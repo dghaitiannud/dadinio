@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "mQl_bN1rhXC2PFiM37lTO"
+uri = "file://haitian-nud-media-source.tar.gz"
+type = "unspecified"
+title = "Haïtien Nud Média — Code source complet"
+
+[[outputs]]
+id = "4g_Pue1v1EQj9AFB8y0Kt"
+uri = "file://exports/haitian-nud-media-complete.tar.gz"
+type = "unspecified"
+title = "HAITIAN NUD - archive complète"

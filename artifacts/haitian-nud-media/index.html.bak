@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+    <title>Haïtien Nud Média — Médya ayisyen 100%</title>
+    <meta name="description" content="Haïtien Nud Média : la plateforme vidéo de la culture haïtienne. Musique kompa, vlogs, podcasts, comédie, news, danse, sports — pour la diaspora et Haïti." />
+    <meta name="keywords" content="Haïtien, Haitien, Haïti, kompa, vlog, podcast, vidéo, diaspora, kreyòl, média, haitiennud" />
+    <meta name="author" content="Haïtien Nud Média" />
+    <meta name="theme-color" content="#0A0B12" />
+    <meta name="color-scheme" content="dark" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Haïtien Nud Média" />
+    <meta property="og:title" content="Haïtien Nud Média — Médya ayisyen 100%" />
+    <meta property="og:description" content="La plateforme vidéo de la culture haïtienne. Musique, vlogs, podcasts, comédie, sports — pour la diaspora et Haïti." />
+    <meta property="og:image" content="https://www.haitiennud.com/logo.jpg" />
+    <meta property="og:image:alt" content="Logo Haïtien Nud Média" />
+    <meta property="og:url" content="https://www.haitiennud.com" />
+    <meta property="og:locale" content="fr_FR" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Haïtien Nud Média" />
+    <meta name="twitter:description" content="Médya ayisyen 100% — vidéo, kilti, kominote." />
+    <meta name="twitter:image" content="https://www.haitiennud.com/logo.jpg" />
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Haitiannud" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/logo.jpg" />
+    <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+    <link rel="canonical" href="https://www.haitiennud.com" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
