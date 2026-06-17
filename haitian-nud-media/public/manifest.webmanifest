@@ -1,0 +1,59 @@
+{
+  "name": "Haïtien Nud Média",
+  "short_name": "Haitiannud",
+  "description": "Plateforme vidéo haïtienne - Accès libre et VIP via Telegram",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0A0B12",
+  "theme_color": "#1E5EFF",
+  "lang": "fr-HT",
+  "dir": "ltr",
+  "categories": ["entertainment"],
+  "screenshots": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Accueil",
+      "short_name": "Accueil",
+      "description": "Aller à la page d'accueil",
+      "url": "/",
+      "icons": [{ "src": "/logo.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Rechercher",
+      "short_name": "Recherche",
+      "description": "Rechercher des vidéos",
+      "url": "/search",
+      "icons": [{ "src": "/logo.jpg", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}
