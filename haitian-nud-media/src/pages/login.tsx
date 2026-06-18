@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { LogIn, UserPlus, Mail, Lock, ArrowLeft } from "lucide-react";
+import { LogIn, UserPlus, Mail, Lock, ArrowLeft, AlertCircle } from "lucide-react";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
 
@@ -17,6 +17,9 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // NOUVEAU : État pour forcer l'affichage de l'erreur dans le formulaire
+  const [formError, setFormError] = useState<string | null>(null);
 
   if (isSignedIn) {
     setLocation("/");
@@ -26,11 +29,20 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setFormError(null); // Réinitialise l'erreur à chaque tentative
+    
     try {
       if (mode === "signin") {
-        const { error } = await signIn(email, password);
-        if (error) {
-          toast.error(error.message || "Email ou mot de passe incorrect");
+        const result = await signIn(email, password);
+        // Supabase peut renvoyer l'erreur directement ou dans un objet
+        const error = result?.error || result; 
+        
+        if (error && error.message) {
+          setFormError(error.message);
+          toast.error(error.message);
+        } else if (error) {
+          setFormError("Email ou mot de passe incorrect");
+          toast.error("Email ou mot de passe incorrect");
         } else {
           toast.success("Connexion réussie !");
           setLocation("/");
@@ -38,18 +50,21 @@ export function LoginPage() {
       } else {
         const { error, data } = await signUp(email, password, displayName);
         if (error) {
-          toast.error(error.message || "Erreur lors de l'inscription");
+          setFormError(error.message);
+          toast.error(error.message);
         } else {
           if (data?.user?.identities?.length === 0) {
+            setFormError("Cet e-mail est déjà utilisé par un autre compte.");
             toast.info("Ce compte existe déjà. Connectez-vous.");
             setMode("signin");
           } else {
-            toast.success("Compte créé ! Vérifiez votre email si confirmation requise.");
+            toast.success("Compte créé !");
             setLocation("/");
           }
         }
       }
     } catch (err: any) {
+      setFormError(err?.message || "Une erreur inattendue est survenue.");
       toast.error(err?.message || "Erreur");
     } finally {
       setLoading(false);
@@ -74,7 +89,7 @@ export function LoginPage() {
             type="button"
             variant={mode === "signin" ? "default" : "outline"}
             className="flex-1"
-            onClick={() => setMode("signin")}
+            onClick={() => { setMode("signin"); setFormError(null); }}
           >
             <LogIn className="h-4 w-4 mr-2" /> Connexion
           </Button>
@@ -82,11 +97,22 @@ export function LoginPage() {
             type="button"
             variant={mode === "signup" ? "default" : "outline"}
             className="flex-1"
-            onClick={() => setMode("signup")}
+            onClick={() => { setMode("signup"); setFormError(null); }}
           >
             <UserPlus className="h-4 w-4 mr-2" /> Inscription
           </Button>
         </div>
+
+        {/* NOUVEAU : Bloc d'erreur visuel et statique au milieu du formulaire */}
+        {formError && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 animate-in fade-in-50">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold">Erreur : </span>
+              {formError === "User already registered" ? "Cet e-mail possède déjà un compte." : formError}
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (
