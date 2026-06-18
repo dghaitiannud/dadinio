@@ -29,9 +29,6 @@ export function Footer() {
             <img src={`${basePath}/logo.jpg`} alt="HAITIAN NUD" className="h-10 w-10 rounded object-cover" />
             <span className="font-serif font-bold text-2xl tracking-tight">HAITIAN NUD</span>
           </Link>
-          <p className="text-sm text-muted-foreground mb-6 max-w-sm">
-            Haitian nud pou ayisyen.
-          </p>
 
           <div className="flex flex-col gap-2 mb-6">
             <a href="https://www.tiktok.com/@haitiannud_ceo" target="_blank" rel="noopener noreferrer">
@@ -71,9 +68,7 @@ export function Footer() {
           <h4 className="font-semibold mt-6 mb-4">Communauté Telegram</h4>
           <ul className="space-y-2">
             <li><a href="https://t.me/dg_haitiannud" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Rejoindre le groupe</a></li>
-            <li><a href="https://t.me/+UXtFEcF2Dw8zNGYx" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Rejoindre le groupe</a></li>
             <li><a href="https://t.me/hatiannud_canal" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen</a></li>
-            <li><a href="https://t.me/haiti_annud" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen</a></li>
           </ul>
         </div>
 
@@ -90,7 +85,6 @@ export function Footer() {
 
       <div className="container mx-auto px-4 mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
         <p>© 2026 HAITIAN NUD. Tous droits réservés.</p>
-        <p>Haitien nud pou ayisyen</p>
       </div>
     </footer>
   );
