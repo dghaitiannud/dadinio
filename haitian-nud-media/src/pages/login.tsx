@@ -26,46 +26,58 @@ export function LoginPage() {
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setFormError(null); // Réinitialise l'erreur à chaque tentative
+    setFormError(null);
     
     try {
       if (mode === "signin") {
         const result = await signIn(email, password);
-        // Supabase peut renvoyer l'erreur directement ou dans un objet
-        const error = result?.error || result; 
         
-        if (error && error.message) {
-          setFormError(error.message);
-          toast.error(error.message);
-        } else if (error) {
-          setFormError("Email ou mot de passe incorrect");
-          toast.error("Email ou mot de passe incorrect");
+        // Sécurité : On vérifie toutes les structures possibles où l'erreur pourrait se cacher
+        const errorObj = result?.error || result;
+        
+        if (errorObj && errorObj.message) {
+          setFormError(errorObj.message);
+          toast.error(errorObj.message);
+        } else if (errorObj && typeof errorObj === 'string') {
+          setFormError(errorObj);
         } else {
-          toast.success("Connexion réussie !");
-          setLocation("/");
+          // Si result est vide ou n'indique rien mais que l'utilisateur n'est pas connecté,
+          // on va manuellement tester une connexion brute ou lever une alerte générique
+          toast.success("Demande envoyée");
+          
+          // Petit hack : Attendre un court instant pour voir si l'état de connexion change
+          setTimeout(() => {
+            if (!isSignedIn) {
+              setFormError("Identifiants incorrects ou problème de synchronisation.");
+            } else {
+              setLocation("/");
+            }
+          }, 1000);
         }
       } else {
-        const { error, data } = await signUp(email, password, displayName);
-        if (error) {
-          setFormError(error.message);
-          toast.error(error.message);
+        const result = await signUp(email, password, displayName);
+        const errorObj = result?.error || result;
+        
+        if (errorObj && errorObj.message) {
+          setFormError(errorObj.message);
+          toast.error(errorObj.message);
+        } else if (result?.data?.user?.identities?.length === 0) {
+          setFormError("Cet e-mail est déjà utilisé par un autre compte.");
+          setMode("signin");
         } else {
-          if (data?.user?.identities?.length === 0) {
-            setFormError("Cet e-mail est déjà utilisé par un autre compte.");
-            toast.info("Ce compte existe déjà. Connectez-vous.");
-            setMode("signin");
-          } else {
-            toast.success("Compte créé !");
-            setLocation("/");
-          }
+          toast.success("Compte créé !");
+          setLocation("/");
         }
       }
     } catch (err: any) {
-      setFormError(err?.message || "Une erreur inattendue est survenue.");
-      toast.error(err?.message || "Erreur");
+      // Ce bloc attrape TOUT ce qui plante de force
+      console.error("Erreur interceptée :", err);
+      const msg = err?.message || err?.error_description || "Une erreur est survenue.";
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
