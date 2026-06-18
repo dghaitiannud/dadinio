@@ -23,10 +23,14 @@ export function BottomNav() {
           <Download className="h-5 w-5" />
           <span className="text-[10px] font-medium">Téléchargements</span>
         </Link>
-        <Link href="/account" className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location.startsWith('/account') ? 'text-primary' : 'text-muted-foreground'}`}>
-          <User className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Compte</span>
-        </Link>
+        <Link 
+  href={isSignedIn ? "/account" : "/login"} 
+  className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location.startsWith('/account') || location.startsWith('/login') ? 'text-primary' : 'text-muted-foreground'}`}
+>
+  <User className="h-5 w-5" />
+  <span className="text-[10px] font-medium">Compte</span>
+</Link>
+
       </div>
     </div>
   );
