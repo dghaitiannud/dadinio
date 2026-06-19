@@ -35,6 +35,14 @@ function InstagramIcon() {
   );
 }
 
+function TelegramIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.56 8.18l-1.91 9c-.14.63-.51.79-1.04.49l-2.91-2.15-1.4 1.35c-.15.15-.29.28-.59.28l.21-2.94 5.35-4.84c.23-.2-.05-.32-.36-.12l-6.62 4.16-2.85-.89c-.62-.2-.63-.62.13-.91l11.13-4.29c.51-.19.97.11.77.87z" fill="#24A1DE"/>
+    </svg>
+  );
+}
+
 function WhatsAppIcon() {
   return (
     <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -79,6 +87,13 @@ export function Footer() {
                 <WhatsAppIcon /> Chaîne WhatsApp
               </Button>
             </a>
+
+            {/* AJOUTÉ : Partie Voye zen pa Telegram juste au-dessus de WhatsApp */}
+            <a href="https://t.me/dg_haitiannud" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto justify-start gap-2 border-border hover:border-sky-500/60 hover:bg-sky-500/5 hover:text-sky-400">
+                <TelegramIcon /> Voye zen pa Telegram
+              </Button>
+            </a>
             
             <a href="https://wa.me/50931310227" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="w-full sm:w-auto justify-start gap-2 border-border hover:border-green-500/60 hover:bg-green-500/5 hover:text-green-400">
@@ -101,7 +116,7 @@ export function Footer() {
 
           <h4 className="font-semibold mt-6 mb-4">Canaux distributions</h4>
           <ul className="space-y-2">
-            <li><a href="https://t.me/dg_haitiannud" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Rejoindre le groupe</a></li>
+            <li><a href="https://t.me/+R3geXsW7ZL8zNTM5" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Rejoindre le groupe</a></li>
             <li><a href="https://wa.me/50931310227" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen pa whatsapp</a></li>
             <li><a href="https://T.me/dg_haitiannud" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen pa telegram</a></li>
           </ul>
