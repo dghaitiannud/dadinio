@@ -64,9 +64,9 @@ export function Footer() {
           </Link>
 
           <div className="flex flex-col gap-2 mb-6">
-            <a href="https://www.tiktok.com/@haitiannud_ceo" target="_blank" rel="noopener noreferrer">
+            <a href="https://tiktok.com/@www.haitiannud.com" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="w-full sm:w-auto justify-start gap-2 border-border hover:border-primary/60 hover:bg-primary/5">
-                <TikTokIcon /> @haitiannud_ceo
+                <TikTokIcon /> @www.haitiannud.com
               </Button>
             </a>
             
