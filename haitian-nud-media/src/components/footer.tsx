@@ -65,10 +65,11 @@ export function Footer() {
             <li><Link href="/account" className="text-muted-foreground hover:text-primary transition-colors">Mon Compte</Link></li>
           </ul>
 
-          <h4 className="font-semibold mt-6 mb-4">Communauté Telegram</h4>
+          <h4 className="font-semibold mt-6 mb-4">Canaux distributions</h4>
           <ul className="space-y-2">
             <li><a href="https://t.me/dg_haitiannud" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Rejoindre le groupe</a></li>
-            <li><a href="https://wa.me/50931310227" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen</a></li>
+            <li><a href="https://wa.me/50931310227" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen pa whatsapp</a></li>
+            <li><a href="https://T.me/dg_haitiannud" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen pa telegram</a></li>
           </ul>
         </div>
 
