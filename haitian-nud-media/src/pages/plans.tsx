@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Send, Star, MessageCircle, Lock } from "lucide-react";
 
 const TELEGRAM_LINKS = [
-  { label: "Groupe 1", url: "https://t.me/dg_haitiannud", desc: "Groupe principal" },
+  { label: "Groupe 1", url: "https://t.me/+R3geXsW7ZL8zNTM5", desc: "Groupe principal" },
   { label: "Groupe 2", url: "https://t.me/+UXtFEcF2Dw8zNGYx", desc: "Groupe secondaire" },
   { label: "Canal 1", url: "https://t.me/hatiannud_canal", desc: "Canal officiel" },
-  { label: "Canal 2", url: "https://t.me/haiti_annud", desc: "Canal communauté" },
+  { label: "Canal 2", url: "https://t.me/fans_haitian_nud", desc: "Canal communauté" },
 ];
 
 export function Plans() {
