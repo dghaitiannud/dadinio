@@ -13,10 +13,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, ThumbsUp, Share2, Star, MessageSquare, Play, AlertCircle, Send, Lock, Copy, WifiOff, Loader2 } from "lucide-react";
+import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Send, Lock, Copy, WifiOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { downloadAndSaveVideo, listOfflineVideos, deleteOfflineVideo } from "@/lib/offline-store";
+import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
 
 const TELEGRAM_LINKS = [
   { label: "Groupe 1", url: "https://t.me/dg_haitiannud" },
@@ -61,7 +61,6 @@ export function Watch() {
   const { isSignedIn, user, appUser } = useAuth();
   const [commentBody, setCommentBody] = useState("");
   const [anonymous, setAnonymous] = useState(false);
-  const [showAd, setShowAd] = useState(false);
   const [video, setVideo] = useState<Video | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
@@ -73,13 +72,9 @@ export function Watch() {
   const [offlineDownloading, setOfflineDownloading] = useState(false);
   const [isOfflineAvailable, setIsOfflineAvailable] = useState(false);
 
-  // FIX #5: Explicit fallback for missing video ID must be before hooks
-  // (moved to after hooks — rendered below)
-
   useEffect(() => {
     if (!id) return;
 
-    // FIX #6: Proper async/await with try/catch — no silent failures
     const loadVideo = async () => {
       setIsLoadingVideo(true);
       setVideoError(null);
@@ -87,7 +82,6 @@ export function Watch() {
         const v = await getVideo(id);
         setVideo(v);
         if (v) {
-          // FIX #18: user?.id safely optional
           registerView(id, user?.id ?? undefined);
           import("@/lib/local-store").then(({ pushWatchHistory }) =>
             pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
@@ -128,16 +122,7 @@ export function Watch() {
     loadVideo();
     loadComments();
     checkOffline();
-  }, [id]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShowAd(true), 1000);
-    const hide = setTimeout(() => setShowAd(false), 6000);
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(hide);
-    };
-  }, [id]);
+  }, [id, user?.id]);
 
   const copyLink = async () => {
     try {
@@ -148,10 +133,33 @@ export function Watch() {
     }
   };
 
+  const handleLike = () => {
+    if (!isSignedIn) {
+      toast.error("Ou bezwen konekte pouw ka renmen videyo sa a");
+      return;
+    }
+    toast.success("Mèsi pou sipò w !");
+  };
+
+  const handleShare = async () => {
+    if (!isSignedIn) {
+      toast.error("Ou bezwen konekte pouw ka pataje videyo sa a");
+      return;
+    }
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: video?.title || "HAITIAN NUD", url });
+      } catch { }
+    } else {
+      await copyLink();
+    }
+  };
+
   const handleDownload = async () => {
     if (!id || !appUser) return;
     if (!isSignedIn) {
-      toast.error("Connectez-vous pour télécharger");
+      toast.error("Fòk ou konekte pou kapab telechaje");
       return;
     }
     if (video?.isVip) {
@@ -161,13 +169,13 @@ export function Watch() {
     setDownloadPending(true);
     try {
       const res = await requestDownload(id, appUser.id, appUser.plan === 'vip', appUser.freeDownloadsUsed);
-      toast.success(`Téléchargement lancé. ${res.remaining} téléchargements restants aujourd'hui.`);
+      toast.success(`Téléchargement lancé. ${res.remaining} téléchargements restants.`);
       window.open(res.url, "_blank");
     } catch (e: any) {
       if (e.message === 'vip_required') {
         toast.error("Vidéo VIP — Rejoignez notre Telegram.");
       } else if (e.message === 'quota_exceeded') {
-        toast.error("Limite de 3 téléchargements atteinte. Revenez demain ou rejoignez Telegram VIP.");
+        toast.error("Limite atteinte. Revenez demain ou rejoignez Telegram VIP.");
       } else {
         toast.error(e?.message || "Erreur de téléchargement");
       }
@@ -178,8 +186,8 @@ export function Watch() {
 
   const handleOfflineDownload = async () => {
     if (!video || !video.videoUrl) return;
-    if (!video.isVip && !isSignedIn) {
-      toast.error("Connectez-vous pour télécharger en offline");
+    if (!isSignedIn) {
+      toast.error("Fòk ou konekte pou gade offline");
       return;
     }
     setOfflineDownloading(true);
@@ -208,17 +216,6 @@ export function Watch() {
     }
   };
 
-  const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: video?.title || "HAITIAN NUD", url });
-      } catch { }
-    } else {
-      await copyLink();
-    }
-  };
-
   const handleComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !commentBody.trim() || !isSignedIn || !appUser) return;
@@ -236,7 +233,6 @@ export function Watch() {
     }
   };
 
-  // FIX #5: Explicit fallback for missing video ID
   if (!id) {
     return (
       <div className="container mx-auto px-4 py-24 text-center">
@@ -260,14 +256,12 @@ export function Watch() {
           <div className="hidden lg:block space-y-4">
             <Skeleton className="w-full h-8" />
             <Skeleton className="w-full aspect-video rounded-xl" />
-            <Skeleton className="w-full aspect-video rounded-xl" />
           </div>
         </div>
       </div>
     );
   }
 
-  // FIX #6: Show error state if API call failed
   if (videoError) {
     return (
       <div className="container mx-auto px-4 py-24 text-center">
@@ -279,55 +273,29 @@ export function Watch() {
     );
   }
 
-  if (!video) {
-    return (
-      <div className="container mx-auto px-4 py-24 text-center">
-        <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-        <h2 className="text-2xl font-serif font-bold mb-2">Vidéo non trouvée</h2>
-        <p className="text-muted-foreground mb-6">Cette vidéo n'existe pas ou a été supprimée.</p>
-        <Link href="/"><Button>Retour à l'accueil</Button></Link>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
+          {/* ZONE DU LECTEUR VIDÉO CORRIGÉE */}
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-4 group">
             {video.isVip && <VipGate />}
 
-            {showAd && !video.isVip ? (
-              <div className="absolute inset-0 bg-zinc-900 flex flex-col items-center justify-center z-20">
-                <span className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Publicité</span>
-                <div className="w-32 h-8 bg-zinc-800 animate-pulse rounded"></div>
-                <div className="absolute bottom-4 right-4 text-xs text-white/50">La vidéo commence dans quelques secondes...</div>
-              </div>
-            ) : null}
-
-            <img src={video.thumbnailUrl || '/logo.jpg'} alt={video.title} className="w-full h-full object-cover opacity-50" />
-            {!video.isVip && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Button size="icon" className="w-16 h-16 rounded-full bg-primary/90 text-white hover:bg-primary hover:scale-110 transition-all shadow-[0_0_30px_rgba(30,94,255,0.5)]">
-                  <Play className="h-8 w-8 ml-1" fill="currentColor" />
-                </Button>
-              </div>
-            )}
-
-            {!video.isVip && (
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="w-full h-1 bg-white/20 rounded-full mb-4 overflow-hidden">
-                  <div className="w-1/3 h-full bg-primary relative">
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow"></div>
-                  </div>
+            {!video.isVip && video.videoUrl ? (
+              <video
+                src={video.videoUrl}
+                poster={video.thumbnailUrl || '/logo.jpg'}
+                controls
+                className="w-full h-full object-contain"
+                playsInline
+              />
+            ) : (
+              !video.isVip && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                  <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">Lien de la vidéo introuvable dans Supabase.</p>
                 </div>
-                <div className="flex items-center justify-between text-white">
-                  <div className="flex items-center gap-4">
-                    <Play className="h-5 w-5 fill-current cursor-pointer" />
-                    <span className="text-sm font-medium">0:00 / {Math.floor(video.durationSec / 60)}:{(video.durationSec % 60).toString().padStart(2, '0')}</span>
-                  </div>
-                </div>
-              </div>
+              )
             )}
           </div>
 
@@ -351,7 +319,7 @@ export function Watch() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="secondary" className="rounded-full bg-accent hover:bg-accent/80">
+                <Button variant="secondary" onClick={handleLike} className="rounded-full bg-accent hover:bg-accent/80">
                   <ThumbsUp className="h-4 w-4 mr-2" /> J'aime
                 </Button>
                 <Button variant="secondary" onClick={handleShare} className="rounded-full bg-accent hover:bg-accent/80">
@@ -459,7 +427,6 @@ export function Watch() {
                     <div className="flex-1 space-y-2">
                       <Skeleton className="w-32 h-4" />
                       <Skeleton className="w-full h-4" />
-                      <Skeleton className="w-2/3 h-4" />
                     </div>
                   </div>
                 ))
@@ -467,7 +434,6 @@ export function Watch() {
                 comments.map((comment) => (
                   <div key={comment.id} className="flex gap-4">
                     <Avatar className="h-10 w-10 shrink-0">
-                      {/* FIX #20: Safe fallback for null/empty displayName */}
                       <AvatarFallback className="bg-primary/10 text-primary">{(comment.displayName || "U").charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -489,17 +455,7 @@ export function Watch() {
         <div className="lg:col-span-1">
           <h3 className="font-serif font-bold text-lg mb-4">Dans la même catégorie</h3>
           <div className="flex flex-col gap-4">
-            {isLoadingVideo ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex gap-3">
-                  <Skeleton className="w-40 aspect-video rounded-lg shrink-0" />
-                  <div className="flex-1 space-y-2 py-1">
-                    <Skeleton className="w-full h-4" />
-                    <Skeleton className="w-2/3 h-3" />
-                  </div>
-                </div>
-              ))
-            ) : relatedVideos.length > 0 ? (
+            {relatedVideos.length > 0 ? (
               relatedVideos.map((vid) => (
                 <Link key={vid.id} href={`/watch/${vid.id}`} className="flex gap-3 group">
                   <div className="relative w-40 aspect-video rounded-lg overflow-hidden shrink-0 bg-muted">
@@ -523,25 +479,8 @@ export function Watch() {
               <p className="text-sm text-muted-foreground">Aucune vidéo similaire.</p>
             )}
           </div>
-
-          <div className="mt-8 p-4 bg-card border border-border rounded-xl">
-            <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm">
-              <Send className="h-4 w-4 text-primary" /> Communauté Telegram
-            </h4>
-            <div className="space-y-2">
-              {TELEGRAM_LINKS.map((link) => (
-                <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">
-                  <Button size="sm" variant="outline" className="w-full justify-between border-border hover:border-primary/40 hover:bg-primary/5 text-xs">
-                    <span className="text-muted-foreground">Rejoindre le groupe</span>
-                    <span className="text-primary font-medium">→</span>
-                  </Button>
-                </a>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
-
       <GoogleAdsBar />
     </div>
   );
