@@ -7,7 +7,7 @@ import { Search as SearchIcon, Loader2 } from "lucide-react";
 // Messages plus courts adaptés aux mobiles
 const TICKER_MESSAGES = [
   "chache zen...",
-  "rejwenn gwoup yo kounya!",
+  "rejwenn gwoup la kounya!",
   "voye zen sou: 31 31 02 27",
   "oswa sou: 31 30 16 95"
 ];
@@ -26,23 +26,24 @@ export function Search() {
   const [currentPlaceholder, setCurrentPlaceholder] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ✍️ Effet d'animation de machine à écrire pour le placeholder
+  // ✍️ Effet d'animation de machine à écrire configuré plus lentement
   useEffect(() => {
     const currentFullText = TICKER_MESSAGES[messageIndex];
     
-    // Détermine la vitesse d'écriture ou d'effacement
-    let typingSpeed = isDeleting ? 30 : 80;
+    // Vitesse de frappe : 120ms par lettre (plus lent pour une lecture confortable)
+    // Vitesse d'effacement : 40ms par lettre
+    let typingSpeed = isDeleting ? 40 : 120;
 
-    // Si le texte est complètement écrit, on attend 2,5 secondes avant de l'effacer
+    // 🕒 PAUSE : Si le texte est entièrement écrit, on le laisse figer pendant 6 secondes (6000ms)
     if (!isDeleting && currentPlaceholder === currentFullText) {
-      typingSpeed = 2500; 
+      typingSpeed = 6000; 
       setIsDeleting(true);
     } 
     // Si le texte est complètement effacé, on passe au message suivant
     else if (isDeleting && currentPlaceholder === "") {
       setIsDeleting(false);
       setMessageIndex((prev) => (prev + 1) % TICKER_MESSAGES.length);
-      typingSpeed = 200;
+      typingSpeed = 300;
     }
 
     const timeout = setTimeout(() => {
@@ -90,7 +91,6 @@ export function Search() {
           </div>
           <Input
             type="search"
-            // Utilise le texte qui s'écrit lettre par lettre
             placeholder={currentPlaceholder}
             className="pl-10 h-12 bg-card border-border text-lg rounded-full shadow-sm focus-visible:ring-primary"
             value={query}
