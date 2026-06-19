@@ -1,8 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { Home, Search, Star, User, Download } from "lucide-react";
+import { useAuth } from "@/lib/auth-context"; // AJOUTÉ : Pour récupérer l'état de connexion
 
 export function BottomNav() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation(); // MODIFIÉ : Récupération de setLocation pour forcer la route
+  const { isSignedIn } = useAuth(); // AJOUTÉ : Récupération du booléen isSignedIn
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t border-border pb-safe">
@@ -23,11 +25,21 @@ export function BottomNav() {
           <Download className="h-5 w-5" />
           <span className="text-[10px] font-medium">Téléchargements</span>
         </Link>
-        <Link href={User ? "/account" : "/login"} className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location.startsWith('/account') || location.startsWith('/login') ? 'text-primary' : 'text-muted-foreground'}`}>
+        
+        {/* MODIFIÉ : Utilisation de isSignedIn + blocage du comportement par défaut si non connecté */}
+        <Link 
+          href={isSignedIn ? "/account" : "/login"} 
+          onClick={(e) => {
+            if (!isSignedIn) {
+              e.preventDefault(); // Bloque la tentative d'aller sur /account qui redirige vers l'accueil
+              setLocation("/login"); // Force la redirection immédiate vers l'écran de login
+            }
+          }}
+          className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location.startsWith('/account') || location.startsWith('/login') ? 'text-primary' : 'text-muted-foreground'}`}
+        >
           <User className="h-5 w-5" />
           <span className="text-[10px] font-medium">Compte</span>
         </Link>
-
       </div>
     </div>
   );
