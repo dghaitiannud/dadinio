@@ -13,7 +13,7 @@ export function Plans() {
     <div className="container mx-auto px-4 py-12 md:py-20 min-h-screen">
       <div className="max-w-2xl mx-auto text-center mb-12">
         <div className="inline-flex items-center gap-2 mb-4 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-semibold border border-primary/20">
-          <Lock className="h-4 w-4" /> VIP — Bientôt disponible
+          <Lock className="h-4 w-4" /> VIP Bientôt disponible
         </div>
         <h1 className="text-4xl md:text-5xl font-serif font-bold mb-6 leading-tight">
           Accès VIP
@@ -53,7 +53,7 @@ export function Plans() {
                   </div>
                 </div>
                 <Button size="sm" className="bg-primary text-white hover:bg-primary/90 shrink-0 gap-1.5">
-                  <Send className="h-3.5 w-3.5" /> klike la pouw voye zen
+                  <Send className="h-3.5 w-3.5" /> Rejwenn
                 </Button>
               </a>
             ))}
