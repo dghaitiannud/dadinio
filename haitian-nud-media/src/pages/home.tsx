@@ -22,6 +22,11 @@ export function Home() {
   const [isLoadingLatest, setIsLoadingLatest] = useState(true);
   const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
 
+  // ✍️ États pour le typing effect sur "HAITIAN NUD"
+  const FULL_TEXT = "HAITIAN NUD";
+  const [currentText, setCurrentText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
   useEffect(() => {
     setIsLoadingTrending(true);
     setIsLoadingLatest(true);
@@ -35,6 +40,29 @@ export function Home() {
     });
   }, []);
 
+  // 🔄 Effet de machine à écrire en boucle
+  useEffect(() => {
+    let typingSpeed = isDeleting ? 40 : 150; // Vitesse d'écriture (150ms) ou effacement (40ms)
+
+    if (!isDeleting && currentText === FULL_TEXT) {
+      typingSpeed = 4000; // Reste affiché complètement pendant 4 secondes
+      setIsDeleting(true);
+    } else if (isDeleting && currentText === "") {
+      setIsDeleting(false);
+      typingSpeed = 500; // Légère pause avant de réécrire
+    }
+
+    const timeout = setTimeout(() => {
+      setCurrentText(
+        isDeleting
+          ? FULL_TEXT.substring(0, currentText.length - 1)
+          : FULL_TEXT.substring(0, currentText.length + 1)
+      );
+    }, typingSpeed);
+
+    return () => clearTimeout(timeout);
+  }, [currentText, isDeleting]);
+
   const visibleVideos = (() => {
     if (!latest) return latest;
     if (activeTab === "popular") return [...latest].sort((a, b) => b.views - a.views);
@@ -43,6 +71,10 @@ export function Home() {
   })();
 
   const isPhotoTab = activeTab === "photo";
+
+  // Distribution intelligente du texte pour le style bicolore
+  const haitianPart = currentText.substring(0, 8); // "HAITIAN " max
+  const nudPart = currentText.substring(8);       // "NUD"
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -57,9 +89,14 @@ export function Home() {
         <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 lg:p-24 container mx-auto">
           <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
             <Badge className="mb-4 bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 backdrop-blur-sm">Nouveau sur HAITIAN NUD</Badge>
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-8 leading-tight">
-              HAITIAN <span className="text-primary">NUD</span>
+            
+            {/* Titre animé avec curseur clignotant */}
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-8 leading-tight min-h-[50px] md:min-h-[80px]">
+              <span>{haitianPart}</span>
+              <span className="text-primary">{nudPart}</span>
+              <span className="animate-pulse ml-1 border-r-4 border-primary"></span>
             </h1>
+
             <div className="flex flex-wrap gap-4">
               <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)]">
                 <Play className="mr-2 h-5 w-5 fill-current" /> Regarder maintenant
