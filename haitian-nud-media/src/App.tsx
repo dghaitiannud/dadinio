@@ -1,8 +1,8 @@
-import { useEffect } from 'react'; // AJOUTÉ
+import { useEffect } from 'react';
 import { Switch, Route, useLocation, Router as WouterRouter } from 'wouter';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner"; // Composant importé avec succès
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth-context";
 
@@ -21,7 +21,6 @@ import { DownloadsPage } from "@/pages/downloads";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-// NOUVEAU COMPOSANT : Remonte la page à chaque changement de route
 function ScrollToTop() {
   const [location] = useLocation();
 
@@ -38,7 +37,6 @@ function App() {
       <TooltipProvider>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
-            {/* AJOUTÉ ICI : Il s'active silencieusement en arrière-plan */}
             <ScrollToTop /> 
             
             <Layout>
@@ -71,6 +69,8 @@ function App() {
           </QueryClientProvider>
         </AuthProvider>
       </TooltipProvider>
+      {/* AJOUTÉ : Le Toaster est maintenant actif à la racine et affichera tes alertes */}
+      <Toaster />
     </WouterRouter>
   );
 }
