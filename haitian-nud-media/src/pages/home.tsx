@@ -22,10 +22,9 @@ export function Home() {
   const [isLoadingLatest, setIsLoadingLatest] = useState(true);
   const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
 
-  // ✍️ États pour le typing effect sur "HAITIAN NUD"
+  // ✍️ États pour le typing effect à l'atterrissage sur la page
   const FULL_TEXT = "HAITIAN NUD";
   const [currentText, setCurrentText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     setIsLoadingTrending(true);
@@ -40,28 +39,17 @@ export function Home() {
     });
   }, []);
 
-  // 🔄 Effet de machine à écrire en boucle
+  // 🔄 Effet de machine à écrire exécuté UNE SEULE FOIS jusqu'à complétion
   useEffect(() => {
-    let typingSpeed = isDeleting ? 40 : 150; // Vitesse d'écriture (150ms) ou effacement (40ms)
-
-    if (!isDeleting && currentText === FULL_TEXT) {
-      typingSpeed = 4000; // Reste affiché complètement pendant 4 secondes
-      setIsDeleting(true);
-    } else if (isDeleting && currentText === "") {
-      setIsDeleting(false);
-      typingSpeed = 500; // Légère pause avant de réécrire
+    // Si le texte n'est pas encore complet, on continue d'ajouter des lettres
+    if (currentText.length < FULL_TEXT.length) {
+      const timeout = setTimeout(() => {
+        setCurrentText(FULL_TEXT.substring(0, currentText.length + 1));
+      }, 150); // Vitesse d'écriture calme (150ms par lettre)
+      
+      return () => clearTimeout(timeout);
     }
-
-    const timeout = setTimeout(() => {
-      setCurrentText(
-        isDeleting
-          ? FULL_TEXT.substring(0, currentText.length - 1)
-          : FULL_TEXT.substring(0, currentText.length + 1)
-      );
-    }, typingSpeed);
-
-    return () => clearTimeout(timeout);
-  }, [currentText, isDeleting]);
+  }, [currentText]);
 
   const visibleVideos = (() => {
     if (!latest) return latest;
@@ -75,6 +63,9 @@ export function Home() {
   // Distribution intelligente du texte pour le style bicolore
   const haitianPart = currentText.substring(0, 8); // "HAITIAN " max
   const nudPart = currentText.substring(8);       // "NUD"
+
+  // On affiche la barre de curseur clignotante seulement pendant que l'écriture est en cours
+  const isTyping = currentText.length < FULL_TEXT.length;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -90,11 +81,11 @@ export function Home() {
           <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
             <Badge className="mb-4 bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 backdrop-blur-sm">Nouveau sur HAITIAN NUD</Badge>
             
-            {/* Titre animé avec curseur clignotant */}
+            {/* Titre animé bicolore fixe après écriture */}
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-8 leading-tight min-h-[50px] md:min-h-[80px]">
               <span>{haitianPart}</span>
               <span className="text-primary">{nudPart}</span>
-              <span className="animate-pulse ml-1 border-r-4 border-primary"></span>
+              {isTyping && <span className="animate-pulse ml-1 border-r-4 border-primary"></span>}
             </h1>
 
             <div className="flex flex-wrap gap-4">
