@@ -1,3 +1,4 @@
+import { useEffect } from 'react'; // AJOUTÉ
 import { Switch, Route, useLocation, Router as WouterRouter } from 'wouter';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -20,12 +21,26 @@ import { DownloadsPage } from "@/pages/downloads";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+// NOUVEAU COMPOSANT : Remonte la page à chaque changement de route
+function ScrollToTop() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+
+  return null;
+}
+
 function App() {
   return (
     <WouterRouter base={basePath}>
       <TooltipProvider>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
+            {/* AJOUTÉ ICI : Il s'active silencieusement en arrière-plan */}
+            <ScrollToTop /> 
+            
             <Layout>
               <Switch>
                 <Route path="/" component={Home} />
