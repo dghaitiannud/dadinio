@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Send, Lock, Copy, WifiOff, Loader2 } from "lucide-react";
+import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Send, Lock, Copy, Wifi, WifiOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
@@ -52,6 +52,61 @@ function GoogleAdsBar() {
   return (
     <div className="mt-8 rounded-2xl border border-border bg-card px-4 py-3 text-center text-sm text-muted-foreground">
       Google Ads
+    </div>
+  );
+}
+
+// 🌐 Composant de l'icône Wifi Dynamique
+function NetworkStatusIcon() {
+  const [networkQuality, setNetworkQuality] = useState<'excellent' | 'good' | 'poor' | 'unknown'>('unknown');
+
+  useEffect(() => {
+    const updateStatus = () => {
+      // @ts-ignore
+      const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (conn && conn.downlink !== undefined) {
+        const speed = conn.downlink; // Vitesse en Mbps
+        if (speed >= 5) setNetworkQuality('excellent');      // Vert
+        else if (speed >= 1.5) setNetworkQuality('good');   // Jaune
+        else setNetworkQuality('poor');                     // Rouge
+      } else {
+        setNetworkQuality('unknown');                       // Blanc Neutre
+      }
+    };
+
+    updateStatus();
+
+    // @ts-ignore
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (conn) {
+      conn.addEventListener('change', updateStatus);
+    }
+    return () => {
+      if (conn) conn.removeEventListener('change', updateStatus);
+    };
+  }, []);
+
+  const getColorClass = () => {
+    switch (networkQuality) {
+      case 'excellent': return 'text-green-500 fill-green-500/20';
+      case 'good': return 'text-yellow-500 fill-yellow-500/20';
+      case 'poor': return 'text-red-500 fill-red-500/20';
+      default: return 'text-white/70 fill-transparent';
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-xs font-medium text-white transition-all">
+      <span className="text-white/60">En ligne</span>
+      <div className="relative flex items-center">
+        <Wifi className={`h-4 w-4 transition-colors duration-300 ${getColorClass()}`} />
+        {networkQuality !== 'unknown' && (
+          <span className={`absolute top-0 right-0 h-1.5 w-1.5 rounded-full animate-ping ${
+            networkQuality === 'excellent' ? 'bg-green-500' :
+            networkQuality === 'good' ? 'bg-yellow-500' : 'bg-red-500'
+          }`} />
+        )}
+      </div>
     </div>
   );
 }
@@ -277,6 +332,15 @@ export function Watch() {
     <div className="container mx-auto px-4 py-6 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
+          
+          {/* BARRE D'ÉTAT AJOUTÉE POUR LE MODE ONLINE / QUALITÉ RÉSEAU */}
+          {!video.isVip && (
+            <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-xs text-muted-foreground font-medium">Lecture en continu</span>
+              <NetworkStatusIcon />
+            </div>
+          )}
+
           {/* ZONE DU LECTEUR VIDÉO CORRIGÉE */}
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-4 group">
             {video.isVip && <VipGate />}
