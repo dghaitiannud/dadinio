@@ -4,6 +4,13 @@ import { VideoCard } from "@/components/video-card";
 import { Input } from "@/components/ui/input";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 
+// Liste des messages qui défilent dynamiquement dans le placeholder
+const TICKER_MESSAGES = [
+  "chache zen...",
+  "rejwenn gwoup la pou plis eksklizivite",
+  "voye zen pa w la sou WhatsApp: 31 31 02 27"
+];
+
 export function Search() {
   const searchParams = new URLSearchParams(window.location.search);
   const initialQuery = searchParams.get("q") || "";
@@ -12,6 +19,18 @@ export function Search() {
   const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Index du message actuellement affiché
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  // 🔄 Effet pour faire défiler les messages toutes les 4 secondes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setMessageIndex((prevIndex) => (prevIndex + 1) % TICKER_MESSAGES.length);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Debounce logic
   useEffect(() => {
@@ -47,8 +66,10 @@ export function Search() {
           </div>
           <Input
             type="search"
-            placeholder="chache zen"
-            className="pl-10 h-12 bg-card border-border text-lg rounded-full shadow-sm focus-visible:ring-primary"
+            // Le placeholder utilise maintenant la variable animée
+            placeholder={TICKER_MESSAGES[messageIndex]}
+            // Petite classe utilitaire de transition CSS pour adoucir le changement de placeholder
+            className="pl-10 h-12 bg-card border-border text-lg rounded-full shadow-sm focus-visible:ring-primary placeholder:transition-all placeholder:duration-500"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
