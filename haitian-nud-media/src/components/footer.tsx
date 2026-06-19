@@ -51,6 +51,12 @@ export function Footer() {
                 <WhatsAppIcon /> Chaîne WhatsApp
               </Button>
             </a>
+            </a>
+            <a href="https://wa.me/50931310227" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto justify-start gap-2 border-border hover:border-green-500/60 hover:bg-green-500/5 hover:text-green-400">
+                <WhatsAppIcon /> Voye zen pa WhatsApp
+              </Button>
+            </a>
           </div>
 
           <PwaInstallButton />
