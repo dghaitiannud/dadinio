@@ -4,11 +4,12 @@ import { VideoCard } from "@/components/video-card";
 import { Input } from "@/components/ui/input";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 
-// Liste des messages qui défilent dynamiquement dans le placeholder
+// Messages plus courts adaptés aux mobiles
 const TICKER_MESSAGES = [
   "chache zen...",
-  "rejwenn gwoup la pou plis eksklizivite",
-  "voye zen pa w la sou WhatsApp: 31 31 02 27"
+  "rejwenn gwoup yo kounya!",
+  "voye zen sou: 31 31 02 27",
+  "oswa sou: 31 30 16 95"
 ];
 
 export function Search() {
@@ -20,19 +21,42 @@ export function Search() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Index du message actuellement affiché
+  // États pour l'effet machine à écrire (Typing effect)
   const [messageIndex, setMessageIndex] = useState(0);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // 🔄 Effet pour faire défiler les messages toutes les 4 secondes
+  // ✍️ Effet d'animation de machine à écrire pour le placeholder
   useEffect(() => {
-    const interval = setInterval(() => {
-      setMessageIndex((prevIndex) => (prevIndex + 1) % TICKER_MESSAGES.length);
-    }, 4000);
+    const currentFullText = TICKER_MESSAGES[messageIndex];
+    
+    // Détermine la vitesse d'écriture ou d'effacement
+    let typingSpeed = isDeleting ? 30 : 80;
 
-    return () => clearInterval(interval);
-  }, []);
+    // Si le texte est complètement écrit, on attend 2,5 secondes avant de l'effacer
+    if (!isDeleting && currentPlaceholder === currentFullText) {
+      typingSpeed = 2500; 
+      setIsDeleting(true);
+    } 
+    // Si le texte est complètement effacé, on passe au message suivant
+    else if (isDeleting && currentPlaceholder === "") {
+      setIsDeleting(false);
+      setMessageIndex((prev) => (prev + 1) % TICKER_MESSAGES.length);
+      typingSpeed = 200;
+    }
 
-  // Debounce logic
+    const timeout = setTimeout(() => {
+      setCurrentPlaceholder(
+        isDeleting
+          ? currentFullText.substring(0, currentPlaceholder.length - 1)
+          : currentFullText.substring(0, currentPlaceholder.length + 1)
+      );
+    }, typingSpeed);
+
+    return () => clearTimeout(timeout);
+  }, [currentPlaceholder, isDeleting, messageIndex]);
+
+  // Debounce logic pour la recherche Supabase
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
@@ -66,10 +90,9 @@ export function Search() {
           </div>
           <Input
             type="search"
-            // Le placeholder utilise maintenant la variable animée
-            placeholder={TICKER_MESSAGES[messageIndex]}
-            // Petite classe utilitaire de transition CSS pour adoucir le changement de placeholder
-            className="pl-10 h-12 bg-card border-border text-lg rounded-full shadow-sm focus-visible:ring-primary placeholder:transition-all placeholder:duration-500"
+            // Utilise le texte qui s'écrit lettre par lettre
+            placeholder={currentPlaceholder}
+            className="pl-10 h-12 bg-card border-border text-lg rounded-full shadow-sm focus-visible:ring-primary"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
