@@ -18,6 +18,18 @@ export interface Video {
   createdAt: string;
 }
 
+export interface Photo {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  category: string;
+  views: number;
+  isVip: boolean;
+  published: boolean;
+  createdAt: string;
+}
+
 export interface Comment {
   id: string;
   videoId: string;
@@ -54,6 +66,7 @@ export interface AdminStats {
   totalUsers: number;
   activeVip: number;
   totalVideos: number;
+  totalPhotos: number;
   totalViews: number;
   totalDownloads: number;
   openTickets: number;
@@ -96,13 +109,11 @@ export async function getVideo(id: string): Promise<Video | null> {
 export async function registerView(videoId: string, userId?: string) {
   try {
     await supabase.from('views').insert({ video_id: videoId, user_id: userId || null });
-    // increment views count
     const { data: vid } = await supabase.from('videos').select('views').eq('id', videoId).single();
     if (vid) {
       await supabase.from('videos').update({ views: (vid.views || 0) + 1 }).eq('id', videoId);
     }
   } catch (err) {
-    // 🔐 FIX #9: Graceful error handling - view tracking is not critical
     console.warn('Failed to register view:', err);
   }
 }
@@ -145,6 +156,31 @@ function toPublicVideo(v: any): Video {
   };
 }
 
+function toPublicPhoto(p: any): Photo {
+  return {
+    id: p.id,
+    title: p.title,
+    description: p.description,
+    imageUrl: p.image_url,
+    category: p.category,
+    views: p.views || 0,
+    isVip: p.is_vip,
+    published: p.published,
+    createdAt: p.created_at,
+  };
+}
+
+// Photos Public functions
+export async function getPhotos(options?: { category?: string }): Promise<Photo[]> {
+  let query = supabase.from('photos').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
+  if (options?.category) {
+    query = query.eq('category', options.category);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map(toPublicPhoto);
+}
+
 // Comments
 export async function listComments(videoId: string): Promise<Comment[]> {
   const { data, error } = await supabase
@@ -164,7 +200,6 @@ export async function listComments(videoId: string): Promise<Comment[]> {
   }));
 }
 
-// 🔐 FIX #19: Add max-length validation for comments
 export async function createComment(
   videoId: string,
   userId: string,
@@ -225,17 +260,23 @@ export async function getAdminStats(): Promise<AdminStats> {
       .eq('plan', 'vip')
       .gt('subscription_ends_at', new Date().toISOString());
     const { count: videoCount } = await supabase.from('videos').select('*', { count: 'exact', head: true });
-    const { data: views } = await supabase.from('videos').select('views');
+    const { count: photoCount } = await supabase.from('photos').select('*', { count: 'exact', head: true });
+    
+    const { data: videoViews } = await supabase.from('videos').select('views');
+    const { data: photoViews } = await supabase.from('photos').select('views');
+    
     const { count: downloadCount } = await supabase.from('downloads').select('*', { count: 'exact', head: true });
     const { count: ticketCount } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
 
-    const totalViews = (views || []).reduce((sum: number, v: any) => sum + (v.views || 0), 0);
+    const totalVideoViews = (videoViews || []).reduce((sum: number, v: any) => sum + (v.views || 0), 0);
+    const totalPhotoViews = (photoViews || []).reduce((sum: number, p: any) => sum + (p.views || 0), 0);
 
     return {
       totalUsers: userCount ?? 0,
       activeVip: vipCount ?? 0,
       totalVideos: videoCount ?? 0,
-      totalViews,
+      totalPhotos: photoCount ?? 0,
+      totalViews: totalVideoViews + totalPhotoViews,
       totalDownloads: downloadCount ?? 0,
       openTickets: ticketCount ?? 0,
     };
@@ -245,6 +286,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       totalUsers: 0,
       activeVip: 0,
       totalVideos: 0,
+      totalPhotos: 0,
       totalViews: 0,
       totalDownloads: 0,
       openTickets: 0,
@@ -252,7 +294,6 @@ export async function getAdminStats(): Promise<AdminStats> {
   }
 }
 
-// 🔐 FIX #11: Add pagination to adminListVideos
 export async function adminListVideos(page: number = 1): Promise<Video[]> {
   const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
   const { data, error } = await supabase
@@ -261,19 +302,7 @@ export async function adminListVideos(page: number = 1): Promise<Video[]> {
     .order('created_at', { ascending: false })
     .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
   if (error) throw error;
-  return (data || []).map((v: any) => ({
-    id: v.id,
-    title: v.title,
-    description: v.description,
-    thumbnailUrl: v.thumbnail_url,
-    videoUrl: v.video_url,
-    category: v.category,
-    durationSec: v.duration_sec,
-    views: v.views || 0,
-    isVip: v.is_vip,
-    published: v.published,
-    createdAt: v.created_at,
-  }));
+  return (data || []).map(toPublicVideo);
 }
 
 export async function adminCreateVideo(video: Omit<Video, 'id' | 'createdAt' | 'views'>) {
@@ -292,9 +321,41 @@ export async function adminCreateVideo(video: Omit<Video, 'id' | 'createdAt' | '
 }
 
 export async function adminDeleteVideo(id: string) {
-  // 🔐 FIX #17: Soft-delete - mark as unpublished instead of deleting
   const { error } = await supabase
     .from('videos')
+    .update({ published: false })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// 🔐 Admin Photos CRUD
+export async function adminListPhotos(page: number = 1): Promise<Photo[]> {
+  const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
+  const { data, error } = await supabase
+    .from('photos')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
+  if (error) throw error;
+  return (data || []).map(toPublicPhoto);
+}
+
+export async function adminCreatePhoto(photo: Omit<Photo, 'id' | 'createdAt' | 'views'>) {
+  const { error } = await supabase.from('photos').insert({
+    title: photo.title.substring(0, 255),
+    description: photo.description,
+    image_url: photo.imageUrl,
+    category: photo.category,
+    is_vip: photo.isVip,
+    published: photo.published,
+    views: 0,
+  });
+  if (error) throw error;
+}
+
+export async function adminDeletePhoto(id: string) {
+  const { error } = await supabase
+    .from('photos')
     .update({ published: false })
     .eq('id', id);
   if (error) throw error;
@@ -321,7 +382,6 @@ export async function adminListUsers(page: number = 1): Promise<AdminUser[]> {
   }));
 }
 
-// 🔐 FIX #12: Prevent admin from blocking themselves
 export async function adminBlockUser(currentUserId: string, targetUserId: string, blocked: boolean) {
   if (currentUserId === targetUserId) {
     throw new Error('Cannot block yourself');
@@ -354,12 +414,10 @@ export async function adminReplyTicket(id: string, reply: string) {
   if (error) throw error;
 }
 
-// Confirm age
 export async function confirmAge(userId: string) {
   const { error } = await supabase.from('users').update({ age_confirmed: true }).eq('id', userId);
   if (error) throw error;
 }
-// === CONFIGURATION DE LA BANNIÈRE VIDÉO D'ACCUEIL ===
 
 export async function getBannerVideo(): Promise<string> {
   try {
