@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { getVideos, getTrendingVideos, getBannerVideo, type Video } from "@/lib/supabase-db";
+import { getVideos, getTrendingVideos, getBannerVideo, getPhotos, type Video, type Photo } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { Play, TrendingUp, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download } from "lucide-react";
+import { Play, TrendingUp, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const TABS = [
@@ -18,20 +18,20 @@ export function Home() {
   const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
   const [trending, setTrending] = useState<Video[]>([]);
   const [latest, setLatest] = useState<Video[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [bannerVideoUrl, setBannerVideoUrl] = useState<string>("");
   const [isLoadingTrending, setIsLoadingTrending] = useState(true);
   const [isLoadingLatest, setIsLoadingLatest] = useState(true);
-  const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
+  const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
 
-  // ✍️ États pour le typing effect à l'atterrissage sur la page
   const FULL_TEXT = "HAITIAN NUD";
   const [currentText, setCurrentText] = useState("");
 
   useEffect(() => {
     setIsLoadingTrending(true);
     setIsLoadingLatest(true);
+    setIsLoadingPhotos(true);
     
-    // Récupérer la vidéo de bannière
     getBannerVideo().then(url => setBannerVideoUrl(url));
 
     getTrendingVideos().then(v => {
@@ -42,9 +42,12 @@ export function Home() {
       setLatest(v);
       setIsLoadingLatest(false);
     });
+    getPhotos().then(p => {
+      setPhotos(p);
+      setIsLoadingPhotos(false);
+    });
   }, []);
 
-  // 🔄 Effet de machine à écrire exécuté UNE SEULE FOIS jusqu'à complétion
   useEffect(() => {
     if (currentText.length < FULL_TEXT.length) {
       const timeout = setTimeout(() => {
@@ -72,7 +75,6 @@ export function Home() {
       {/* Hero Section */}
       <section className="relative w-full aspect-[4/3] md:aspect-[21/9] max-h-[70vh] bg-black overflow-hidden border-b border-border">
         {bannerVideoUrl ? (
-          // Vidéo de fond en arrière-plan sans contrôles, auto-play et loop infini
           <div className="absolute inset-0 z-0">
             <video
               src={bannerVideoUrl}
@@ -83,12 +85,10 @@ export function Home() {
               controls={false}
               className="w-full h-full object-cover pointer-events-none"
             />
-            {/* Voile dégradé sombre pour préserver la lisibilité parfaite du texte blanc */}
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/30" />
             <div className="absolute inset-0 bg-black/20" />
           </div>
         ) : (
-          // Dégradé par défaut si aucune vidéo n'est enregistrée en administration
           <div className="absolute inset-0">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-background" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(30,94,255,0.25),transparent_60%)]" />
@@ -216,8 +216,39 @@ export function Home() {
           </h2>
 
           {isPhotoTab ? (
-            <div className="py-24 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-              Aucune photo disponible pour l'instant.
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {isLoadingPhotos ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={`photo-sk-${i}`} className="flex flex-col gap-3">
+                    <Skeleton className="aspect-square w-full rounded-xl" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                ))
+              ) : photos && photos.length > 0 ? (
+                photos.map((photo, i) => (
+                  <div key={photo.id} className="group relative rounded-xl overflow-hidden border border-border bg-card animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: `${(i % 4) * 100}ms`, animationFillMode: 'both' }}>
+                    <div className="aspect-square w-full bg-muted relative overflow-hidden">
+                      <img src={photo.imageUrl} alt={photo.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                      {photo.isVip && (
+                        <div className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-md">
+                          <Star className="h-3 w-3 fill-current text-yellow-400" /> VIP
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{photo.title}</h3>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        <span className="bg-accent px-1.5 py-0.5 rounded text-[11px] font-medium">{photo.category}</span>
+                        <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {photo.views}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-24 text-center text-muted-foreground border border-dashed border-border rounded-xl">
+                  Aucune photo disponible pour l'instant.
+                </div>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 gap-y-10">
