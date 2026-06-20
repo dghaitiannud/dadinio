@@ -23,3 +23,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 export const ADMIN_EMAIL = 'dghaitiannud@gmail.com';
+export const LIVE_ADMIN_EMAIL = 'liveadmin@gmail.com'; // 🚀 L'email autorisé à lancer le live
+
