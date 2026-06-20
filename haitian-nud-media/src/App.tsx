@@ -19,6 +19,10 @@ import { ForgotPasswordPage } from "@/pages/forgot-password";
 import { ResetPasswordPage } from "@/pages/reset-password";
 import { DownloadsPage } from "@/pages/downloads";
 
+// 🚀 AJOUTÉ : Importation de vos nouvelles pages de Live et Studio Admin
+import { Live } from "@/pages/live";
+import { AdminLive } from "@/pages/admin-live";
+
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function ScrollToTop() {
@@ -51,11 +55,18 @@ function App() {
                   <Route path="/plans" component={Plans} />
                   <Route path="/account" component={Account} />
                   <Route path="/admin" component={Admin} />
+                  
+                  {/* 🚀 AJOUTÉ : Vos nouvelles routes pour le Live */}
+                  <Route path="/live" component={Live} />
+                  <Route path="/admin-live" component={AdminLive} />
+
                   <Route path="/legal" component={Legal} />
                   <Route path="/login" component={LoginPage} />
                   <Route path="/forgot-password" component={ForgotPasswordPage} />
                   <Route path="/reset-password" component={ResetPasswordPage} />
                   <Route path="/downloads" component={DownloadsPage} />
+                  
+                  {/* Route de secours (404) */}
                   <Route>
                     <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
                       <div className="mb-4 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
