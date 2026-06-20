@@ -359,3 +359,32 @@ export async function confirmAge(userId: string) {
   const { error } = await supabase.from('users').update({ age_confirmed: true }).eq('id', userId);
   if (error) throw error;
 }
+// === CONFIGURATION DE LA BANNIÈRE VIDÉO D'ACCUEIL ===
+
+export async function getBannerVideo(): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('id', 'home_banner_video')
+      .single();
+    if (error || !data) return '';
+    return data.value;
+  } catch (err) {
+    console.error('Erreur getBannerVideo:', err);
+    return '';
+  }
+}
+
+export async function updateBannerVideo(url: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ id: 'home_banner_video', value: url.trim(), updated_at: new Date().toISOString() });
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Erreur updateBannerVideo:', err);
+    throw err;
+  }
+}
