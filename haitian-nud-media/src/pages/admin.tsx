@@ -260,7 +260,7 @@ function PhotosTab() {
       await loadPhotos();
     } catch (err: any) {
       toast.error(err?.message || "Erreur de suppression");
-    } finaly {
+    } finally {
       setDeletePending(null);
     }
   };
