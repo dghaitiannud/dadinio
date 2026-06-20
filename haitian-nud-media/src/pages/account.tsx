@@ -92,7 +92,7 @@ export function Account() {
       try {
         await navigator.share({
           title: "Haïtien Nud Média",
-          text: "Rejoins-moi sur Haïtien Nud Média — médya ayisyen 100%.",
+          text: "Rejoins-moi sur HAITIAN NUD MEDIA",
           url: referralLink,
         });
       } catch { }
