@@ -12,12 +12,15 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone } from "lucide-react";
+// 🚀 AJOUTÉ : "Radio" pour l'icône du bouton Live
+import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { getWatchHistory, clearWatchHistory, getNotifPrefs, setNotifPrefs, type WatchEntry, type NotifPrefs } from "@/lib/local-store";
 import { listMyTickets, createTicket, type SupportTicket } from "@/lib/supabase-db";
 import { PwaInstallButton } from "@/components/pwa-install";
 import { isPushSupported, getPushPermission, subscribeToPush, unsubscribeFromPush, getCurrentSubscription, type PushPermission } from "@/lib/push-notifications";
+// 🚀 AJOUTÉ : Importation des constantes d'administration de messagerie
+import { ADMIN_EMAIL, LIVE_ADMIN_EMAIL } from "@/lib/supabase";
 
 export function Account() {
   const { isSignedIn, user, appUser, signOut, isAdmin, refreshUser } = useAuth();
@@ -165,6 +168,19 @@ export function Account() {
                     >
                       <Shield className="h-4 w-4 mr-2" />
                       Panneau Admin
+                    </Button>
+                  </Link>
+                )}
+
+                {/* 🚀 NOUVEAU : Bouton d'accès au Studio réservé à l'Admin Live secondaire ou au Super Admin */}
+                {(appUser?.email === LIVE_ADMIN_EMAIL || isAdmin) && (
+                  <Link href="/admin-live" className="w-full mt-2">
+                    <Button
+                      variant="outline"
+                      className="w-full bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20"
+                    >
+                      <Radio className="h-4 w-4 mr-2" />
+                      Studio Diffusion Live
                     </Button>
                   </Link>
                 )}
@@ -512,17 +528,5 @@ function PushNotificationCard({ userId }: { userId?: string }) {
         )}
       </CardContent>
     </Card>
-  );
-}
-
-function SettingRow({ label, desc, checked, onChange }: { label: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-start justify-between gap-4 p-3 rounded-lg border border-border bg-background">
-      <div className="flex-1 min-w-0">
-        <div className="font-medium">{label}</div>
-        <div className="text-xs text-muted-foreground">{desc}</div>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </div>
   );
 }
