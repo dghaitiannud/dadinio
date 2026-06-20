@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getVideos, getTrendingVideos, type Video } from "@/lib/supabase-db";
+import { getVideos, getTrendingVideos, getBannerVideo, type Video } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -18,6 +18,7 @@ export function Home() {
   const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
   const [trending, setTrending] = useState<Video[]>([]);
   const [latest, setLatest] = useState<Video[]>([]);
+  const [bannerVideoUrl, setBannerVideoUrl] = useState<string>("");
   const [isLoadingTrending, setIsLoadingTrending] = useState(true);
   const [isLoadingLatest, setIsLoadingLatest] = useState(true);
   const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
@@ -29,6 +30,10 @@ export function Home() {
   useEffect(() => {
     setIsLoadingTrending(true);
     setIsLoadingLatest(true);
+    
+    // Récupérer la vidéo de bannière
+    getBannerVideo().then(url => setBannerVideoUrl(url));
+
     getTrendingVideos().then(v => {
       setTrending(v);
       setIsLoadingTrending(false);
@@ -41,12 +46,10 @@ export function Home() {
 
   // 🔄 Effet de machine à écrire exécuté UNE SEULE FOIS jusqu'à complétion
   useEffect(() => {
-    // Si le texte n'est pas encore complet, on continue d'ajouter des lettres
     if (currentText.length < FULL_TEXT.length) {
       const timeout = setTimeout(() => {
         setCurrentText(FULL_TEXT.substring(0, currentText.length + 1));
-      }, 150); // Vitesse d'écriture calme (150ms par lettre)
-      
+      }, 150);
       return () => clearTimeout(timeout);
     }
   }, [currentText]);
@@ -60,28 +63,43 @@ export function Home() {
 
   const isPhotoTab = activeTab === "photo";
 
-  // Distribution intelligente du texte pour le style bicolore
-  const haitianPart = currentText.substring(0, 8); // "HAITIAN " max
-  const nudPart = currentText.substring(8);       // "NUD"
-
-  // On affiche la barre de curseur clignotante seulement pendant que l'écriture est en cours
+  const haitianPart = currentText.substring(0, 8);
+  const nudPart = currentText.substring(8);
   const isTyping = currentText.length < FULL_TEXT.length;
 
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
       <section className="relative w-full aspect-[4/3] md:aspect-[21/9] max-h-[70vh] bg-black overflow-hidden border-b border-border">
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-background" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(30,94,255,0.25),transparent_60%)]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        </div>
+        {bannerVideoUrl ? (
+          // Vidéo de fond en arrière-plan sans contrôles, auto-play et loop infini
+          <div className="absolute inset-0 z-0">
+            <video
+              src={bannerVideoUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls={false}
+              className="w-full h-full object-cover pointer-events-none"
+            />
+            {/* Voile dégradé sombre pour préserver la lisibilité parfaite du texte blanc */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/30" />
+            <div className="absolute inset-0 bg-black/20" />
+          </div>
+        ) : (
+          // Dégradé par défaut si aucune vidéo n'est enregistrée en administration
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-background" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(30,94,255,0.25),transparent_60%)]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+          </div>
+        )}
         
-        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 lg:p-24 container mx-auto">
+        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 lg:p-24 container mx-auto z-10">
           <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
             <Badge className="mb-4 bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 backdrop-blur-sm">Nouveau sur HAITIAN NUD</Badge>
             
-            {/* Titre animé bicolore fixe après écriture */}
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-8 leading-tight min-h-[50px] md:min-h-[80px]">
               <span>{haitianPart}</span>
               <span className="text-primary">{nudPart}</span>
