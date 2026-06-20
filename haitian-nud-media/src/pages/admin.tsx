@@ -11,13 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Shield, Users, Video as VideoIcon, DollarSign, Download, Ticket, Trash2, Bell, MessageSquare, UserCheck } from "lucide-react";
+import { Shield, Users, Video as VideoIcon, DollarSign, Download, Ticket, Trash2, Bell, MessageSquare, UserCheck, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   getAdminStats, adminListVideos, adminCreateVideo, adminDeleteVideo,
   adminListUsers, adminBlockUser, adminListTickets, adminReplyTicket,
+  getBannerVideo, updateBannerVideo,
   type Video, type AdminUser, type SupportTicket, type AdminStats
 } from "@/lib/supabase-db";
 
@@ -49,16 +50,18 @@ export function Admin() {
       </h1>
       <AdminStatsCards />
       <Tabs defaultValue="videos" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsList className="grid w-full grid-cols-5 mb-6">
           <TabsTrigger value="videos">Vidéos</TabsTrigger>
           <TabsTrigger value="users">Utilisateurs</TabsTrigger>
           <TabsTrigger value="tickets">Messages</TabsTrigger>
           <TabsTrigger value="alerts">Alertes</TabsTrigger>
+          <TabsTrigger value="banner" className="text-primary font-semibold">Bannière</TabsTrigger>
         </TabsList>
         <TabsContent value="videos"><VideosTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="tickets"><TicketsTab /></TabsContent>
         <TabsContent value="alerts"><AdminAlerts /></TabsContent>
+        <TabsContent value="banner"><AdminBannerTab /></TabsContent>
       </Tabs>
     </div>
   );
@@ -227,7 +230,6 @@ function UsersTab() {
     if (!appUser) return;
     setBlockPending(id);
     try {
-      // FIX #12: Pass current admin's userId as first arg to prevent self-block
       await adminBlockUser(appUser.id, id, !currentBlocked);
       toast.success(currentBlocked ? "Utilisateur débloqué" : "Utilisateur bloqué");
       await loadUsers();
@@ -411,5 +413,99 @@ function AdminAlerts() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// ⚙️ NOUVEAU COMPOSANT CRUD POUR LA VIDÉO DE BANNIÈRE (FOND D'ACCUEIL)
+function AdminBannerTab() {
+  const [url, setUrl] = useState("");
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    getBannerVideo().then(res => setUrl(res));
+  }, []);
+
+  const handleSave = async () => {
+    setPending(true);
+    try {
+      await updateBannerVideo(url);
+      toast.success("Vidéo de fond d'accueil mise à jour avec succès !");
+    } catch (e) {
+      toast.error("Erreur lors de l'enregistrement");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleClear = async () => {
+    if (!confirm("Voulez-vous retirer la vidéo de fond et restaurer le thème par défaut ?")) return;
+    setPending(true);
+    try {
+      await updateBannerVideo("");
+      setUrl("");
+      toast.success("Bannière réinitialisée");
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <Card className="bg-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <LayoutTemplate className="h-5 w-5 text-primary" /> Configuration de la Vidéo de Fond d'Accueil
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="banner-url">URL de la vidéo (.mp4 recommandés)</Label>
+          <div className="flex flex-col md:flex-row gap-3">
+            <Input
+              id="banner-url"
+              placeholder="https://lcfnjxqademkrcocvtlo.supabase.co/storage/v1/object/public/..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="flex-1 bg-background"
+            />
+            <div className="flex gap-2">
+              <Button onClick={handleSave} disabled={pending}>
+                {pending ? "Enregistrement..." : "Enregistrer"}
+              </Button>
+              {url && (
+                <Button variant="destructive" onClick={handleClear} disabled={pending}>
+                  Supprimer
+                </Button>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Collez le lien direct vers le fichier vidéo. Il jouera automatiquement en boucle, en silence, sans contrôles de lecture pour l'utilisateur.
+          </p>
+        </div>
+
+        {url && (
+          <div className="space-y-2">
+            <Label>Aperçu du rendu final :</Label>
+            <div className="relative w-full aspect-video md:max-w-xl bg-black rounded-xl overflow-hidden border border-border">
+              <video
+                src={url}
+                autoPlay
+                muted
+                loop
+                playsInline
+                controls={false}
+                className="w-full h-full object-cover pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col justify-end p-4">
+                <span className="text-[11px] uppercase tracking-widest text-primary font-bold">Aperçu direct</span>
+                <h4 className="text-xl font-bold text-white font-serif">HAITIAN NUD</h4>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
