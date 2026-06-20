@@ -446,3 +446,38 @@ export async function updateBannerVideo(url: string): Promise<boolean> {
     throw err;
   }
 }
+// ====================================================
+//  FONCTIONS DE GESTION DU LIVE
+// ====================================================
+
+export interface LiveState {
+  isActive: boolean;
+  streamUrl: string | null;
+}
+
+export async function getLiveStatus(): Promise<LiveState> {
+  try {
+    const { data, error } = await supabase
+      .from('live_status')
+      .select('is_active, stream_url')
+      .eq('id', 1)
+      .single();
+    if (error || !data) return { isActive: false, streamUrl: null };
+    return { isActive: data.is_active, streamUrl: data.stream_url };
+  } catch {
+    return { isActive: false, streamUrl: null };
+  }
+}
+
+export async function updateLiveStatus(isActive: boolean, streamUrl: string | null): Promise<boolean> {
+  const { error } = await supabase
+    .from('live_status')
+    .update({
+      is_active: isActive,
+      stream_url: isActive ? streamUrl : null,
+      started_at: isActive ? new Date().toISOString() : null
+    })
+    .eq('id', 1);
+  if (error) throw error;
+  return true;
+}
