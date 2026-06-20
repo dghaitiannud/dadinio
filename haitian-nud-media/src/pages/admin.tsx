@@ -11,15 +11,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Shield, Users, Video as VideoIcon, DollarSign, Download, Ticket, Trash2, Bell, MessageSquare, UserCheck, LayoutTemplate } from "lucide-react";
+import { Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, Ticket, Trash2, Bell, MessageSquare, UserCheck, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import {
   getAdminStats, adminListVideos, adminCreateVideo, adminDeleteVideo,
+  adminListPhotos, adminCreatePhoto, adminDeletePhoto,
   adminListUsers, adminBlockUser, adminListTickets, adminReplyTicket,
   getBannerVideo, updateBannerVideo,
-  type Video, type AdminUser, type SupportTicket, type AdminStats
+  type Video, type Photo, type AdminUser, type SupportTicket, type AdminStats
 } from "@/lib/supabase-db";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -50,14 +51,16 @@ export function Admin() {
       </h1>
       <AdminStatsCards />
       <Tabs defaultValue="videos" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-5 mb-6">
+        <TabsList className="grid w-full grid-cols-6 mb-6">
           <TabsTrigger value="videos">Vidéos</TabsTrigger>
+          <TabsTrigger value="photos">Photos</TabsTrigger>
           <TabsTrigger value="users">Utilisateurs</TabsTrigger>
           <TabsTrigger value="tickets">Messages</TabsTrigger>
           <TabsTrigger value="alerts">Alertes</TabsTrigger>
           <TabsTrigger value="banner" className="text-primary font-semibold">Bannière</TabsTrigger>
         </TabsList>
         <TabsContent value="videos"><VideosTab /></TabsContent>
+        <TabsContent value="photos"><PhotosTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="tickets"><TicketsTab /></TabsContent>
         <TabsContent value="alerts"><AdminAlerts /></TabsContent>
@@ -75,13 +78,14 @@ function AdminStatsCards() {
   }, []);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
       <StatCard title="Utilisateurs" value={stats?.totalUsers || 0} icon={Users} />
       <StatCard title="Membres VIP" value={stats?.activeVip || 0} icon={DollarSign} color="text-yellow-500" />
       <StatCard title="Vidéos" value={stats?.totalVideos || 0} icon={VideoIcon} />
+      <StatCard title="Photos" value={stats?.totalPhotos || 0} icon={ImageIcon} color="text-emerald-500" />
       <StatCard title="Vues" value={stats?.totalViews || 0} icon={Shield} />
       <StatCard title="Téléchargements" value={stats?.totalDownloads || 0} icon={Download} />
-      <StatCard title="Tickets Ouverts" value={stats?.openTickets || 0} icon={Ticket} color="text-destructive" />
+      <StatCard title="Tickets" value={stats?.openTickets || 0} icon={Ticket} color="text-destructive" />
     </div>
   );
 }
@@ -109,9 +113,7 @@ function VideosTab() {
 
   const buildCategory = () => `${contentType.trim()} ${year}`.trim();
 
-  useEffect(() => {
-    loadVideos();
-  }, []);
+  useEffect(() => { loadVideos(); }, []);
 
   const loadVideos = async () => {
     const v = await adminListVideos();
@@ -212,14 +214,122 @@ function VideosTab() {
   );
 }
 
+// 🔐 NOUVEAU COMPOSANT : Gestion des Photos dans l'Admin
+function PhotosTab() {
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [open, setOpen] = useState(false);
+  const [contentType, setContentType] = useState("");
+  const [year, setYear] = useState(String(CURRENT_YEAR));
+  const [formData, setFormData] = useState({ title: "", description: "", imageUrl: "", isVip: false, published: true });
+  const [createPending, setCreatePending] = useState(false);
+  const [deletePending, setDeletePending] = useState<string | null>(null);
+
+  const buildCategory = () => `${contentType.trim()} ${year}`.trim();
+
+  useEffect(() => { loadPhotos(); }, []);
+
+  const loadPhotos = async () => {
+    const p = await adminListPhotos();
+    setPhotos(p);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatePending(true);
+    try {
+      await adminCreatePhoto({ ...formData, category: buildCategory() });
+      toast.success("Photo ajoutée avec succès !");
+      setOpen(false);
+      setFormData({ title: "", description: "", imageUrl: "", isVip: false, published: true });
+      setContentType("");
+      setYear(String(CURRENT_YEAR));
+      await loadPhotos();
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur lors de l'ajout");
+    } finaly {
+      setCreatePending(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Retirer cette photo de la galerie ?")) return;
+    setDeletePending(id);
+    try {
+      await adminDeletePhoto(id);
+      toast.success("Photo archivée");
+      await loadPhotos();
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur de suppression");
+    } finaly {
+      setDeletePending(null);
+    }
+  };
+
+  return (
+    <Card className="bg-card">
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <CardTitle>Gestion de la Galerie Photo</CardTitle>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild><Button>Ajouter une photo</Button></DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader><DialogTitle>Nouvelle Photo</DialogTitle></DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Titre de l'image</Label>
+                <Input required value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Catégorie</Label>
+                  <Input required placeholder="ex: Shooting, Model, Event..." value={contentType} onChange={e => setContentType(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Année</Label>
+                  <Select value={year} onValueChange={setYear}>
+                    <SelectTrigger><SelectValue placeholder="Année" /></SelectTrigger>
+                    <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="px-3 py-2 bg-muted rounded-lg text-sm text-muted-foreground">Catégorie finale : <span className="font-semibold text-foreground">{buildCategory() || "—"}</span></div>
+              <div className="space-y-2"><Label>Description / Légende</Label><Textarea required value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
+              <div className="space-y-2"><Label>URL de la Photo</Label><Input required value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} placeholder="Lien Supabase storage ou externe..." /></div>
+              <div className="flex gap-6 mt-2">
+                <div className="flex items-center gap-2"><Switch checked={formData.isVip} onCheckedChange={c => setFormData({ ...formData, isVip: c })} /><Label>Contenu VIP</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={formData.published} onCheckedChange={c => setFormData({ ...formData, published: c })} /><Label>Publier immédiatement</Label></div>
+              </div>
+              <Button type="submit" disabled={createPending} className="w-full mt-4">{createPending ? "Envoi..." : "Ajouter la photo"}</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader><TableRow><TableHead>Aperçu</TableHead><TableHead>Titre</TableHead><TableHead>Catégorie</TableHead><TableHead>Vues</TableHead><TableHead>VIP</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableBody>
+            {photos.map((p) => (
+              <TableRow key={p.id}>
+                <TableCell><img src={p.imageUrl} alt="" className="w-10 h-10 object-cover rounded border" /></TableCell>
+                <TableCell className="font-medium">{p.title}</TableCell>
+                <TableCell><span className="px-2 py-1 bg-accent text-accent-foreground rounded text-xs">{p.category}</span></TableCell>
+                <TableCell>{p.views}</TableCell>
+                <TableCell>{p.isVip ? "Oui" : "Non"}</TableCell>
+                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} disabled={deletePending === p.id} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
 function UsersTab() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [blockPending, setBlockPending] = useState<string | null>(null);
   const { appUser } = useAuth();
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  useEffect(() => { loadUsers(); }, []);
 
   const loadUsers = async () => {
     const u = await adminListUsers();
@@ -269,9 +379,7 @@ function TicketsTab() {
   const [replyText, setReplyText] = useState("");
   const [replyPending, setReplyPending] = useState(false);
 
-  useEffect(() => {
-    loadTickets();
-  }, []);
+  useEffect(() => { loadTickets(); }, []);
 
   const loadTickets = async () => {
     const t = await adminListTickets();
@@ -416,14 +524,11 @@ function AdminAlerts() {
   );
 }
 
-// ⚙️ NOUVEAU COMPOSANT CRUD POUR LA VIDÉO DE BANNIÈRE (FOND D'ACCUEIL)
 function AdminBannerTab() {
   const [url, setUrl] = useState("");
   const [pending, setPending] = useState(false);
 
-  useEffect(() => {
-    getBannerVideo().then(res => setUrl(res));
-  }, []);
+  useEffect(() => { getBannerVideo().then(res => setUrl(res)); }, []);
 
   const handleSave = async () => {
     setPending(true);
