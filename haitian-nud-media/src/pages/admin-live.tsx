@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Radio, Video, VideoOff, Send, Users, ShieldAlert } from "lucide-react";
+import { Radio, Video, VideoOff, Send, Users, ShieldAlert, Camera, CameraOff } from "lucide-react";
 import { toast } from "sonner";
 
 interface ChatMessage {
@@ -25,6 +25,10 @@ export function AdminLive() {
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // 🚀 ÉTATS AJOUTÉS POUR LE WEBRTC / CAMÉRA DU SMARTPHONE
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement>(null);
 
   // Sécurité d'accès stricte : Il faut être connecté ET posséder l'un des deux emails admins
   const hasAccess = isAdmin || (appUser?.email === LIVE_ADMIN_EMAIL || appUser?.email === ADMIN_EMAIL);
@@ -54,6 +58,10 @@ export function AdminLive() {
 
     return () => {
       supabase.removeChannel(liveChannel);
+      // Nettoyer la caméra si l'admin quitte la page
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
     };
   }, [isSignedIn, hasAccess]);
 
@@ -63,6 +71,42 @@ export function AdminLive() {
 
   if (!isSignedIn) return <Redirect to="/login" />;
   if (!hasAccess) return <Redirect to="/" />;
+
+  // 🚀 FONCTION MAGIQUE : Déclenche le pop-up Android d'autorisation Caméra/Micro
+  const handleToggleCamera = async () => {
+    if (localStream) {
+      // Éteindre la caméra
+      localStream.getTracks().forEach(track => track.stop());
+      setLocalStream(null);
+      toast.info("Caméra et micro désactivés.");
+    } else {
+      // Allumer la caméra
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: "user", // "user" = caméra avant, changez par "environment" pour la caméra arrière
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: true
+        });
+        
+        setLocalStream(stream);
+        toast.success("Caméra et micro activés ! Pop-up accepté.");
+
+        // Lier le flux vidéo à notre balise d'aperçu
+        setTimeout(() => {
+          if (videoPreviewRef.current) {
+            videoPreviewRef.current.srcObject = stream;
+          }
+        }, 100);
+
+      } catch (err: any) {
+        console.error("Erreur d'accès aux médias :", err);
+        toast.error("Impossible d'accéder à la caméra. Vérifiez les autorisations de votre navigateur.");
+      }
+    }
+  };
 
   // Lancer le flux en direct
   const handleStartLive = async () => {
@@ -97,6 +141,12 @@ export function AdminLive() {
     try {
       await updateLiveStatus(false, null);
       setIsActive(false);
+
+      // Éteindre la caméra physique si elle tournait encore
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+      }
 
       // Diffuser l'arrêt immédiat aux clients
       await supabase.channel("live_interactions").send({
@@ -159,10 +209,49 @@ export function AdminLive() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
+              
+              {/* 🚀 NOUVEAU : Bouton matériel pour activer les capteurs physiques du smartphone */}
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-muted-foreground">URL de streaming (.m3u8, .mp4, ou WebRTC)</label>
+                <label className="text-xs font-semibold text-muted-foreground">Étape 1 : Activer le matériel</label>
+                <Button
+                  type="button"
+                  variant={localStream ? "secondary" : "outline"}
+                  onClick={handleToggleCamera}
+                  disabled={isActive || loading}
+                  className="w-full flex items-center justify-center gap-2 text-xs font-semibold"
+                >
+                  {localStream ? (
+                    <>
+                      <CameraOff className="h-4 w-4 text-amber-500" /> Éteindre la caméra du téléphone
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="h-4 w-4 text-blue-500" /> Demander l'accès Caméra & Micro (Pop-up)
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Retour vidéo en direct de la caméra de l'admin */}
+              {localStream && (
+                <div className="relative rounded-lg overflow-hidden bg-black aspect-video w-full border border-border shadow-inner">
+                  <video
+                    ref={videoPreviewRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-[10px] text-white px-2 py-0.5 rounded font-mono uppercase tracking-wider">
+                    Aperçu caméra locale
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-muted-foreground">Étape 2 : URL de streaming (.m3u8, .mp4, ou WebRTC)</label>
                 <Input
-                  placeholder="https://exemple.com/live/stream.m3u8"
+                  placeholder="Ex: wss://haitiannud-9jux3tyw.livekit.cloud ou lien .m3u8"
                   value={streamUrl}
                   onChange={(e) => setStreamUrl(e.target.value)}
                   disabled={isActive || loading}
@@ -198,8 +287,8 @@ export function AdminLive() {
             <CardContent className="p-4 flex gap-3 items-start text-xs text-muted-foreground">
               <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-bold text-foreground">Rappel de diffusion sécurisée</p>
-                <p>En tant qu'administrateur de streaming, assurez-vous que votre logiciel encodeur (OBS Studio, Larix Broadcaster, etc.) est actif et pousse le flux vers votre URL réseau avant de cliquer sur "Lancer la diffusion publique".</p>
+                <p className="font-bold text-foreground">Rappel du protocole WebRTC</p>
+                <p>Pour diffuser sans logiciel tiers, cliquez sur le bouton de caméra ci-dessus, puis collez votre URL de serveur dans le champ réseau avant d'activer le live public.</p>
               </div>
             </CardContent>
           </Card>
