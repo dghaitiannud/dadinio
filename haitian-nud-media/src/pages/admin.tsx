@@ -246,7 +246,7 @@ function PhotosTab() {
       await loadPhotos();
     } catch (err: any) {
       toast.error(err?.message || "Erreur lors de l'ajout");
-    } finaly {
+    } finally {
       setCreatePending(false);
     }
   };
