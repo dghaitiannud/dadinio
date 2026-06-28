@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@mux/mux-player-react": "^3.13.0"
+  }
+}
