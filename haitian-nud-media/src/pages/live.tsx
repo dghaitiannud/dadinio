@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Redirect } from "wouter";
 import { supabase } from "@/lib/supabase";
-import { getLiveStatus, type LiveState } from "@/lib/supabase-db";
+import MuxPlayer from "@mux/mux-player-react"; // 1. IMPORT DU LECTEUR PRO MUX
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,14 +24,14 @@ interface ChatMessage {
 
 export function Live() {
   const { isSignedIn, appUser } = useAuth();
-  const [liveInfo, setLiveInfo] = useState<LiveState>({ isActive: false, streamUrl: null });
+  const [isActive, setIsActive] = useState(false); // Gestion directe de l'état
+  const [playbackId, setPlaybackId] = useState<string | null>(null); // Stockage du Playback ID
   const [isMuted, setIsMuted] = useState(false);
   const [reactions, setReactions] = useState<FloatingReaction[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [viewerCount, setViewerCount] = useState(1);
   
-  const videoRef = useRef<HTMLVideoElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Redirection stricte si non connecté
@@ -40,10 +40,47 @@ export function Live() {
   }
 
   useEffect(() => {
-    // 1. Récupération initiale du statut du live
-    getLiveStatus().then(setLiveInfo);
+    // 2. RÉCUPÉRATION DIRECTE DEPUIS TA TABLE SUPABASE NETTOYÉE
+    async function fetchLiveSettings() {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("id", "live_playback_id")
+        .single();
 
-    // 2. Écoute temps réel Supabase Realtime (Statut du live & Interactions)
+      if (data && data.value) {
+        setPlaybackId(data.value);
+        setIsActive(true);
+      } else {
+        setIsActive(false);
+        setPlaybackId(null);
+      }
+    }
+
+    fetchLiveSettings();
+
+    // 3. ÉCOUTE EN TEMPS RÉEL DU CHANGEMENT DE LA BASE DE DONNÉES (SUPABASE REALTIME)
+    const settingsSubscription = supabase
+      .channel("public:app_settings")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.live_playback_id" },
+        (payload) => {
+          const newValue = payload.new.value;
+          if (newValue) {
+            setPlaybackId(newValue);
+            setIsActive(true);
+            toast.success("Le live commence !");
+          } else {
+            setIsActive(false);
+            setPlaybackId(null);
+            toast.info("Le live s'est terminé.");
+          }
+        }
+      )
+      .subscribe();
+
+    // Écoute des interactions (chat & réactions)
     const liveChannel = supabase.channel("live_interactions", {
       config: { broadcast: { self: false } },
     });
@@ -55,13 +92,10 @@ export function Live() {
       .on("broadcast", { event: "comment" }, ({ payload }) => {
         setMessages((prev) => [...prev, payload]);
       })
-      .on("broadcast", { event: "status_changed" }, ({ payload }) => {
-        setLiveInfo({ isActive: payload.isActive, streamUrl: payload.streamUrl });
-        if (!payload.isActive) toast.info("Le live s'est terminé.");
-      })
       .subscribe();
 
     return () => {
+      supabase.removeChannel(settingsSubscription);
       supabase.removeChannel(liveChannel);
     };
   }, []);
@@ -74,7 +108,7 @@ export function Live() {
   // Déclencher l'affichage visuel d'une réaction volante
   const triggerLocalReaction = (emoji: string) => {
     const id = Date.now() + Math.random();
-    const left = Math.random() * 60 + 20; // Position aléatoire horizontale en %
+    const left = Math.random() * 60 + 20;
     setReactions((prev) => [...prev, { id, emoji, left }]);
     setTimeout(() => {
       setReactions((prev) => prev.filter((r) => r.id !== id));
@@ -116,14 +150,13 @@ export function Live() {
     <div className="container mx-auto px-2 py-4 max-w-6xl pb-24 md:pb-8 min-h-[90vh] flex flex-col lg:flex-row gap-4">
       {/* Colonne Lecteur Vidéo */}
       <div className="flex-1 flex flex-col justify-between relative bg-black rounded-xl overflow-hidden aspect-video lg:aspect-auto lg:h-[75vh] border border-border">
-        {liveInfo.isActive ? (
+        {isActive && playbackId ? (
           <div className="relative w-full h-full bg-black">
-            {/* Lecteur vidéo standard gérant les flux mobiles */}
-            <video
-              ref={videoRef}
-              src={liveInfo.streamUrl || ""}
+            {/* 4. REMPLACEMENT PAR LE LECTEUR HAUTE PERFORMANCE MUX */}
+            <MuxPlayer
+              playbackId={playbackId}
+              streamType="live"
               autoPlay
-              playsInline
               muted={isMuted}
               className="w-full h-full object-contain"
             />
@@ -142,14 +175,14 @@ export function Live() {
             <Button
               variant="secondary"
               size="icon"
-              className="absolute bottom-4 left-4 rounded-full bg-black/50 text-white backdrop-blur-sm border-0 hover:bg-black/70"
+              className="absolute bottom-4 left-4 rounded-full bg-black/50 text-white backdrop-blur-sm border-0 hover:bg-black/70 z-10"
               onClick={() => setIsMuted(!isMuted)}
             >
               {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center flex-1 text-center p-8 bg-neutral-900 text-neutral-400 h-full">
+          <div className="flex flex-col items-center justify-center flex-1 text-center p-8 bg-neutral-900 text-neutral-400 h-full w-full architecture-placeholder">
             <Radio className="h-12 w-12 text-neutral-600 mb-4 animate-bounce" />
             <h3 className="text-xl font-bold text-white">Aucun live en cours</h3>
             <p className="text-sm mt-2 max-w-sm">Revenez plus tard ou attendez le signal de l'administrateur.</p>
@@ -216,7 +249,7 @@ export function Live() {
             maxLength={150}
             className="bg-background"
           />
-          <Button type="submit" size="icon" disabled={!inputText.trim() || !liveInfo.isActive}>
+          <Button type="submit" size="icon" disabled={!inputText.trim() || !isActive}>
             <Send className="h-4 w-4" />
           </Button>
         </form>
