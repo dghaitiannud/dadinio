@@ -79,7 +79,7 @@ export function AdminLive() {
             streamType="live"
             autoPlay
             muted
-            preferCmcd="low-latency" 
+            preferCmcd="low" 
             maxLiveSyncPlaybackRate={2}
             placeholder=""
             className="w-full h-full object-cover"
