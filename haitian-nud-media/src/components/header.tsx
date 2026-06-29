@@ -1,6 +1,6 @@
-import { useState } from "react"; // AJOUTÉ
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, Home, Star, User, Menu, LogOut } from "lucide-react";
+import { Search, Home, Star, User, Menu, LogOut, Radio } from "lucide-react"; // AJOUTÉ : Radio
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
@@ -12,7 +12,6 @@ export function Header() {
   const [location] = useLocation();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
   
-  // NOUVEAU : État pour contrôler l'ouverture/fermeture du menu mobile
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -24,7 +23,6 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          {/* MODIFIÉ : open et onOpenChange liés à notre état */}
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden mr-2">
@@ -37,7 +35,6 @@ export function Header() {
                 <SheetTitle className="text-left font-serif text-xl">HAITIAN NUD</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col gap-4 mt-8">
-                {/* MODIFIÉ : Chaque lien ferme le menu au clic */}
                 <Link href="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg hover:text-primary transition-colors">
                   <Home className="h-5 w-5" /> Accueil
                 </Link>
@@ -47,6 +44,14 @@ export function Header() {
                 <Link href="/plans" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg hover:text-primary transition-colors">
                   <Star className="h-5 w-5" /> Devenir VIP
                 </Link>
+                
+                {/* AJOUTÉ : Lien Live dans le menu Mobile pour les connectés */}
+                {isSignedIn && (
+                  <Link href="/live" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg text-red-500 font-semibold hover:text-red-600 transition-colors">
+                    <Radio className="h-5 w-5" /> En Direct
+                  </Link>
+                )}
+
                 <div className="mt-4 pt-4 border-t border-border">
                   {isSignedIn ? (
                     <>
@@ -76,6 +81,7 @@ export function Header() {
           </Link>
         </div>
 
+        {/* MODIFIÉ : Menu PC avec l'onglet "En Direct" si l'utilisateur est connecté */}
         <nav className="hidden md:flex items-center gap-6">
           <Link href="/" className={`text-sm font-medium transition-colors hover:text-primary ${location === '/' ? 'text-primary' : 'text-muted-foreground'}`}>
             Accueil
@@ -86,6 +92,11 @@ export function Header() {
           <Link href="/plans" className={`text-sm font-medium transition-colors hover:text-primary ${location === '/plans' ? 'text-primary' : 'text-muted-foreground'}`}>
             VIP
           </Link>
+          {isSignedIn && (
+            <Link href="/live" className={`text-sm font-semibold transition-colors flex items-center gap-1.5 hover:text-red-500 ${location === '/live' ? 'text-red-500' : 'text-muted-foreground'}`}>
+              <Radio className="h-4 w-4 animate-pulse text-red-500" /> En Direct
+            </Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-4">

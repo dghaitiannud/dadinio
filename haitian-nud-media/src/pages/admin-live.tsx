@@ -31,7 +31,7 @@ export function AdminLive() {
   const handleStartLive = async () => {
     setLoading(true);
     // REMPLACE PAR TON ID DE LECTURE (PLAYBACK ID) GÉNÉRÉ PAR MUX
-    const currentPlaybackId = "HP01vXCqfBsVBLhCowJhkX3RRenWDNqER2009yZrUBkYg"; 
+    const currentPlaybackId = "hOHyJBsghEMe9mVy6lX7hecK1lBitndcOtMO9uttXtw"; 
 
     const { error } = await supabase
       .from('app_settings')
