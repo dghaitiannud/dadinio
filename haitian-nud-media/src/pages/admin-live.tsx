@@ -16,7 +16,7 @@ export function AdminLive() {
       const { data, error } = await supabase
         .from('app_settings') // Assure-toi que le nom de la table correspond
         .select('value')
-        .eq('key', 'live_playback_id')
+        .eq('id', 'live_playback_id')
         .single();
 
       if (data && data.value) {
@@ -36,7 +36,7 @@ export function AdminLive() {
     const { error } = await supabase
       .from('app_settings')
       .update({ value: currentPlaybackId })
-      .eq('key', 'live_playback_id');
+      .eq('id', 'live_playback_id');
 
     if (!error) {
       setPlaybackId(currentPlaybackId);
@@ -51,7 +51,7 @@ export function AdminLive() {
     const { error } = await supabase
       .from('app_settings')
       .update({ value: null })
-      .eq('key', 'live_playback_id');
+      .eq('id', 'live_playback_id');
 
     if (!error) {
       setPlaybackId('');
