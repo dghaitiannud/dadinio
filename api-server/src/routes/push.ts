@@ -1,14 +1,17 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import webpush from "web-push";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js"; // <-- L'import manquant rajouté ici
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-const SUPABASE_URL = process.env.SUPABASE_URL || "";
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
+const env = (globalThis as any).process?.env || {};
+
+const VAPID_PUBLIC_KEY = env.VAPID_PUBLIC_KEY || "";
+const VAPID_PRIVATE_KEY = env.VAPID_PRIVATE_KEY || "";
+const SUPABASE_URL = env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_KEY = env.SUPABASE_SERVICE_KEY || "";
+const PUSH_ADMIN_SECRET = env.PUSH_ADMIN_SECRET || "";
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
@@ -19,11 +22,16 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
 }
 
 function getSupabase() {
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  });
 }
 
 // GET /api/push/vapid-public-key
-router.get("/push/vapid-public-key", (_req, res) => {
+router.get("/push/vapid-public-key", (_req: Request, res: Response) => {
   if (!VAPID_PUBLIC_KEY) {
     res.status(503).json({ error: "Push notifications not configured" });
     return;
@@ -32,8 +40,7 @@ router.get("/push/vapid-public-key", (_req, res) => {
 });
 
 // POST /api/push/subscribe
-// Body: { subscription: PushSubscription, userId?: string }
-router.post("/push/subscribe", async (req, res) => {
+router.post("/push/subscribe", async (req: Request, res: Response) => {
   const { subscription, userId } = req.body;
   if (!subscription?.endpoint) {
     res.status(400).json({ error: "Invalid subscription" });
@@ -46,7 +53,7 @@ router.post("/push/subscribe", async (req, res) => {
       endpoint: subscription.endpoint,
       p256dh: subscription.keys?.p256dh,
       auth: subscription.keys?.auth,
-      user_id: userId || null,
+      user_id: userId ? String(userId) : null,
       updated_at: new Date().toISOString(),
     }, { onConflict: "endpoint" });
 
@@ -58,8 +65,7 @@ router.post("/push/subscribe", async (req, res) => {
 });
 
 // POST /api/push/unsubscribe
-// Body: { endpoint: string }
-router.post("/push/unsubscribe", async (req, res) => {
+router.post("/push/unsubscribe", async (req: Request, res: Response) => {
   const { endpoint } = req.body;
   if (!endpoint) {
     res.status(400).json({ error: "endpoint required" });
@@ -76,12 +82,11 @@ router.post("/push/unsubscribe", async (req, res) => {
 });
 
 // POST /api/push/send
-// Body: { title, body, url?, icon?, adminSecret }
-router.post("/push/send", async (req, res) => {
+router.post("/push/send", async (req: Request, res: Response) => {
   const { title, body, url, icon, adminSecret } = req.body;
 
-  // Simple secret check
-  if (adminSecret !== process.env.PUSH_ADMIN_SECRET) {
+  // Comparaison propre nettoyée des espaces
+  if (!PUSH_ADMIN_SECRET || !adminSecret || adminSecret.trim() !== PUSH_ADMIN_SECRET.trim()) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -100,7 +105,7 @@ router.post("/push/send", async (req, res) => {
     const supabase = getSupabase();
     const { data: subs } = await supabase.from("push_subscriptions").select("*");
     if (!subs || subs.length === 0) {
-      res.json({ ok: true, sent: 0, total: 0 });
+      res.json({ ok: true, sent: 0, total: 0, failed: 0 });
       return;
     }
 
@@ -111,6 +116,7 @@ router.post("/push/send", async (req, res) => {
     await Promise.allSettled(
       subs.map(async (sub: any) => {
         try {
+          if (!sub.endpoint) return;
           await webpush.sendNotification(
             {
               endpoint: sub.endpoint,
@@ -121,7 +127,6 @@ router.post("/push/send", async (req, res) => {
           sent++;
         } catch (err: any) {
           logger.warn({ endpoint: sub.endpoint, err: err.message }, "Failed to send push");
-          // If subscription expired (410 Gone), remove it
           if (err.statusCode === 410 || err.statusCode === 404) {
             failed.push(sub.endpoint);
           }
@@ -129,7 +134,6 @@ router.post("/push/send", async (req, res) => {
       })
     );
 
-    // Cleanup expired subscriptions
     if (failed.length > 0) {
       await supabase.from("push_subscriptions").delete().in("endpoint", failed);
     }
