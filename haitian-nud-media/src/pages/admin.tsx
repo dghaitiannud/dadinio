@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, Ticket, Trash2, Bell, MessageSquare, UserCheck, LayoutTemplate } from "lucide-react";
+import { Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, Ticket, Trash2, Bell, UserCheck, LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -214,7 +214,6 @@ function VideosTab() {
   );
 }
 
-// 🔐 NOUVEAU COMPOSANT : Gestion des Photos dans l'Admin
 function PhotosTab() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [open, setOpen] = useState(false);
@@ -437,6 +436,7 @@ function TicketsTab() {
   );
 }
 
+// 🔔 COMPOSANT ALERTES CORRIGÉ : Utilise fetch direct pour éviter l'erreur 403
 function AdminAlerts() {
   const [title, setTitle] = useState("Nouvelle vidéo disponible !");
   const [body, setBody] = useState("Une nouvelle vidéo vient d'être publiée sur Haïtien Nud Média. Viens voir !");
@@ -447,17 +447,37 @@ function AdminAlerts() {
 
   const handleSend = async () => {
     if (!title || !body) { toast.error("Titre et message requis"); return; }
-    if (!secret) { toast.error("Le secret admin est requis"); return; }
+    if (!secret) { toast.error("Le secret admin is requis"); return; }
+    
     setSending(true);
     setResult(null);
+    
     try {
-      const { sendPushToAll } = await import("@/lib/push-notifications");
-      const res = await sendPushToAll(secret, title, body, url);
-      if (!res) throw new Error("Erreur de connexion au serveur");
+      const response = await fetch("/api/push/send", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          body,
+          url,
+          icon: "/logo.jpg",
+          adminSecret: secret.trim()
+        })
+      });
+
+      const res = await response.json();
+
+      if (!response.ok) {
+        throw new Error(res.details || res.error || "Erreur de validation serveur");
+      }
+
       setResult(res);
-      toast.success(`${res.sent}/${res.total} notifications envoyées`);
+      toast.success(`${res.sent}/${res.total} notifications envoyées avec succès !`);
     } catch (e: any) {
-      toast.error(e?.message || "Erreur d'envoi");
+      console.error("Erreur push détaillée:", e);
+      toast.error(e?.message || "Erreur d'envoi de la notification");
     } finally {
       setSending(false);
     }

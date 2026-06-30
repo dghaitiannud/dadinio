@@ -2,25 +2,36 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
 
+const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+const adminSecretEnv = process.env.PUSH_ADMIN_SECRET;
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // En-têtes CORS obligatoires pour les requêtes du panel d'administration
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { title, body, url, icon, adminSecret } = req.body ?? {};
 
-  if (adminSecret !== process.env.PUSH_ADMIN_SECRET) {
-    return res.status(403).json({ error: "Forbidden" });
+  // Sécurité renforcée : Comparaison nettoyée des espaces invisibles (.trim)
+  if (!adminSecretEnv || !adminSecret || adminSecret.trim() !== adminSecretEnv.trim()) {
+    return res.status(403).json({ error: "Forbidden - Secret incorrect" });
   }
 
   if (!title || !body) {
     return res.status(400).json({ error: "title and body required" });
   }
-
-  const vapidPublic = process.env.VAPID_PUBLIC_KEY;
-  const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
   if (!vapidPublic || !vapidPrivate) {
     return res.status(503).json({ error: "VAPID keys not configured" });
@@ -36,7 +47,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   );
 
   try {
-    const supabase = createClient(supabaseUrl || 'https://lcfnjxqademkrcocvtlo.supabase.co', supabaseKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjZm5qeHFhZGVta3Jjb2N2dGxvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTY3NzU0OCwiZXhwIjoyMDk3MjUzNTQ4fQ.tHEKo3Wt1iCGRGXJcc_JatAFoTdRqsonAqhMXkhzfYk');
+    // Configuration sécurisée sans localStorage pour Vercel Node
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
+
     const { data: subs, error: fetchError } = await supabase
       .from("push_subscriptions")
       .select("*");
@@ -59,13 +77,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await Promise.allSettled(
       subs.map(async (sub: any) => {
         try {
+          if (!sub.endpoint) return;
           await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            { 
+              endpoint: sub.endpoint, 
+              keys: { p256dh: sub.p256dh, auth: sub.auth } 
+            },
             payload
           );
           sent++;
         } catch (err: any) {
-          console.warn("push failed:", sub.endpoint, err?.statusCode);
+          console.warn("push failed for endpoint:", sub.endpoint, err?.statusCode);
           if (err?.statusCode === 410 || err?.statusCode === 404) {
             expired.push(sub.endpoint);
           }
@@ -80,6 +102,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.json({ ok: true, sent, total: subs.length, failed: expired.length });
   } catch (err: any) {
     console.error("push/send error:", err);
-    return res.status(500).json({ error: "Failed to send notifications" });
+    return res.status(500).json({ error: "Failed to send notifications", details: err?.message });
   }
 }
