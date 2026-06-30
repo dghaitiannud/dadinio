@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js"; // <-- L'import manquant rajouté ici
 import { logger } from "../lib/logger";
+import { createClient } from '@supabase/supabase-client'; // ou le chemin vers ton fichier db local
 
 const router: IRouter = Router();
 
