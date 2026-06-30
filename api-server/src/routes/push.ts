@@ -1,8 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import webpush from "web-push";
-import { createClient } from "@supabase/supabase-js"; // <-- L'import manquant rajouté ici
+import { createClient } from "@supabase/supabase-js"; 
 import { logger } from "../lib/logger";
-import { createClient } from '@supabase/supabase-client'; // ou le chemin vers ton fichier db local
 
 const router: IRouter = Router();
 
@@ -85,6 +84,12 @@ router.post("/push/unsubscribe", async (req: Request, res: Response) => {
 // POST /api/push/send
 router.post("/push/send", async (req: Request, res: Response) => {
   const { title, body, url, icon, adminSecret } = req.body;
+
+  // 🔴 BLOC DE DÉBOGAGE POUR EXPRESS API-SERVER LOGS
+  console.log("=== EXPRESS BACKEND PUSH DEBUG ===");
+  console.log("Secret reçu (adminSecret) :", adminSecret ? `"${adminSecret}"` : "VIDE");
+  console.log("Secret attendu (PUSH_ADMIN_SECRET) :", PUSH_ADMIN_SECRET ? `"${PUSH_ADMIN_SECRET}"` : "VIDE");
+  console.log("==================================");
 
   // Comparaison propre nettoyée des espaces
   if (!PUSH_ADMIN_SECRET || !adminSecret || adminSecret.trim() !== PUSH_ADMIN_SECRET.trim()) {

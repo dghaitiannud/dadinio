@@ -24,6 +24,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { title, body, url, icon, adminSecret } = req.body ?? {};
 
+  // 🔴 BLOC DE DÉBOGAGE POUR VERCEL RUNTIME LOGS
+  console.log("=== VERCEL PUSH DEBUG ===");
+  console.log("Secret saisi sur l'Admin (adminSecret) :", adminSecret ? `"${adminSecret}"` : "VIDE");
+  console.log("Secret configuré sur Vercel (adminSecretEnv) :", adminSecretEnv ? `"${adminSecretEnv}"` : "NON CONFIGURÉ / UNDEFINED");
+  console.log("Match direct après trim() :", (adminSecret && adminSecretEnv) ? adminSecret.trim() === adminSecretEnv.trim() : false);
+  console.log("=========================");
+
   // Sécurité renforcée : Comparaison nettoyée des espaces invisibles (.trim)
   if (!adminSecretEnv || !adminSecret || adminSecret.trim() !== adminSecretEnv.trim()) {
     return res.status(403).json({ error: "Forbidden - Secret incorrect" });
