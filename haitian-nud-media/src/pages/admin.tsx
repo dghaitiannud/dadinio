@@ -436,7 +436,6 @@ function TicketsTab() {
   );
 }
 
-// 🔔 COMPOSANT ALERTES CORRIGÉ : Utilise fetch direct pour éviter l'erreur 403
 function AdminAlerts() {
   const [title, setTitle] = useState("Nouvelle vidéo disponible !");
   const [body, setBody] = useState("Une nouvelle vidéo vient d'être publiée sur Haïtien Nud Média. Viens voir !");
@@ -447,7 +446,7 @@ function AdminAlerts() {
 
   const handleSend = async () => {
     if (!title || !body) { toast.error("Titre et message requis"); return; }
-    if (!secret) { toast.error("Le secret admin is requis"); return; }
+    if (!secret) { toast.error("Le secret admin est requis"); return; }
     
     setSending(true);
     setResult(null);
