@@ -1,6 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import webpush from "web-push";
-import { createClient } from "@supabase/supabase-js"; 
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -13,6 +12,8 @@ const SUPABASE_URL = env.SUPABASE_URL || "";
 const SUPABASE_SERVICE_KEY = env.SUPABASE_SERVICE_KEY || "";
 const PUSH_ADMIN_SECRET = env.PUSH_ADMIN_SECRET || "";
 
+const SUPABASE_REST_URL = SUPABASE_URL.replace(/\/$/, "") + "/rest/v1";
+
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
     "mailto:dghaitiannud@gmail.com",
@@ -21,13 +22,75 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   );
 }
 
-function getSupabase() {
-  return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    }
+function getSupabaseHeaders() {
+  return {
+    Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+    apikey: SUPABASE_SERVICE_KEY,
+    "Content-Type": "application/json",
+  };
+}
+
+async function supabaseRequest(path: string, init: any = {}) {
+  const fetchFn = (globalThis as any).fetch;
+  if (!fetchFn) {
+    throw new Error("Fetch is not available in this environment");
+  }
+
+  const response = await fetchFn(`${SUPABASE_REST_URL}${path}`, {
+    ...init,
+    headers: {
+      ...getSupabaseHeaders(),
+      ...(init.headers || {}),
+    },
   });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Supabase request failed: ${response.status} ${errorText}`);
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+}
+
+function getSupabase() {
+  return {
+    from: (table: string) => {
+      const basePath = `/${encodeURIComponent(table)}`;
+
+      return {
+        upsert: async (row: any, options: any = {}) => {
+          const params = options.onConflict ? `?on_conflict=${encodeURIComponent(options.onConflict)}` : "";
+          return supabaseRequest(`${basePath}${params}`, {
+            method: "POST",
+            body: JSON.stringify(row),
+          });
+        },
+        select: async (select: string) => {
+          return supabaseRequest(`${basePath}?select=${encodeURIComponent(select)}`);
+        },
+        delete: () => {
+          return {
+            eq: async (column: string, value: any) => {
+              const encoded = encodeURIComponent(String(value));
+              return supabaseRequest(`${basePath}?${encodeURIComponent(column)}=eq.${encoded}`, {
+                method: "DELETE",
+              });
+            },
+            in: async (column: string, values: any[]) => {
+              const encodedValues = values.map((value) => encodeURIComponent(String(value))).join(",");
+              return supabaseRequest(`${basePath}?${encodeURIComponent(column)}=in.(${encodedValues})`, {
+                method: "DELETE",
+              });
+            },
+          };
+        },
+      };
+    },
+  };
 }
 
 // GET /api/push/vapid-public-key
