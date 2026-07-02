@@ -452,7 +452,7 @@ function AdminAlerts() {
     setResult(null);
     
     try {
-      const response = await fetch("/api/push/send", {
+      const response = await fetch("https://api-6rzs.onrender.com/api/push/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
