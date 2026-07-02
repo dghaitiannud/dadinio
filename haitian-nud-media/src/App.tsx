@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
-// 🚀 MODIFIÉ : Ajout de "Redirect" dans l'importation de wouter
-import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from 'wouter';
+import { Switch, Route, useLocation, Router as WouterRouter } from 'wouter';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/sonner";
@@ -50,11 +49,7 @@ function App() {
               {/* Le div ci-dessous réactive l'animation CSS fluide à chaque changement de page grâce à l'attribut key */}
               <div key={location} className="animate-page-fade">
                 <Switch>
-                  {/* 🚀 MODIFIÉ : Redirige automatiquement l'accueil noire vers la page admin fonctionnelle */}
-                  <Route path="/">
-                    <Redirect to="/home" />
-                  </Route>
-                  
+                  <Route path="/" component={Home} />
                   <Route path="/watch/:id" component={Watch} />
                   <Route path="/search" component={Search} />
                   <Route path="/plans" component={Plans} />
