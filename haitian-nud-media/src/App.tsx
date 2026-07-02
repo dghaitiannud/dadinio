@@ -52,7 +52,7 @@ function App() {
                 <Switch>
                   {/* 🚀 MODIFIÉ : Redirige automatiquement l'accueil noire vers la page admin fonctionnelle */}
                   <Route path="/">
-                    <Redirect to="/login" />
+                    <Redirect to="/home" />
                   </Route>
                   
                   <Route path="/watch/:id" component={Watch} />
