@@ -50,25 +50,7 @@ function App() {
               <div key={location} className="animate-page-fade">
                 <Switch>
                   <Route path="/" component={Home} />
-                  <Route path="/watch/:id">
-  {(params) => {
-    // On récupère l'état de connexion grâce au hook d'authentification de ton projet
-    const { user, isLoading } = require("@/lib/auth-context").useAuth(); 
-
-    // Pendant que le site vérifie si l'utilisateur est connecté, on affiche un écran de chargement
-    if (isLoading) {
-      return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">Chargement...</div>;
-    }
-
-    // Si l'utilisateur n'est pas connecté, on le redirige immédiatement vers la page de connexion
-    if (!user) {
-      return <Redirect to="/login" />;
-    }
-
-    // S'il est connecté, on le laisse regarder sa vidéo normalement
-    return <Watch id={params.id} />;
-  }}
-</Route>
+                  <Route path="/watch/:id" component={Watch} />
 
                   <Route path="/search" component={Search} />
                   <Route path="/plans" component={Plans} />
