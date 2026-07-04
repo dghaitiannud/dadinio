@@ -3,14 +3,14 @@ import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
   Send, Star, CheckCircle2, ShieldCheck, DollarSign, 
-  Smartphone, Upload, Sparkles, LogIn, ArrowRight 
+  Smartphone, Upload, Sparkles, LogIn, ArrowRight, FileImage 
 } from "lucide-react";
 
 const TELEGRAM_LINKS = [
@@ -27,10 +27,35 @@ export function Plans() {
   // Gestion des étapes : 'info' | 'payment' | 'success'
   const [step, setStep] = useState<'info' | 'payment' | 'success'>('info');
   const [paymentMethod, setPaymentMethod] = useState<"moncash" | "natcash">("moncash");
-  const [proofUrl, setProofUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Soumission du formulaire à Supabase
+  // Validation et sécurité du fichier sélectionné
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+
+      // Mesure de sécurité 1 : Limiter la taille du fichier (Max 5 Mo)
+      const maxSize = 5 * 1024 * 1024; 
+      if (selectedFile.size > maxSize) {
+        toast.error("Le fichier est trop lourd. Maximum 5 Mo autorisé.");
+        e.target.value = ""; // Réinitialise l'input
+        return;
+      }
+
+      // Mesure de sécurité 2 : Vérifier les extensions de fichiers autorisées
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedTypes.includes(selectedFile.type)) {
+        toast.error("Format non supporté. Veuillez envoyer une image (JPG, JPEG ou PNG).");
+        e.target.value = "";
+        return;
+      }
+
+      setFile(selectedFile);
+    }
+  };
+
+  // Traitement et téléversement sécurisé vers Supabase
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSignedIn || !appUser) {
@@ -38,28 +63,51 @@ export function Plans() {
       return;
     }
 
-    if (!proofUrl.trim()) {
-      toast.error("Veuillez fournir le lien de votre preuve de paiement.");
+    if (!file) {
+      toast.error("Veuillez téléverser votre reçu de paiement.");
       return;
     }
 
+    // Mesure de sécurité 3 : Anti-double clic / Anti-spam
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.from("vip_requests").insert({
+      // Génération d'un nom de fichier unique et sécurisé (évite l'écrasement ou l'injection de scripts)
+      const fileExt = file.name.split('.').pop();
+      const uniqueFileName = `${(appUser as any).id}-${Date.now()}.${fileExt}`;
+      const filePath = `${uniqueFileName}`;
+
+      // 1. Upload du fichier dans le bucket 'vip-proofs' de Supabase Storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from("vip-proofs")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false // Interdiction d'écraser un fichier existant
+        });
+
+      if (uploadError) throw new Error(`Erreur lors de l'upload de l'image : ${uploadError.message}`);
+
+      // 2. Récupération de l'URL publique de la preuve de paiement
+      const { data: { publicUrl } } = supabase.storage
+        .from("vip-proofs")
+        .getPublicUrl(filePath);
+
+      // 3. Insertion des informations dans la table vip_requests
+      const { error: dbError } = await supabase.from("vip_requests").insert({
         user_id: (appUser as any).id,
         user_email: (appUser as any).email,
         payment_method: paymentMethod,
-        proof_url: proofUrl.trim(),
+        proof_url: publicUrl,
         status: "pending"
       });
 
-      if (error) throw error;
+      if (dbError) throw dbError;
 
-      toast.success("Preuve envoyée avec succès !");
-      setStep('success'); // Passage à l'écran de remerciement bloqué par état
+      toast.success("Preuve de paiement reçue avec succès !");
+      setStep('success'); // Bloqué par état local
     } catch (err: any) {
-      toast.error(err?.message || "Erreur lors de l'envoi de la demande.");
+      console.error(err);
+      toast.error(err?.message || "Une erreur est survenue lors de l'envoi.");
     } finally {
       setIsSubmitting(false);
     }
@@ -83,7 +131,6 @@ export function Plans() {
             </p>
           </div>
 
-          {/* Grille des privilèges */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-card/50 border-border hover:border-primary/30 transition-all">
               <CardContent className="p-5 flex gap-4 items-start">
@@ -129,7 +176,6 @@ export function Plans() {
             )}
           </div>
 
-          {/* Accès aux Groupes Telegram */}
           <div className="max-w-xl mx-auto border-t pt-8">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2 justify-center">
               <Send className="h-5 w-5 text-primary" /> Rejoindre nos groupes & canaux Telegram
@@ -149,11 +195,10 @@ export function Plans() {
         </div>
       )}
 
-      {/* ÉTAPE 2 : FORMULAIRE DE PAIEMENT & CONSIGNES TAPTAP SEND */}
+      {/* ÉTAPE 2 : CONSIGNES ET FORMULAIRE DE TÉLÉVERSEMENT */}
       {step === 'payment' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
           
-          {/* Guide d'instructions à gauche */}
           <div className="lg:col-span-7 space-y-6">
             <div className="border-b pb-4">
               <h2 className="text-2xl font-serif font-bold">Comment payer votre abonnement VIP ?</h2>
@@ -162,7 +207,7 @@ export function Plans() {
 
             <div className="bg-card border border-border rounded-xl p-5 space-y-4">
               <h3 className="font-bold text-sm flex items-center gap-2 text-primary">
-                <Smartphone className="h-4 w-4" /> 💳 Étapes du paiement via l'application (TapTap Send)
+                <Smartphone className="h-4 w-4" /> Étapes du paiement via l'application (TapTap Send)
               </h3>
               <div className="space-y-3 text-xs text-muted-foreground max-h-[50vh] overflow-y-auto pr-2">
                 <p><span className="font-semibold text-foreground text-primary">Étape 1 :</span> Téléchargez l'application TapTap Send depuis l'App Store ou le Google Play Store.</p>
@@ -171,11 +216,13 @@ export function Plans() {
                 <p><span className="font-semibold text-foreground text-primary">Étape 4 :</span> Saisissez votre numéro de téléphone et le code de confirmation reçu par SMS.</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 5 :</span> Sélectionnez le pays de destination (Haïti +509).</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 6 :</span> Saisissez le montant (20 $).</p>
-                <p><span className="font-semibold text-foreground text-primary">Étape 7 :</span> Ajoutez le nom du destinataire du paiement : cela dépend du mode de paiement choisi.</p>
+                <p><span className="font-semibold text-foreground text-primary">Étape 7 :</span> Ajoutez le nom du destinataire du paiement selon votre choix :</p>
+                
                 <div className="pl-4 border-l-2 border-primary/30 py-1 space-y-1 my-2 bg-muted/30 rounded-r-md">
-                  <p>• Si vous choisissez <span className="font-medium text-foreground">MonCash</span>, utilisez le numéro MonCash indiqué sur le site et le nom associé.</p>
-                  <p>• Si vous choisissez <span className="font-medium text-foreground">NatCash</span>, utilisez le numéro NatCash indiqué sur le site et le nom fourni.</p>
+                  <p>• Si vous choisissez <span className="font-bold text-foreground">MonCash</span>, utilisez le numéro MonCash indiqué sur le site et le nom associé.</p>
+                  <p>• Si vous choisissez <span className="font-bold text-foreground">NatCash</span>, utilisez le numéro NatCash indiqué sur le site et le nom fourni.</p>
                 </div>
+
                 <p>Cliquez ensuite sur « Suivant ».</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 8 :</span> Saisissez votre adresse e-mail (@email.com).</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 9 :</span> Saisissez les informations de contact demandées et cliquez sur « Enregistrer ».</p>
@@ -188,16 +235,15 @@ export function Plans() {
             </Button>
           </div>
 
-          {/* Formulaire de soumission à droite */}
+          {/* Module de paiement mis à jour avec les vraies coordonnées */}
           <div className="lg:col-span-5">
             <Card className="bg-card border-border shadow-xl sticky top-6">
               <CardContent className="p-6">
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Upload className="h-4 w-4 text-primary" /> Soumettre votre reçu
+                  <Upload className="h-4 w-4 text-primary" /> Transmettre le reçu
                 </h3>
                 
                 <form onSubmit={handlePaymentSubmit} className="space-y-6">
-                  {/* Choix de l'opérateur */}
                   <div className="space-y-2">
                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">1. Mode de paiement utilisé</Label>
                     <RadioGroup 
@@ -209,7 +255,7 @@ export function Plans() {
                         <RadioGroupItem value="moncash" id="moncash" className="sr-only" />
                         <Label 
                           htmlFor="moncash" 
-                          className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'moncash' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background hover:bg-muted'}`}
+                          className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'moncash' ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-border bg-background hover:bg-muted'}`}
                         >
                           MonCash
                         </Label>
@@ -218,7 +264,7 @@ export function Plans() {
                         <RadioGroupItem value="natcash" id="natcash" className="sr-only" />
                         <Label 
                           htmlFor="natcash" 
-                          className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'natcash' ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background hover:bg-muted'}`}
+                          className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'natcash' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500' : 'border-border bg-background hover:bg-muted'}`}
                         >
                           NatCash
                         </Label>
@@ -226,46 +272,51 @@ export function Plans() {
                     </RadioGroup>
                   </div>
 
-                  {/* Coordonnées indicatives pour le virement */}
-                  <div className="p-3 rounded-lg bg-muted border text-xs space-y-1 text-muted-foreground">
-                    <p className="font-bold text-foreground mb-1">📞 Envoyez le transfert sur :</p>
+                  {/* VRAIES COORDONNÉES INJECTÉES ICI */}
+                  <div className="p-4 rounded-xl bg-muted/60 border text-xs space-y-2 text-muted-foreground">
+                    <p className="font-bold text-foreground text-sm border-b pb-1">📞 Infos de transfert :</p>
                     {paymentMethod === 'moncash' ? (
                       <>
-                        <p>Numéro MonCash : <span className="font-mono text-foreground font-bold">XXXX-XXXX</span></p>
-                        <p>Nom associé : <span className="text-foreground font-medium">Haitian Nud Media</span></p>
+                        <p>Numéro MonCash : <span className="font-mono text-foreground font-bold text-sm text-red-500">+509 34 25 08 08</span></p>
+                        <p>Nom Destinataire : <span className="text-foreground font-bold">Jhon Wood Antoine</span></p>
                       </>
                     ) : (
                       <>
-                        <p>Numéro NatCash : <span className="font-mono text-foreground font-bold">XXXX-XXXX</span></p>
-                        <p>Nom associé : <span className="text-foreground font-medium">Haitian Nud Media</span></p>
+                        <p>Numéro NatCash : <span className="font-mono text-foreground font-bold text-sm text-emerald-500">+509 32 49 24 65</span></p>
+                        <p>Nom Destinataire : <span className="text-foreground font-bold">Dafca Saint Vill</span></p>
                       </>
                     )}
                   </div>
 
-                  {/* Preuve de paiement */}
+                  {/* ZONE DE TELEVERSEMENT DE FICHIER SECURISEE */}
                   <div className="space-y-2">
-                    <Label htmlFor="proof-url" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      2. URL de votre Preuve de paiement
+                    <Label htmlFor="proof-file" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      2. Capture d'écran ou reçu (Image)
                     </Label>
-                    <Input 
-                      id="proof-url" 
-                      required
-                      placeholder="Collez le lien de la capture d'écran / reçu..."
-                      value={proofUrl}
-                      onChange={(e) => setProofUrl(e.target.value)}
-                      className="bg-background rounded-xl"
-                    />
-                    <p className="text-[10px] text-muted-foreground leading-normal">
-                      Une fois le paiement effectué, hébergez ou téléchargez simplement votre preuve de paiement et insérez son lien public ici.
-                    </p>
+                    
+                    <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-4 bg-background hover:bg-muted/20 transition-all cursor-pointer group">
+                      <input 
+                        type="file" 
+                        id="proof-file" 
+                        required
+                        accept="image/png, image/jpeg, image/jpg"
+                        onChange={handleFileChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      <FileImage className={`h-8 w-8 mb-2 ${file ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} transition-colors`} />
+                      <p className="text-xs font-medium text-center text-foreground max-w-[200px] truncate">
+                        {file ? file.name : "Cliquez pour choisir un fichier"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, JPEG jusqu'à 5 Mo</p>
+                    </div>
                   </div>
 
                   <Button 
                     type="submit" 
-                    disabled={isSubmitting || !proofUrl} 
+                    disabled={isSubmitting || !file} 
                     className="w-full py-5 text-sm font-bold rounded-xl mt-4"
                   >
-                    {isSubmitting ? "Envoi de la preuve..." : "Envoyer mon reçu"}
+                    {isSubmitting ? "Sécurisation & Envoi..." : "Envoyer ma preuve de paiement"}
                   </Button>
                 </form>
               </CardContent>
@@ -275,7 +326,7 @@ export function Plans() {
         </div>
       )}
 
-      {/* ÉTAPE 3 : ÉCRAN DE REMERCIEMENT (ACCÈS UNIQUE PAR SOUMISSION FORMULAIRE) */}
+      {/* ÉTAPE 3 : ÉCRAN DE REMERCIEMENT (BLOQUÉ PAR ÉTAT) */}
       {step === 'success' && (
         <div className="max-w-md mx-auto text-center py-12 space-y-6 animate-scale-in">
           <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-inner">
@@ -285,16 +336,15 @@ export function Plans() {
           <div className="space-y-2">
             <h2 className="text-3xl font-serif font-bold tracking-tight">Merci pour votre confiance !</h2>
             <p className="text-sm text-muted-foreground px-4">
-              Votre reçu de paiement via <span className="font-semibold text-foreground uppercase">{paymentMethod}</span> a été transmis avec succès à notre équipe d'administration.
+              Votre preuve de paiement via <span className="font-semibold text-foreground uppercase">{paymentMethod}</span> a été stockée de manière sécurisée et transmise aux administrateurs.
             </p>
           </div>
 
           <div className="p-4 bg-card border rounded-2xl text-left text-xs text-muted-foreground leading-relaxed">
-            <p className="font-semibold text-foreground text-sm mb-1">⏳ Qu'arrive-t-il maintenant ?</p>
+            <p className="font-semibold text-foreground text-sm mb-1">Qu'arrive-t-il maintenant ?</p>
             Notre équipe vérifiera manuellement la validité de votre transfert et votre accès VIP complet sera activé sur votre compte <span className="font-semibold text-foreground">{appUser?.email}</span> en moins de 5 minutes. Vous recevrez une notification dès validation.
           </div>
 
-          {/* Groupes de secours Telegram */}
           <div className="pt-4 border-t space-y-3">
             <p className="text-xs font-medium text-foreground">En attendant la validation, restez connecté avec nous :</p>
             <div className="flex flex-wrap justify-center gap-2">
