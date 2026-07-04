@@ -23,6 +23,8 @@ import { DownloadsPage } from "@/pages/downloads";
 import { Live } from "@/pages/live";
 import { AdminLive } from "@/pages/admin-live";
 
+import { useAuth } from "@/lib/auth-context";
+
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function ScrollToTop() {
@@ -50,7 +52,26 @@ function App() {
               <div key={location} className="animate-page-fade">
                 <Switch>
                   <Route path="/" component={Home} />
-                  <Route path="/watch/:id" component={Watch} />
+                  <Route path="/watch/:id">
+  {(params) => {
+    const { user, isLoading } = useAuth();
+
+    if (isLoading) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-black text-white">
+          Chargement...
+        </div>
+      );
+    }
+
+    if (!user) {
+      return <Redirect to="/login" />;
+    }
+
+    // On passe l'ID correctement au composant Watch
+    return <Watch params={params} />;
+  }}
+</Route>
 
                   <Route path="/search" component={Search} />
                   <Route path="/plans" component={Plans} />
