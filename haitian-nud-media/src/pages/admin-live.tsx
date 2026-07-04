@@ -1,38 +1,46 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/lib/auth-context'; // Utilise exactement ce qui fonctionne dans ton Header
+import { useAuth } from '@/lib/auth-context';
 import MuxPlayer from '@mux/mux-player-react';
 import { supabase } from '@/lib/supabase';
 import { Button } from "@/components/ui/button";
 import { Radio, VideoOff } from "lucide-react";
 
+// ⚠️ REMPLACE CETTE VALEUR PAR TON EMAIL DE CONNEXION ADMIN LIVEADMIN
+const ADMIN_EMAIL_BACKUP = "liveadmin@gmail.com";
+
 export function AdminLive() {
-  const { isSignedIn, appUser } = useAuth(); // Supprimé 'loading' qui n'existe pas ici
+  const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation();
 
   const [isActive, setIsActive] = useState(false);
   const [playbackId, setPlaybackId] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [isChecking, setIsChecking] = useState(true); // Ajout d'un état de chargement local
+  const [isChecking, setIsChecking] = useState(true);
 
   // 1. Protection de la page et gestion du cycle de chargement
   useEffect(() => {
-    // On attend un court instant pour s'assurer que l'état d'authentification est résolu
     const checkAccess = () => {
+      // Log utile pour voir ce que l'application détecte réellement dans Acode/navigateur
+      console.log("Vérification Admin - appUser:", appUser);
+
       if (isSignedIn) {
         const userRole = (appUser as any)?.role;
-        if (userRole !== 'admin') {
-          setLocation('/');
-        } else {
+        const userEmail = (appUser as any)?.email;
+        
+        // Sécurité par rôle OU par email de secours pour forcer l'accès
+        if (userRole === 'admin' || userEmail === ADMIN_EMAIL_BACKUP) {
           setIsChecking(false); // Accès accordé
+        } else {
+          console.warn("Accès refusé : rôle ou email incorrect", { userRole, userEmail });
+          setLocation('/');
         }
       } else {
-        // Si non connecté après le chargement initial
         setLocation('/');
       }
     };
 
-    // Un léger timeout permet d'éviter les faux rebonds pendant que useAuth s'initialise
+    // Un léger timeout permet d'éviter les faux rebonds pendant l'initialisation du contexte Auth
     const timer = setTimeout(() => {
       checkAccess();
     }, 500);
@@ -42,13 +50,18 @@ export function AdminLive() {
 
   // 2. Récupérer l'état du live depuis Supabase au chargement
   useEffect(() => {
-    if (isSignedIn && (appUser as any)?.role === 'admin') {
+    // Si l'accès est validé globalement, on peut charger le statut
+    if (isSignedIn && !isChecking) {
       async function fetchLiveStatus() {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('app_settings')
           .select('value')
           .eq('id', 'live_playback_id')
           .single();
+
+        if (error) {
+          console.warn("Impossible de récupérer l'état du live :", error);
+        }
 
         if (data && data.value) {
           setPlaybackId(data.value);
@@ -57,7 +70,7 @@ export function AdminLive() {
       }
       fetchLiveStatus();
     }
-  }, [isSignedIn, appUser]);
+  }, [isSignedIn, isChecking]);
 
   // Écran d'attente local pendant la vérification du profil
   if (isChecking) {
@@ -68,8 +81,10 @@ export function AdminLive() {
     );
   }
 
-  // Double sécurité : si pas admin, on n'affiche rien
-  if (!isSignedIn || (appUser as any)?.role !== 'admin') {
+  // Double sécurité : si pas connecté ou pas admin/email valide, on n'affiche rien
+  const userRole = (appUser as any)?.role;
+  const userEmail = (appUser as any)?.email;
+  if (!isSignedIn || (userRole !== 'admin' && userEmail !== ADMIN_EMAIL_BACKUP)) {
     return null;
   }
 
@@ -86,6 +101,8 @@ export function AdminLive() {
     if (!error) {
       setPlaybackId(currentPlaybackId);
       setIsActive(true);
+    } else {
+      console.error("Erreur lors de l'activation du flux :", error);
     }
     setActionLoading(false);
   };
@@ -101,6 +118,8 @@ export function AdminLive() {
     if (!error) {
       setPlaybackId('');
       setIsActive(false);
+    } else {
+      console.error("Erreur lors de l'arrêt du flux :", error);
     }
     setActionLoading(false);
   };
