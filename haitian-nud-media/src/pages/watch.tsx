@@ -113,7 +113,7 @@ function NetworkStatusIcon() {
 
 export function Watch() {
   const { id } = useParams<{ id: string }>();
-  const { isSignedIn, user, appUser } = useAuth();
+  const { isSignedIn, user, appUser, isLoading: authLoading } = useAuth(); // 👈 Ajout du statut de chargement de l'auth
   const [commentBody, setCommentBody] = useState("");
   const [anonymous, setAnonymous] = useState(false);
   const [video, setVideo] = useState<Video | null>(null);
@@ -136,11 +136,13 @@ export function Watch() {
       try {
         const v = await getVideo(id);
         setVideo(v);
-        if (v) {
-          registerView(id, user?.id ?? undefined);
+        if (v && user?.id) { // 🚀 N'enregistre l'historique que si l'utilisateur est connecté
+          registerView(id, user.id);
           import("@/lib/local-store").then(({ pushWatchHistory }) =>
             pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
           );
+        }
+        if (v) {
           getVideos({ category: v.category })
             .then(vids => setRelatedVideos(vids.filter(vid => vid.id !== id)))
             .catch(err => console.warn('Failed to load related videos:', err));
@@ -299,7 +301,8 @@ export function Watch() {
     );
   }
 
-  if (isLoadingVideo) {
+  // 🚀 Attente que l'état d'authentification ou de la vidéo soit chargé
+  if (isLoadingVideo || authLoading) {
     return (
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -317,12 +320,12 @@ export function Watch() {
     );
   }
 
-  if (videoError) {
+  if (videoError || !video) {
     return (
       <div className="container mx-auto px-4 py-24 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-serif font-bold mb-2">Erreur de chargement</h2>
-        <p className="text-muted-foreground mb-6">{videoError}</p>
+        <p className="text-muted-foreground mb-6">{videoError || "Vidéo introuvable"}</p>
         <Link href="/"><Button>Retour à l'accueil</Button></Link>
       </div>
     );
@@ -334,18 +337,41 @@ export function Watch() {
         <div className="lg:col-span-2">
           
           {/* BARRE D'ÉTAT AJOUTÉE POUR LE MODE ONLINE / QUALITÉ RÉSEAU */}
-          {!video.isVip && (
+          {isSignedIn && !video.isVip && (
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-xs text-muted-foreground font-medium">Lecture en continu</span>
               <NetworkStatusIcon />
             </div>
           )}
 
-          {/* ZONE DU LECTEUR VIDÉO CORRIGÉE */}
+          {/* ZONE DE SÉCURITÉ DU LECTEUR VIDÉO */}
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-4 group">
-            {video.isVip && <VipGate />}
-
-            {!video.isVip && video.videoUrl ? (
+            {!isSignedIn ? (
+              /* 🔒 BLOCAGE : Affichage du message si l'utilisateur n'est pas connecté */
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center">
+                <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-4 text-red-500">
+                  <Lock className="h-6 w-6" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Kontni sa a restrien</h3>
+                <p className="text-zinc-400 text-sm text-center mb-6 max-w-xs">
+                  Konekte oswa kreye yon kont pou w ka gade videyo sa a.
+                </p>
+                <div className="flex gap-3">
+                  <Link href="/login">
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5">
+                      Se connecter
+                    </Button>
+                  </Link>
+                  <Link href="/login">
+                    <Button size="sm" variant="secondary" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-5">
+                      S'inscrire
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : video.isVip ? (
+              <VipGate />
+            ) : video.videoUrl ? (
               <video
                 src={video.videoUrl}
                 poster={video.thumbnailUrl || '/logo.jpg'}
@@ -354,12 +380,10 @@ export function Watch() {
                 playsInline
               />
             ) : (
-              !video.isVip && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
-                  <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Lien de la vidéo introuvable dans Supabase.</p>
-                </div>
-              )
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Lien de la vidéo introuvable dans Supabase.</p>
+              </div>
             )}
           </div>
 
@@ -392,7 +416,7 @@ export function Watch() {
                 <Button variant="secondary" onClick={copyLink} className="rounded-full bg-accent hover:bg-accent/80">
                   <Copy className="h-4 w-4 mr-2" /> Copier le lien
                 </Button>
-                {!video.isVip && (
+                {isSignedIn && !video.isVip && (
                   <>
                     <Button onClick={handleDownload} disabled={downloadPending} className="rounded-full bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(30,94,255,0.3)]">
                       <Download className="h-4 w-4 mr-2" />
@@ -425,7 +449,7 @@ export function Watch() {
               <p className="text-sm whitespace-pre-wrap">{video.description}</p>
             </div>
 
-            {video.isVip && (
+            {isSignedIn && video.isVip && (
               <div className="mt-4 p-5 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl">
                 <h3 className="font-bold mb-1 flex items-center gap-2">
                   <Send className="h-4 w-4 text-yellow-500" />
