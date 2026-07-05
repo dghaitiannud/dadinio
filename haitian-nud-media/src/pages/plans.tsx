@@ -114,7 +114,7 @@ export function Plans() {
             body: `L'utilisateur ${(appUser as any).email} a envoyé une preuve via ${paymentMethod.toUpperCase()}.`,
             url: "/admin",
             icon: "/logo.jpg",
-            adminSecret: "TON_PUSH_ADMIN_SECRET" 
+            targetUserId: "admin" // 🌟 Identifiant ciblé pour router vers ton appareil d'administration en toute sécurité
           })
         });
       } catch (pushErr) {
