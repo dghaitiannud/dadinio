@@ -10,11 +10,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 type CatalogTab = "all-vip" | "video-vip" | "photo-vip";
 
 export function VipCatalog() {
-  const { isSignedIn } = useAuth(); // On a juste besoin de savoir s'il est connecté
+  const { isSignedIn, appUser } = useAuth(); // 🌟 Récupération de appUser pour inspecter le plan
   const [activeTab, setActiveTab] = useState<CatalogTab>("all-vip");
   const [vipVideos, setVipVideos] = useState<Video[]>([]);
   const [vipPhotos, setVipPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Vérification si le compte est explicitement VIP
+  const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
   useEffect(() => {
     // 🧠 STRATÉGIE : Si l'utilisateur n'est pas connecté, on ne charge rien (bloqué par le garde).
@@ -55,7 +58,7 @@ export function VipCatalog() {
           Rejoignez la communauté ! Connectez-vous ou créez un compte gratuitement pour découvrir notre catalogue exclusif.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Link href="/auth">
+          <Link href="/login">
             <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full">
               Se connecter / S'inscrire
             </Button>
@@ -70,7 +73,7 @@ export function VipCatalog() {
     );
   }
 
-  // 🔓 ACCÈS LIBRE (Free & VIP) : Les utilisateurs connectés voient tout. La page /watch fera le tri !
+  // 🔓 ACCÈS LIBRE (Free & VIP) : Les utilisateurs les voient tous. La page /watch fera le tri si clic !
   return (
     <div className="container mx-auto px-4 py-8 min-h-screen flex flex-col gap-8">
       {/* Header du catalogue */}
@@ -81,10 +84,13 @@ export function VipCatalog() {
             <Star className="h-3.5 w-3.5 fill-current text-yellow-400" /> CATALOGUE EXCLUSIF
           </div>
           <h1 className="text-3xl md:text-5xl font-serif font-bold text-white mb-2 tracking-tight">
-            Votre Espace VIP
+            {isUserVip ? "Votre Espace VIP Actif" : "Espace VIP"}
           </h1>
           <p className="text-muted-foreground max-w-xl">
-            Découvrez nos productions exclusives. Devenez membre VIP pour débloquer la lecture instantanée de tous les contenus.
+            {isUserVip 
+              ? "Merci pour votre soutien ! Profitez de votre accès membre complet et visionnez l'ensemble des contenus en illimité."
+              : "Découvrez nos productions exclusives. Devenez membre VIP pour débloquer la lecture instantanée de tous les contenus."
+            }
           </p>
         </div>
         <div className="relative bg-black/40 backdrop-blur-sm border border-white/5 rounded-xl px-6 py-4 flex gap-6 shrink-0 text-center">
@@ -204,6 +210,7 @@ export function VipCatalog() {
   );
 }
 
+// Composant pour afficher un message vide
 function EmptyCatalogMessage({ type }: { type: string }) {
   return (
     <div className="w-full py-24 text-center text-muted-foreground border border-dashed border-border rounded-xl">
