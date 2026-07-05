@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Send, Lock, Copy, Wifi, WifiOff, Loader2 } from "lucide-react";
+import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Send, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
@@ -27,22 +27,20 @@ const TELEGRAM_LINKS = [
 
 function VipGate() {
   return (
-    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 rounded-xl px-6">
-      <div className="w-14 h-14 rounded-full bg-yellow-500/20 flex items-center justify-center mb-4">
-        <Lock className="h-7 w-7 text-yellow-400" />
+    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/95 rounded-xl px-6 text-center">
+      <div className="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4 border border-yellow-500/20 shadow-inner">
+        <Lock className="h-6 w-6 text-yellow-500" />
       </div>
-      <h3 className="text-xl font-bold text-white mb-2">Contenu VIP</h3>
-      <p className="text-white/70 text-sm text-center mb-6 max-w-xs">
-        Cette vidéo est réservée aux membres VIP. Rejoignez notre Telegram pour y accéder dès maintenant.
+      <h3 className="text-xl font-bold text-white mb-2">Espace Privé & Vidéos VIP</h3>
+      <p className="text-zinc-400 text-sm text-center mb-6 max-w-xs leading-relaxed">
+        Cette vidéo exclusive est réservée aux membres VIP. Devenez Premium pour débloquer tout le catalogue instantanément.
       </p>
-      <div className="flex flex-wrap gap-2 justify-center">
-        {TELEGRAM_LINKS.map((link) => (
-          <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">
-            <Button size="sm" className="bg-primary hover:bg-primary/90 text-white gap-2">
-              <Send className="h-3.5 w-3.5" /> klike la pouw voye zen
-            </Button>
-          </a>
-        ))}
+      <div className="flex flex-col sm:flex-row gap-3 justify-center w-full max-w-sm">
+        <Link href="/plans" className="w-full sm:flex-1">
+          <Button size="sm" className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold gap-2 py-5 rounded-xl shadow-lg">
+            Devenir Membre VIP <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
       </div>
     </div>
   );
@@ -56,7 +54,6 @@ function GoogleAdsBar() {
   );
 }
 
-// 🌐 Composant de l'icône Wifi Dynamique
 function NetworkStatusIcon() {
   const [networkQuality, setNetworkQuality] = useState<'excellent' | 'good' | 'poor' | 'unknown'>('unknown');
 
@@ -65,12 +62,12 @@ function NetworkStatusIcon() {
       // @ts-ignore
       const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       if (conn && conn.downlink !== undefined) {
-        const speed = conn.downlink; // Vitesse en Mbps
-        if (speed >= 5) setNetworkQuality('excellent');      // Vert
-        else if (speed >= 1.5) setNetworkQuality('good');   // Jaune
-        else setNetworkQuality('poor');                     // Rouge
+        const speed = conn.downlink; 
+        if (speed >= 5) setNetworkQuality('excellent');      
+        else if (speed >= 1.5) setNetworkQuality('good');   
+        else setNetworkQuality('poor');                     
       } else {
-        setNetworkQuality('unknown');                       // Blanc Neutre
+        setNetworkQuality('unknown');                        
       }
     };
 
@@ -113,7 +110,7 @@ function NetworkStatusIcon() {
 
 export function Watch() {
   const { id } = useParams<{ id: string }>();
-  const { isSignedIn, user, appUser, isLoading: authLoading } = useAuth(); // 👈 Ajout du statut de chargement de l'auth
+  const { isSignedIn, user, appUser, isLoading: authLoading } = useAuth(); 
   const [commentBody, setCommentBody] = useState("");
   const [anonymous, setAnonymous] = useState(false);
   const [video, setVideo] = useState<Video | null>(null);
@@ -127,6 +124,9 @@ export function Watch() {
   const [offlineDownloading, setOfflineDownloading] = useState(false);
   const [isOfflineAvailable, setIsOfflineAvailable] = useState(false);
 
+  // Détection si l'utilisateur connecté possède un abonnement VIP actif
+  const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
+
   useEffect(() => {
     if (!id) return;
 
@@ -136,7 +136,7 @@ export function Watch() {
       try {
         const v = await getVideo(id);
         setVideo(v);
-        if (v && user?.id) { // 🚀 N'enregistre l'historique que si l'utilisateur est connecté
+        if (v && user?.id) { 
           registerView(id, user.id);
           import("@/lib/local-store").then(({ pushWatchHistory }) =>
             pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
@@ -219,20 +219,20 @@ export function Watch() {
       toast.error("Fòk ou konekte pou kapab telechaje");
       return;
     }
-    if (video?.isVip) {
-      toast.error("Vidéo VIP — Rejoignez notre Telegram pour accéder au téléchargement.");
+    if (video?.isVip && !isUserVip) {
+      toast.error("Vidéo VIP — Abonnez-vous pour accéder au téléchargement.");
       return;
     }
     setDownloadPending(true);
     try {
-      const res = await requestDownload(id, appUser.id, appUser.plan === 'vip', appUser.freeDownloadsUsed);
-      toast.success(`Téléchargement lancé. ${res.remaining} téléchargements restants.`);
+      const res = await requestDownload(id, appUser.id, isUserVip, appUser.freeDownloadsUsed);
+      toast.success(isUserVip ? "Téléchargement VIP lancé !" : `Téléchargement lancé. ${res.remaining} restants.`);
       window.open(res.url, "_blank");
     } catch (e: any) {
       if (e.message === 'vip_required') {
-        toast.error("Vidéo VIP — Rejoignez notre Telegram.");
+        toast.error("Abonnement VIP requis pour cette vidéo.");
       } else if (e.message === 'quota_exceeded') {
-        toast.error("Limite atteinte. Revenez demain ou rejoignez Telegram VIP.");
+        toast.error("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité.");
       } else {
         toast.error(e?.message || "Erreur de téléchargement");
       }
@@ -301,7 +301,6 @@ export function Watch() {
     );
   }
 
-  // 🚀 Attente que l'état d'authentification ou de la vidéo soit chargé
   if (isLoadingVideo || authLoading) {
     return (
       <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -336,7 +335,6 @@ export function Watch() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           
-          {/* BARRE D'ÉTAT AJOUTÉE POUR LE MODE ONLINE / QUALITÉ RÉSEAU */}
           {isSignedIn && !video.isVip && (
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-xs text-muted-foreground font-medium">Lecture en continu</span>
@@ -344,10 +342,9 @@ export function Watch() {
             </div>
           )}
 
-          {/* ZONE DE SÉCURITÉ DU LECTEUR VIDÉO */}
+          {/* ZONE DU LECTEUR VIDÉO AVEC SECURITÉ CONDITIONNELLE VIP */}
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-4 group">
             {!isSignedIn ? (
-              /* 🔒 BLOCAGE : Affichage du message si l'utilisateur n'est pas connecté */
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center">
                 <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-4 text-red-500">
                   <Lock className="h-6 w-6" />
@@ -369,9 +366,11 @@ export function Watch() {
                   </Link>
                 </div>
               </div>
-            ) : video.isVip ? (
+            ) : video.isVip && !isUserVip ? (
+              /* 🌟 LOCK POUR LES MEMBRES GRATUITS SUR LES VIDÉOS VIP */
               <VipGate />
             ) : video.videoUrl ? (
+              /* 🌟 LECTURE SÉCURISÉE ACCESSIBLE POUR LES MEMBRES VIP OU VIDÉOS PUBLIQUES */
               <video
                 src={video.videoUrl}
                 poster={video.thumbnailUrl || '/logo.jpg'}
@@ -382,7 +381,7 @@ export function Watch() {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
                 <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">Lien de la vidéo introuvable dans Supabase.</p>
+                <p className="text-sm text-muted-foreground">Lien de la vidéo introuvable.</p>
               </div>
             )}
           </div>
@@ -416,7 +415,9 @@ export function Watch() {
                 <Button variant="secondary" onClick={copyLink} className="rounded-full bg-accent hover:bg-accent/80">
                   <Copy className="h-4 w-4 mr-2" /> Copier le lien
                 </Button>
-                {isSignedIn && !video.isVip && (
+                
+                {/* ACCÈS AUX OUTILS DE TÉLÉCHARGEMENT CONDITIONNÉ AU STATUT VIP SI REQUIS */}
+                {isSignedIn && (!video.isVip || isUserVip) && (
                   <>
                     <Button onClick={handleDownload} disabled={downloadPending} className="rounded-full bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(30,94,255,0.3)]">
                       <Download className="h-4 w-4 mr-2" />
@@ -449,21 +450,22 @@ export function Watch() {
               <p className="text-sm whitespace-pre-wrap">{video.description}</p>
             </div>
 
-            {isSignedIn && video.isVip && (
+            {/* 🌟 LE MESSAGE VIP DU BAS N'EST PLUS AFFICHÉ QUE POUR LES NON-VIP SUR LES CONTENUS BLOCKÉS */}
+            {isSignedIn && video.isVip && !isUserVip && (
               <div className="mt-4 p-5 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl">
                 <h3 className="font-bold mb-1 flex items-center gap-2">
-                  <Send className="h-4 w-4 text-yellow-500" />
-                  Rejoignez Telegram pour voir cette vidéo
+                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                  Débloquez l'accès Premium VIP
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4">Contenu VIP disponible sur nos groupes et canaux Telegram.</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Cette vidéo ainsi que toutes les publications exclusives de la plateforme sont réservées à nos membres abonnés.
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  {TELEGRAM_LINKS.map((link) => (
-                    <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold gap-1.5">
-                        <Send className="h-3.5 w-3.5" /> klike la pouw voye zen
-                      </Button>
-                    </a>
-                  ))}
+                  <Link href="/plans">
+                    <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold gap-1.5 px-4 py-2 rounded-xl shadow-md">
+                      Voir les offres d'abonnement
+                    </Button>
+                  </Link>
                 </div>
               </div>
             )}

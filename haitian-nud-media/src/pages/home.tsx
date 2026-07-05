@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Play, TrendingUp, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/lib/auth-context"; // 👈 Ajout du context d'authentification
 
 const TABS = [
   { id: "all", label: "Accueil", icon: HomeIcon },
@@ -15,6 +16,7 @@ const TABS = [
 ] as const;
 
 export function Home() {
+  const { isSignedIn, appUser } = useAuth(); // 👈 Récupération du profil utilisateur
   const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
   const [trending, setTrending] = useState<Video[]>([]);
   const [latest, setLatest] = useState<Video[]>([]);
@@ -26,6 +28,9 @@ export function Home() {
 
   const FULL_TEXT = "HAITIAN NUD";
   const [currentText, setCurrentText] = useState("");
+
+  // Détection si l'utilisateur connecté est VIP
+  const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
   useEffect(() => {
     setIsLoadingTrending(true);
@@ -107,14 +112,18 @@ export function Home() {
             </h1>
 
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)]">
+              <Button size="lg" className={`bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] ${isUserVip ? 'w-full sm:w-auto' : ''}`}>
                 <Play className="mr-2 h-5 w-5 fill-current" /> Regarder maintenant
               </Button>
-              <Link href="/plans">
-                <Button size="lg" variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm">
-                  <Star className="mr-2 h-5 w-5 text-yellow-400" /> Devenir VIP
-                </Button>
-              </Link>
+              
+              {/* 🔒 BOUTON MASQUÉ SI L'UTILISATEUR EST VIP */}
+              {!isUserVip && (
+                <Link href="/plans">
+                  <Button size="lg" variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm w-full sm:w-auto">
+                    <Star className="mr-2 h-5 w-5 text-yellow-400" /> Devenir VIP
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -180,30 +189,32 @@ export function Home() {
           </div>
         </section>
 
-        {/* VIP Promo Block */}
-        <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-background to-background" />
-          <div className="absolute right-0 top-0 bottom-0 w-1/3 md:w-1/2">
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_right,rgba(30,94,255,0.35),transparent_70%)]" />
-             <div className="absolute inset-0 bg-gradient-to-r from-card to-transparent" />
-          </div>
-          <div className="relative p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 z-10">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="h-5 w-5 text-primary fill-primary" />
-                <h3 className="text-xl md:text-2xl font-bold">Pass VIP Exclusif</h3>
-              </div>
-              <p className="text-muted-foreground max-w-md">
-                Accédez à tout le contenu premium, téléchargements illimités et sans publicités. Soutenez les créateurs haïtiens.
-              </p>
+        {/* 🌟 BLOC PUBLICITAIRE INTERNE : RETIRÉ COMPLÈTEMENT SI L'UTILISATEUR EST VIP */}
+        {!isUserVip && (
+          <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-background to-background" />
+            <div className="absolute right-0 top-0 bottom-0 w-1/3 md:w-1/2">
+               <div className="absolute inset-0 bg-[radial-gradient(circle_at_right,rgba(30,94,255,0.35),transparent_70%)]" />
+               <div className="absolute inset-0 bg-gradient-to-r from-card to-transparent" />
             </div>
-            <Link href="/plans">
-              <Button size="lg" className="bg-primary text-primary-foreground font-bold shrink-0">
-                Découvrir les offres
-              </Button>
-            </Link>
-          </div>
-        </section>
+            <div className="relative p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 z-10">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="h-5 w-5 text-primary fill-primary" />
+                  <h3 className="text-xl md:text-2xl font-bold">Pass VIP Exclusif</h3>
+                </div>
+                <p className="text-muted-foreground max-w-md">
+                  Accédez à tout le contenu premium, téléchargements illimités et sans publicités. Soutenez les créateurs haïtiens.
+                </p>
+              </div>
+              <Link href="/plans">
+                <Button size="lg" className="bg-primary text-primary-foreground font-bold shrink-0">
+                  Découvrir les offres
+                </Button>
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* Latest / filtered grid */}
         <section className="mb-8">
