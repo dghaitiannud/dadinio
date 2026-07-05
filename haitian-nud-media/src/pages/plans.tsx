@@ -55,7 +55,7 @@ export function Plans() {
     }
   };
 
-  // Traitement et téléversement sécurisé vers Supabase
+  // Traitement et téléversement sécurisé vers Supabase + Notification Admin
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSignedIn || !appUser) {
@@ -68,21 +68,20 @@ export function Plans() {
       return;
     }
 
-    // Mesure de sécurité 3 : Anti-double clic / Anti-spam
     setIsSubmitting(true);
 
     try {
-      // Génération d'un nom de fichier unique et sécurisé (évite l'écrasement ou l'injection de scripts)
+      // Génération d'un nom de fichier unique et sécurisé
       const fileExt = file.name.split('.').pop();
       const uniqueFileName = `${(appUser as any).id}-${Date.now()}.${fileExt}`;
       const filePath = `${uniqueFileName}`;
 
-      // 1. Upload du fichier dans le bucket 'vip-proofs' de Supabase Storage
-      const { error: uploadError, data: uploadData } = await supabase.storage
+      // 1. Upload du fichier dans le bucket 'vip-proofs'
+      const { error: uploadError } = await supabase.storage
         .from("vip-proofs")
         .upload(filePath, file, {
           cacheControl: "3600",
-          upsert: false // Interdiction d'écraser un fichier existant
+          upsert: false
         });
 
       if (uploadError) throw new Error(`Erreur lors de l'upload de l'image : ${uploadError.message}`);
@@ -103,8 +102,25 @@ export function Plans() {
 
       if (dbError) throw dbError;
 
+      // 4. Appel API pour notifier l'administration sur Render
+      try {
+        await fetch("https://api-6rzs.onrender.com/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "🚨 Nouveau reçu VIP reçu !",
+            body: `L'utilisateur ${(appUser as any).email} a envoyé une preuve via ${paymentMethod.toUpperCase()}.`,
+            url: "/admin",
+            icon: "/logo.jpg",
+            adminSecret: "TON_PUSH_ADMIN_SECRET" 
+          })
+        });
+      } catch (pushErr) {
+        console.error("Échec notification admin:", pushErr);
+      }
+
       toast.success("Preuve de paiement reçue avec succès !");
-      setStep('success'); // Bloqué par état local
+      setStep('success');
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || "Une erreur est survenue lors de l'envoi.");
@@ -116,7 +132,6 @@ export function Plans() {
   return (
     <div className="container mx-auto px-4 py-8 md:py-16 min-h-screen max-w-4xl">
       
-      {/* ÉTAPE 1 : DÉCOUVRIR LES AVANTAGES VIP */}
       {step === 'info' && (
         <div className="space-y-12 animate-fade-in">
           <div className="text-center max-w-2xl mx-auto">
@@ -159,7 +174,7 @@ export function Plans() {
           </div>
 
           <div className="max-w-md mx-auto text-center p-6 bg-secondary/30 rounded-2xl border border-border">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold">Tarif Unique</p>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold font-bold text-yellow-500">Abonnement de 1 Mois</p>
             <div className="text-3xl font-bold font-mono text-primary my-2 flex items-center justify-center gap-1">
               <DollarSign className="h-7 w-7 text-yellow-500" /> 20 USD <span className="text-muted-foreground text-sm font-normal">ou</span> 2 500 HTG
             </div>
@@ -170,7 +185,7 @@ export function Plans() {
                 Devenir VIP maintenant <ArrowRight className="h-5 w-5" />
               </Button>
             ) : (
-              <Button onClick={() => setLocation("/auth")} variant="destructive" className="w-full py-6 text-base font-bold rounded-xl gap-2">
+              <Button onClick={() => setLocation("/auth")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
                 <LogIn className="h-5 w-5" /> Connectez-vous pour vous abonner
               </Button>
             )}
@@ -195,7 +210,6 @@ export function Plans() {
         </div>
       )}
 
-      {/* ÉTAPE 2 : CONSIGNES ET FORMULAIRE DE TÉLÉVERSEMENT */}
       {step === 'payment' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
           
@@ -235,7 +249,6 @@ export function Plans() {
             </Button>
           </div>
 
-          {/* Module de paiement mis à jour avec les vraies coordonnées */}
           <div className="lg:col-span-5">
             <Card className="bg-card border-border shadow-xl sticky top-6">
               <CardContent className="p-6">
@@ -255,7 +268,7 @@ export function Plans() {
                         <RadioGroupItem value="moncash" id="moncash" className="sr-only" />
                         <Label 
                           htmlFor="moncash" 
-                          className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'moncash' ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-border bg-background hover:bg-muted'}`}
+                          className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'moncash' ? 'border-foreground bg-primary/10 text-foreground' : 'border-border bg-background hover:bg-muted'}`}
                         >
                           MonCash
                         </Label>
@@ -272,23 +285,21 @@ export function Plans() {
                     </RadioGroup>
                   </div>
 
-                  {/* VRAIES COORDONNÉES INJECTÉES ICI */}
                   <div className="p-4 rounded-xl bg-muted/60 border text-xs space-y-2 text-muted-foreground">
                     <p className="font-bold text-foreground text-sm border-b pb-1">📞 Infos de transfert :</p>
                     {paymentMethod === 'moncash' ? (
                       <>
-                        <p>Numéro MonCash : <span className="font-mono text-foreground font-bold text-sm text-red-500">+509 34 25 08 08</span></p>
+                        <p>Numéro MonCash : <span className="font-mono text-foreground font-bold text-sm">+509 34 25 08 08</span></p>
                         <p>Nom Destinataire : <span className="text-foreground font-bold">Jhon Wood Antoine</span></p>
                       </>
                     ) : (
                       <>
-                        <p>Numéro NatCash : <span className="font-mono text-foreground font-bold text-sm text-emerald-500">+509 32 49 24 65</span></p>
+                        <p>Numéro NatCash : <span className="font-mono text-emerald-500 font-bold text-sm">+509 32 49 24 65</span></p>
                         <p>Nom Destinataire : <span className="text-foreground font-bold">Dafca Saint Vill</span></p>
                       </>
                     )}
                   </div>
 
-                  {/* ZONE DE TELEVERSEMENT DE FICHIER SECURISEE */}
                   <div className="space-y-2">
                     <Label htmlFor="proof-file" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       2. Capture d'écran ou reçu (Image)
@@ -326,7 +337,6 @@ export function Plans() {
         </div>
       )}
 
-      {/* ÉTAPE 3 : ÉCRAN DE REMERCIEMENT (BLOQUÉ PAR ÉTAT) */}
       {step === 'success' && (
         <div className="max-w-md mx-auto text-center py-12 space-y-6 animate-scale-in">
           <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-inner">

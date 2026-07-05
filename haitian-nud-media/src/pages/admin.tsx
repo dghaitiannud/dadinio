@@ -328,9 +328,6 @@ function PhotosTab() {
   );
 }
 
-/* ====================================================
-   COMPOSANT : ONGLET GESTION DES REÇUS ET DEMANDES VIP
-   ==================================================== */
 function VipRequestsTab() {
   const [requests, setRequests] = useState<VipRequest[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -347,13 +344,35 @@ function VipRequestsTab() {
     }
   };
 
-  const handleAction = async (requestId: string, userId: string, action: "approved" | "rejected") => {
+  const handleAction = async (requestId: string, userId: string, userEmail: string, action: "approved" | "rejected") => {
     setProcessingId(requestId);
     const duration = parseInt(selectedDuration[requestId] || "30", 10);
     
     try {
+      // 1. Processus en base de données via Supabase
       await adminProcessVipRequest(requestId, userId, action, duration);
       toast.success(action === "approved" ? "Abonnement VIP activé avec succès !" : "Demande rejetée");
+      
+      // 2. Notification Push ciblée spécifique (userId)
+      try {
+        await fetch("https://api-6rzs.onrender.com/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: action === "approved" ? "👑 Votre accès VIP est Actif !" : "❌ Reçu VIP non validé",
+            body: action === "approved" 
+              ? `Félicitations ! Votre abonnement VIP d'un mois a été validé.` 
+              : "Le reçu envoyé pour l'abonnement VIP a été refusé. Veuillez contacter le support.",
+            url: "/vip",
+            icon: "/logo.jpg",
+            targetUserId: userId, // Ciblage direct
+            adminSecret: "TON_PUSH_ADMIN_SECRET" 
+          })
+        });
+      } catch (pushErr) {
+        console.warn("Échec de l'envoi de l'alerte à l'utilisateur :", pushErr);
+      }
+
       await loadRequests();
     } catch (err: any) {
       toast.error(err?.message || "Erreur de traitement");
@@ -394,7 +413,7 @@ function VipRequestsTab() {
                 <TableRow key={r.id} className={r.status !== 'pending' ? "opacity-60" : ""}>
                   <TableCell className="font-semibold">{r.userEmail}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${r.paymentMethod === 'moncash' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${r.paymentMethod === 'moncash' ? 'bg-muted border' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
                       {r.paymentMethod}
                     </span>
                   </TableCell>
@@ -456,7 +475,7 @@ function VipRequestsTab() {
                           variant="outline" 
                           className="h-8 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 gap-1"
                           disabled={processingId === r.id}
-                          onClick={() => handleAction(r.id, r.userId, 'approved')}
+                          onClick={() => handleAction(r.id, r.userId, r.userEmail, 'approved')}
                         >
                           <Check className="h-3.5 w-3.5" /> Accepter
                         </Button>
@@ -465,7 +484,7 @@ function VipRequestsTab() {
                           variant="outline" 
                           className="h-8 border-destructive text-destructive hover:bg-destructive/10 gap-1"
                           disabled={processingId === r.id}
-                          onClick={() => handleAction(r.id, r.userId, 'rejected')}
+                          onClick={() => handleAction(r.id, r.userId, r.userEmail, 'rejected')}
                         >
                           <X className="h-3.5 w-3.5" /> Rejeter
                         </Button>
