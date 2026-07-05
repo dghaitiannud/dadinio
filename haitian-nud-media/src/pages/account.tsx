@@ -12,14 +12,12 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-// 🚀 AJOUTÉ : "Radio" pour l'icône du bouton Live
 import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio } from "lucide-react";
 import { toast } from "sonner";
 import { getWatchHistory, clearWatchHistory, getNotifPrefs, setNotifPrefs, type WatchEntry, type NotifPrefs } from "@/lib/local-store";
 import { listMyTickets, createTicket, type SupportTicket } from "@/lib/supabase-db";
 import { PwaInstallButton } from "@/components/pwa-install";
 import { isPushSupported, getPushPermission, subscribeToPush, unsubscribeFromPush, getCurrentSubscription, type PushPermission } from "@/lib/push-notifications";
-// 🚀 AJOUTÉ : Importation des constantes d'administration de messagerie
 import { ADMIN_EMAIL, LIVE_ADMIN_EMAIL } from "@/lib/supabase";
 
 export function Account() {
@@ -104,12 +102,6 @@ export function Account() {
     }
   };
 
-  const updateNotif = (key: keyof NotifPrefs, value: boolean) => {
-    const next = { ...notifs, [key]: value };
-    setNotifsState(next);
-    setNotifPrefs(next);
-  };
-
   const saveDisplayName = async () => {
     if (!displayName.trim() || !appUser?.id) return;
     setSavingName(true);
@@ -172,7 +164,6 @@ export function Account() {
                   </Link>
                 )}
 
-                {/* 🚀 NOUVEAU : Bouton d'accès au Studio réservé à l'Admin Live secondaire ou au Super Admin */}
                 {(appUser?.email === LIVE_ADMIN_EMAIL || isAdmin) && (
                   <Link href="/admin-live" className="w-full mt-2">
                     <Button
@@ -206,7 +197,7 @@ export function Account() {
               <TabsTrigger value="support"><Ticket className="h-4 w-4 mr-1 hidden sm:inline" />Support</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="subscription" className="space-y-6">
+            <TabsListContent value="subscription" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -292,9 +283,9 @@ export function Account() {
                   </CardContent>
                 </Card>
               )}
-            </TabsContent>
+            </TabsListContent>
 
-            <TabsContent value="history" className="space-y-6">
+            <TabsListContent value="history" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -328,9 +319,9 @@ export function Account() {
                   )}
                 </CardContent>
               </Card>
-            </TabsContent>
+            </TabsListContent>
 
-            <TabsContent value="settings" className="space-y-6">
+            <TabsListContent value="settings" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
                   <CardTitle>Profil</CardTitle>
@@ -350,7 +341,8 @@ export function Account() {
                 </CardContent>
               </Card>
 
-              <PushNotificationCard userId={appUser?.id} />
+              {/* 🌟 CORRECTION CRITIQUE : Si c'est l'admin, on force le label d'identification à "admin" pour le lier aux alertes Vercel/Render */}
+              <PushNotificationCard userId={isAdmin ? "admin" : appUser?.id} />
 
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
@@ -362,9 +354,9 @@ export function Account() {
                   <PwaInstallButton variant="card" />
                 </CardContent>
               </Card>
-            </TabsContent>
+            </TabsListContent>
 
-            <TabsContent value="support" className="space-y-6">
+            <TabsListContent value="support" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
                   <CardTitle>Contacter le support</CardTitle>
@@ -425,7 +417,7 @@ export function Account() {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </TabsListContent>
           </Tabs>
         </div>
       </div>
