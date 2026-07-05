@@ -481,3 +481,70 @@ export async function updateLiveStatus(isActive: boolean, streamUrl: string | nu
   if (error) throw error;
   return true;
 }
+
+// ====================================================
+//  FONCTIONS DE GESTION DU SYSTÈME VIP
+// ====================================================
+
+export interface VipRequest {
+  id: string;
+  userId: string;
+  userEmail: string;
+  paymentMethod: 'moncash' | 'natcash';
+  proofUrl: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+// Lister toutes les demandes VIP (avec pagination optionnelle)
+export async function adminListVipRequests(page: number = 1): Promise<VipRequest[]> {
+  const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
+  const { data, error } = await supabase
+    .from('vip_requests')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
+  
+  if (error) throw error;
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    userId: r.user_id,
+    userEmail: r.user_email,
+    paymentMethod: r.payment_method,
+    proofUrl: r.proof_url,
+    status: r.status,
+    createdAt: r.created_at,
+  }));
+}
+
+// Valider une demande VIP et mettre à jour le rôle de l'utilisateur
+export async function adminProcessVipRequest(
+  requestId: string, 
+  userId: string, 
+  action: 'approved' | 'rejected', 
+  daysDuration: number = 30
+) {
+  // 1. Mise à jour du statut de la requête
+  const { error: requestError } = await supabase
+    .from('vip_requests')
+    .update({ status: action })
+    .eq('id', requestId);
+
+  if (requestError) throw requestError;
+
+  // 2. Si approuvé, on passe l'utilisateur en plan VIP avec une date de fin
+  if (action === 'approved') {
+    const subscriptionEndsAt = new Date();
+    subscriptionEndsAt.setDate(subscriptionEndsAt.getDate() + daysDuration);
+
+    const { error: userError } = await supabase
+      .from('users')
+      .update({
+        plan: 'vip',
+        subscription_ends_at: subscriptionEndsAt.toISOString()
+      })
+      .eq('id', userId);
+
+    if (userError) throw userError;
+  }
+}

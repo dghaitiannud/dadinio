@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, Ticket, Trash2, Bell, UserCheck, LayoutTemplate } from "lucide-react";
+import { Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, Ticket, Trash2, Bell, UserCheck, LayoutTemplate, Crown, ExternalLink, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -20,7 +20,8 @@ import {
   adminListPhotos, adminCreatePhoto, adminDeletePhoto,
   adminListUsers, adminBlockUser, adminListTickets, adminReplyTicket,
   getBannerVideo, updateBannerVideo,
-  type Video, type Photo, type AdminUser, type SupportTicket, type AdminStats
+  adminListVipRequests, adminProcessVipRequest,
+  type Video, type Photo, type AdminUser, type SupportTicket, type AdminStats, type VipRequest
 } from "@/lib/supabase-db";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -51,9 +52,12 @@ export function Admin() {
       </h1>
       <AdminStatsCards />
       <Tabs defaultValue="videos" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-6 mb-6">
+        <TabsList className="grid w-full grid-cols-7 mb-6">
           <TabsTrigger value="videos">Vidéos</TabsTrigger>
           <TabsTrigger value="photos">Photos</TabsTrigger>
+          <TabsTrigger value="vip" className="text-yellow-500 font-semibold gap-1">
+            <Crown className="h-3.5 w-3.5 fill-yellow-500" /> Demandes VIP
+          </TabsTrigger>
           <TabsTrigger value="users">Utilisateurs</TabsTrigger>
           <TabsTrigger value="tickets">Messages</TabsTrigger>
           <TabsTrigger value="alerts">Alertes</TabsTrigger>
@@ -61,6 +65,7 @@ export function Admin() {
         </TabsList>
         <TabsContent value="videos"><VideosTab /></TabsContent>
         <TabsContent value="photos"><PhotosTab /></TabsContent>
+        <TabsContent value="vip"><VipRequestsTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="tickets"><TicketsTab /></TabsContent>
         <TabsContent value="alerts"><AdminAlerts /></TabsContent>
@@ -323,6 +328,162 @@ function PhotosTab() {
   );
 }
 
+/* ====================================================
+   COMPOSANT : ONGLET GESTION DES REÇUS ET DEMANDES VIP
+   ==================================================== */
+function VipRequestsTab() {
+  const [requests, setRequests] = useState<VipRequest[]>([]);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<Record<string, string>>({});
+
+  useEffect(() => { loadRequests(); }, []);
+
+  const loadRequests = async () => {
+    try {
+      const data = await adminListVipRequests();
+      setRequests(data);
+    } catch (err) {
+      toast.error("Impossible de charger les reçus VIP");
+    }
+  };
+
+  const handleAction = async (requestId: string, userId: string, action: "approved" | "rejected") => {
+    setProcessingId(requestId);
+    const duration = parseInt(selectedDuration[requestId] || "30", 10);
+    
+    try {
+      await adminProcessVipRequest(requestId, userId, action, duration);
+      toast.success(action === "approved" ? "Abonnement VIP activé avec succès !" : "Demande rejetée");
+      await loadRequests();
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur de traitement");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  return (
+    <Card className="bg-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-yellow-500">
+          <Crown className="h-5 w-5 fill-yellow-500" /> Validation des paiements VIP
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email Utilisateur</TableHead>
+              <TableHead>Méthode</TableHead>
+              <TableHead>Preuve / Reçu</TableHead>
+              <TableHead>Date d'envoi</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead>Durée Forfait</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {requests.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  Aucune demande VIP enregistrée pour le moment.
+                </TableCell>
+              </TableRow>
+            ) : (
+              requests.map((r) => (
+                <TableRow key={r.id} className={r.status !== 'pending' ? "opacity-60" : ""}>
+                  <TableCell className="font-semibold">{r.userEmail}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${r.paymentMethod === 'moncash' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
+                      {r.paymentMethod}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="relative w-12 h-12 rounded border border-border overflow-hidden cursor-pointer group bg-muted">
+                          <img src={r.proofUrl} alt="Reçu" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-[9px] text-white font-bold">Agrandir</div>
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-xl bg-background">
+                        <DialogHeader>
+                          <DialogTitle className="text-sm text-muted-foreground flex items-center justify-between">
+                            <span>Preuve envoyée par : {r.userEmail}</span>
+                            <a href={r.proofUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary text-xs hover:underline">
+                              Ouvrir l'original <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </DialogTitle>
+                        </DialogHeader>
+                        <div className="mt-2 rounded-xl border overflow-hidden bg-black max-h-[70vh] flex justify-center">
+                          <img src={r.proofUrl} alt="Reçu grand format" className="max-w-full max-h-[70vh] object-contain" />
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {format(new Date(r.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-[11px] font-medium uppercase ${r.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : r.status === 'rejected' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                      {r.status === 'approved' ? 'Validé' : r.status === 'rejected' ? 'Refusé' : 'En attente'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {r.status === 'pending' ? (
+                      <Select 
+                        value={selectedDuration[r.id] || "30"} 
+                        onValueChange={(val) => setSelectedDuration({ ...selectedDuration, [r.id]: val })}
+                      >
+                        <SelectTrigger className="w-28 h-8 text-xs bg-background">
+                          <SelectValue placeholder="30 Jours" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30 Jours</SelectItem>
+                          <SelectItem value="90">90 Jours</SelectItem>
+                          <SelectItem value="365">1 An (Privilège)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {r.status === 'pending' ? (
+                      <div className="flex gap-2 justify-end">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 gap-1"
+                          disabled={processingId === r.id}
+                          onClick={() => handleAction(r.id, r.userId, 'approved')}
+                        >
+                          <Check className="h-3.5 w-3.5" /> Accepter
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8 border-destructive text-destructive hover:bg-destructive/10 gap-1"
+                          disabled={processingId === r.id}
+                          onClick={() => handleAction(r.id, r.userId, 'rejected')}
+                        >
+                          <X className="h-3.5 w-3.5" /> Rejeter
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className="text-xs italic text-muted-foreground">Traité</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
 function UsersTab() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [blockPending, setBlockPending] = useState<string | null>(null);
@@ -522,7 +683,7 @@ function AdminAlerts() {
         <CardHeader><CardTitle className="flex items-center gap-2"><UserCheck className="h-5 w-5 text-primary" /> Informations</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <div className="p-3 rounded-lg border border-border bg-background">
-            <div className="font-semibold text-foreground mb-1">🔑 Variables d'environnement requises</div>
+            <div className="font-semibold text-foreground mb-1">Variables d'environnement requises</div>
             <code className="text-xs block">VAPID_PUBLIC_KEY=BAM-Ab_F...</code>
             <code className="text-xs block">VAPID_PRIVATE_KEY=e6Qt_r7...</code>
             <code className="text-xs block">PUSH_ADMIN_SECRET=ton-secret</code>
@@ -530,11 +691,11 @@ function AdminAlerts() {
             <code className="text-xs block">SUPABASE_SERVICE_KEY=eyJ...</code>
           </div>
           <div className="p-3 rounded-lg border border-border bg-background">
-            <div className="font-semibold text-foreground mb-1">📊 Table Supabase requise</div>
+            <div className="font-semibold text-foreground mb-1"> Table Supabase requise</div>
             <p>Table <code>push_subscriptions</code> — créée via le SQL setup.</p>
           </div>
           <div className="p-3 rounded-lg border border-border bg-background">
-            <div className="font-semibold text-foreground mb-1">📱 Les abonnés</div>
+            <div className="font-semibold text-foreground mb-1"> Les abonnés</div>
             <p>Les users s'abonnent depuis Compte → Paramètres → Notifications.</p>
           </div>
         </CardContent>
