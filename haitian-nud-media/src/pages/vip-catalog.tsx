@@ -10,19 +10,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 type CatalogTab = "all-vip" | "video-vip" | "photo-vip";
 
 export function VipCatalog() {
-  const { isSignedIn, appUser } = useAuth(); // 🌟 Récupération de appUser pour inspecter le plan
+  const { isSignedIn, appUser } = useAuth();
   const [activeTab, setActiveTab] = useState<CatalogTab>("all-vip");
   const [vipVideos, setVipVideos] = useState<Video[]>([]);
   const [vipPhotos, setVipPhotos] = useState<Photo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Vérification si le compte est explicitement VIP
-  const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
+  // 🌟 PROTECTION DOUBLE : Connecté + Statut VIP requis
+  const isAccessGranted = isSignedIn && appUser && (appUser as any).plan === "vip";
 
   useEffect(() => {
-    // 🧠 STRATÉGIE : Si l'utilisateur n'est pas connecté, on ne charge rien (bloqué par le garde).
-    // S'il est connecté (Free ou VIP), on charge tout le catalogue exclusif.
-    if (!isSignedIn) return;
+    if (!isAccessGranted) return;
 
     async function loadVipContent() {
       setIsLoading(true);
@@ -42,10 +40,10 @@ export function VipCatalog() {
     }
 
     loadVipContent();
-  }, [isSignedIn]);
+  }, [isAccessGranted]);
 
-  // 🔒 BARRIÈRE 1 : Si l'utilisateur n'est même pas connecté, on le force à créer un compte / s'identifier
-  if (!isSignedIn) {
+  // 🔒 Écran d'accès refusé (non connecté ou non VIP)
+  if (!isAccessGranted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 container mx-auto text-center">
         <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-6 border border-primary/20 shadow-[0_0_30px_rgba(30,94,255,0.2)]">
@@ -55,14 +53,24 @@ export function VipCatalog() {
           Espace Privé VIP
         </h1>
         <p className="text-muted-foreground max-w-md mb-8">
-          Rejoignez la communauté ! Connectez-vous ou créez un compte gratuitement pour découvrir notre catalogue exclusif.
+          {!isSignedIn 
+            ? "Vous devez vous connecter à votre compte et détenir un pass VIP pour accéder à cet espace exclusif." 
+            : "Cet espace regroupe l'intégralité de nos contenus exclusifs. Vous devez posséder un compte VIP actif pour y accéder."}
         </p>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Link href="/login">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full">
-              Se connecter / S'inscrire
-            </Button>
-          </Link>
+          {!isSignedIn ? (
+            <Link href="/auth">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full">
+                Se connecter
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/plans">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full">
+                <Star className="mr-2 h-5 w-5 fill-current text-yellow-400" /> Devenir Membre VIP
+              </Button>
+            </Link>
+          )}
           <Link href="/">
             <Button size="lg" variant="outline" className="w-full">
               Retour à l'accueil
@@ -73,7 +81,6 @@ export function VipCatalog() {
     );
   }
 
-  // 🔓 ACCÈS LIBRE (Free & VIP) : Les utilisateurs les voient tous. La page /watch fera le tri si clic !
   return (
     <div className="container mx-auto px-4 py-8 min-h-screen flex flex-col gap-8">
       {/* Header du catalogue */}
@@ -84,13 +91,10 @@ export function VipCatalog() {
             <Star className="h-3.5 w-3.5 fill-current text-yellow-400" /> CATALOGUE EXCLUSIF
           </div>
           <h1 className="text-3xl md:text-5xl font-serif font-bold text-white mb-2 tracking-tight">
-            {isUserVip ? "Votre Espace VIP Actif" : "Espace VIP"}
+            Votre Espace VIP
           </h1>
           <p className="text-muted-foreground max-w-xl">
-            {isUserVip 
-              ? "Merci pour votre soutien ! Profitez de votre accès membre complet et visionnez l'ensemble des contenus en illimité."
-              : "Découvrez nos productions exclusives. Devenez membre VIP pour débloquer la lecture instantanée de tous les contenus."
-            }
+            Profitez d'un accès illimité et sans restriction à l'ensemble des productions premium de la plateforme.
           </p>
         </div>
         <div className="relative bg-black/40 backdrop-blur-sm border border-white/5 rounded-xl px-6 py-4 flex gap-6 shrink-0 text-center">
@@ -112,7 +116,7 @@ export function VipCatalog() {
           variant={activeTab === "all-vip" ? "default" : "ghost"}
           size="sm"
           onClick={() => setActiveTab("all-vip")}
-          className="rounded-full"
+          className="rounded-full gap-2"
         >
           Tout le contenu
         </Button>
@@ -151,7 +155,7 @@ export function VipCatalog() {
             {(activeTab === "all-vip" || activeTab === "video-vip") && (
               <div className="mb-8">
                 {activeTab === "all-vip" && vipVideos.length > 0 && (
-                  <h2 className="text-xl font-bold mb-4 text-white flex items-center gap-2">Vidéos Premium</h2>
+                  <h2 className="text-xl font-bold mb-4 text-white flex items-center gap-2">Vidéo Premium</h2>
                 )}
                 {vipVideos.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 gap-y-10">
@@ -210,7 +214,6 @@ export function VipCatalog() {
   );
 }
 
-// Composant pour afficher un message vide
 function EmptyCatalogMessage({ type }: { type: string }) {
   return (
     <div className="w-full py-24 text-center text-muted-foreground border border-dashed border-border rounded-xl">
