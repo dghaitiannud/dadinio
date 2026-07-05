@@ -59,7 +59,7 @@ export function VipCatalog() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           {!isSignedIn ? (
-            <Link href="/auth">
+            <Link href="/login">
               <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full">
                 Se connecter
               </Button>
