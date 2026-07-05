@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Play, TrendingUp, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/lib/auth-context"; // 👈 Ajout du context d'authentification
+import { useAuth } from "@/lib/auth-context";
 
 const TABS = [
   { id: "all", label: "Accueil", icon: HomeIcon },
@@ -16,7 +16,7 @@ const TABS = [
 ] as const;
 
 export function Home() {
-  const { isSignedIn, appUser } = useAuth(); // 👈 Récupération du profil utilisateur
+  const { isSignedIn, appUser } = useAuth();
   const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
   const [trending, setTrending] = useState<Video[]>([]);
   const [latest, setLatest] = useState<Video[]>([]);
@@ -29,7 +29,6 @@ export function Home() {
   const FULL_TEXT = "HAITIAN NUD";
   const [currentText, setCurrentText] = useState("");
 
-  // Détection si l'utilisateur connecté est VIP
   const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
   useEffect(() => {
@@ -65,7 +64,7 @@ export function Home() {
   const visibleVideos = (() => {
     if (!latest) return latest;
     if (activeTab === "popular") return [...latest].sort((a, b) => b.views - a.views);
-    if (activeTab === "downloads") return latest.filter((v) => !v.isVip);
+    // 🌟 CORRECTION : On ne filtre plus les vidéos VIP ici. Elles restent visibles pour tous.
     return latest;
   })();
 
@@ -116,7 +115,6 @@ export function Home() {
                 <Play className="mr-2 h-5 w-5 fill-current" /> Regarder maintenant
               </Button>
               
-              {/* 🔒 BOUTON MASQUÉ SI L'UTILISATEUR EST VIP */}
               {!isUserVip && (
                 <Link href="/plans">
                   <Button size="lg" variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm w-full sm:w-auto">
@@ -189,7 +187,6 @@ export function Home() {
           </div>
         </section>
 
-        {/* 🌟 BLOC PUBLICITAIRE INTERNE : RETIRÉ COMPLÈTEMENT SI L'UTILISATEUR EST VIP */}
         {!isUserVip && (
           <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-background to-background" />
