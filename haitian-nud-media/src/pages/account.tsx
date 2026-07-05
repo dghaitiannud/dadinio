@@ -14,11 +14,11 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio } from "lucide-react";
 import { toast } from "sonner";
-import { getWatchHistory, clearWatchHistory, getNotifPrefs, setNotifPrefs, type WatchEntry, type NotifPrefs } from "@/lib/local-store";
+import { getWatchHistory, clearWatchHistory, getNotifPrefs, type WatchEntry, type NotifPrefs } from "@/lib/local-store";
 import { listMyTickets, createTicket, type SupportTicket } from "@/lib/supabase-db";
 import { PwaInstallButton } from "@/components/pwa-install";
 import { isPushSupported, getPushPermission, subscribeToPush, unsubscribeFromPush, getCurrentSubscription, type PushPermission } from "@/lib/push-notifications";
-import { ADMIN_EMAIL, LIVE_ADMIN_EMAIL } from "@/lib/supabase";
+import { LIVE_ADMIN_EMAIL } from "@/lib/supabase";
 
 export function Account() {
   const { isSignedIn, user, appUser, signOut, isAdmin, refreshUser } = useAuth();
@@ -28,7 +28,6 @@ export function Account() {
   const [message, setMessage] = useState("");
   const [ticketPending, setTicketPending] = useState(false);
   const [history, setHistory] = useState<WatchEntry[]>([]);
-  const [notifs, setNotifsState] = useState<NotifPrefs>(getNotifPrefs());
   const [displayName, setDisplayName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -66,8 +65,8 @@ export function Account() {
       toast.success("Message envoyé au support");
       const updated = await listMyTickets(appUser.id);
       setTickets(updated);
-    } catch (e: any) {
-      toast.error(e?.message || "Erreur d'envoi");
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur d'envoi");
     } finally {
       setTicketPending(false);
     }
@@ -114,8 +113,8 @@ export function Account() {
       if (error) throw error;
       await refreshUser();
       toast.success("Nom mis à jour");
-    } catch (e: any) {
-      toast.error(e?.message || "Erreur");
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur");
     } finally {
       setSavingName(false);
     }
@@ -197,7 +196,7 @@ export function Account() {
               <TabsTrigger value="support"><Ticket className="h-4 w-4 mr-1 hidden sm:inline" />Support</TabsTrigger>
             </TabsList>
 
-            <TabsListContent value="subscription" className="space-y-6">
+            <TabsContent value="subscription" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -283,9 +282,9 @@ export function Account() {
                   </CardContent>
                 </Card>
               )}
-            </TabsListContent>
+            </TabsContent>
 
-            <TabsListContent value="history" className="space-y-6">
+            <TabsContent value="history" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
@@ -319,9 +318,9 @@ export function Account() {
                   )}
                 </CardContent>
               </Card>
-            </TabsListContent>
+            </TabsContent>
 
-            <TabsListContent value="settings" className="space-y-6">
+            <TabsContent value="settings" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
                   <CardTitle>Profil</CardTitle>
@@ -341,7 +340,6 @@ export function Account() {
                 </CardContent>
               </Card>
 
-              {/* 🌟 CORRECTION CRITIQUE : Si c'est l'admin, on force le label d'identification à "admin" pour le lier aux alertes Vercel/Render */}
               <PushNotificationCard userId={isAdmin ? "admin" : appUser?.id} />
 
               <Card className="border-border bg-card shadow-sm">
@@ -354,9 +352,9 @@ export function Account() {
                   <PwaInstallButton variant="card" />
                 </CardContent>
               </Card>
-            </TabsListContent>
+            </TabsContent>
 
-            <TabsListContent value="support" className="space-y-6">
+            <TabsContent value="support" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
                   <CardTitle>Contacter le support</CardTitle>
@@ -369,7 +367,7 @@ export function Account() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="message">Message</Label>
-                      <Textarea id="message" placeholder="Décrivez votre problème en détail..." rows={4} value={message} onChange={e => setMessage(e.target.value)} className="bg-background resize-none" />
+                      <Textarea id="message" placeholder="Décrivez votre problem en détail..." rows={4} value={message} onChange={e => setMessage(e.target.value)} className="bg-background resize-none" />
                     </div>
                     <Button type="submit" disabled={ticketPending || !subject || !message}>
                       {ticketPending ? "Envoi..." : "Envoyer la demande"}
@@ -417,7 +415,7 @@ export function Account() {
                   </div>
                 </CardContent>
               </Card>
-            </TabsListContent>
+            </TabsContent>
           </Tabs>
         </div>
       </div>
