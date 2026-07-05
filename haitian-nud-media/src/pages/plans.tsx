@@ -214,7 +214,7 @@ export function Plans() {
                   Devenir VIP maintenant <ArrowRight className="h-5 w-5" />
                 </Button>
               ) : (
-                <Button onClick={() => setLocation("/auth")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
+                <Button onClick={() => setLocation("/login")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
                   <LogIn className="h-5 w-5" /> Connectez-vous pour vous abonner
                 </Button>
               )}
