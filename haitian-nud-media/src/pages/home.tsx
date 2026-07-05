@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getVideos, getTrendingVideos, getBannerVideo, getPhotos, type Video, type Photo } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
+import { useLocation, Link } from "wouter"; // 🌟 MODIFIÉ : Ajout de useLocation
 import { Play, TrendingUp, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
@@ -17,6 +17,7 @@ const TABS = [
 
 export function Home() {
   const { isSignedIn, appUser } = useAuth();
+  const [, setLocation] = useLocation(); // 🌟 MODIFIÉ : Hook de navigation active
   const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
   const [trending, setTrending] = useState<Video[]>([]);
   const [latest, setLatest] = useState<Video[]>([]);
@@ -110,19 +111,24 @@ export function Home() {
             </h1>
 
             <div className="flex flex-wrap gap-4">
-              {/* 🌟 FIX: Redirection forcée de "Regarder maintenant" vers le catalogue privé VIP */}
-              <Link href="/vip-catalog" className={`${isUserVip ? 'w-full sm:w-auto' : ''}`}>
-                <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full">
-                  <Play className="mr-2 h-5 w-5 fill-current" /> Regarder maintenant
-                </Button>
-              </Link>
+              {/* 🌟 FIX : Redirection logicielle forcée au clic pour éviter le blocage de wouter */}
+              <Button 
+                size="lg" 
+                onClick={() => setLocation("/vip-catalog")}
+                className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full sm:w-auto"
+              >
+                <Play className="mr-2 h-5 w-5 fill-current" /> Regarder maintenant
+              </Button>
               
               {!isUserVip && (
-                <Link href="/plans">
-                  <Button size="lg" variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm w-full sm:w-auto">
-                    <Star className="mr-2 h-5 w-5 text-yellow-400" /> Devenir VIP
-                  </Button>
-                </Link>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={() => setLocation("/plans")}
+                  className="bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm w-full sm:w-auto"
+                >
+                  <Star className="mr-2 h-5 w-5 text-yellow-400" /> Devenir VIP
+                </Button>
               )}
             </div>
           </div>
@@ -206,11 +212,9 @@ export function Home() {
                   Accédez à tout le contenu premium, téléchargements illimités et sans publicités. Soutenez les créateurs haïtiens.
                 </p>
               </div>
-              <Link href="/plans">
-                <Button size="lg" className="bg-primary text-primary-foreground font-bold shrink-0">
-                  Découvrir les offres
-                </Button>
-              </Link>
+              <Button size="lg" onClick={() => setLocation("/plans")} className="bg-primary text-primary-foreground font-bold shrink-0">
+                Découvrir les offres
+              </Button>
             </div>
           </section>
         )}
@@ -294,5 +298,5 @@ function Badge({ children, className }: any) {
     <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className}`}>
       {children}
     </div>
-  )
+  );
 }
