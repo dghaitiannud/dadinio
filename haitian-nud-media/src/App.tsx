@@ -23,6 +23,9 @@ import { DownloadsPage } from "@/pages/downloads";
 import { Live } from "@/pages/live";
 import { AdminLive } from "@/pages/admin-live";
 
+// 🌟 AJOUTÉ : Importation du catalogue privé VIP
+import { VipCatalog } from "@/pages/vip-catalog";
+
 import { useAuth } from "@/lib/auth-context";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -52,6 +55,10 @@ function App() {
               <div key={location} className="animate-page-fade">
                 <Switch>
                   <Route path="/" component={Home} />
+                  
+                  {/* 🌟 AJOUTÉ : Route pour le catalogue privé VIP */}
+                  <Route path="/vip-catalog" component={VipCatalog} />
+                  
                   <Route path="/watch/:id" component={Watch} />
 
                   <Route path="/search" component={Search} />

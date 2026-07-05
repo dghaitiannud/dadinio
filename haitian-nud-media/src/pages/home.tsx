@@ -64,7 +64,6 @@ export function Home() {
   const visibleVideos = (() => {
     if (!latest) return latest;
     if (activeTab === "popular") return [...latest].sort((a, b) => b.views - a.views);
-    // 🌟 CORRECTION : On ne filtre plus les vidéos VIP ici. Elles restent visibles pour tous.
     return latest;
   })();
 
@@ -111,9 +110,12 @@ export function Home() {
             </h1>
 
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className={`bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] ${isUserVip ? 'w-full sm:w-auto' : ''}`}>
-                <Play className="mr-2 h-5 w-5 fill-current" /> Regarder maintenant
-              </Button>
+              {/* 🌟 FIX: Redirection forcée de "Regarder maintenant" vers le catalogue privé VIP */}
+              <Link href="/vip-catalog" className={`${isUserVip ? 'w-full sm:w-auto' : ''}`}>
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full">
+                  <Play className="mr-2 h-5 w-5 fill-current" /> Regarder maintenant
+                </Button>
+              </Link>
               
               {!isUserVip && (
                 <Link href="/plans">
