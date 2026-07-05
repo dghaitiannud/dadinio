@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
   Send, Star, CheckCircle2, ShieldCheck, DollarSign, 
-  Smartphone, Upload, Sparkles, LogIn, ArrowRight, FileImage 
+  Smartphone, Upload, Sparkles, LogIn, ArrowRight, FileImage, Crown
 } from "lucide-react";
 
 const TELEGRAM_LINKS = [
@@ -23,6 +23,9 @@ const TELEGRAM_LINKS = [
 export function Plans() {
   const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation();
+
+  // Détection si l'utilisateur connecté est déjà membre VIP
+  const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
   // Gestion des étapes : 'info' | 'payment' | 'success'
   const [step, setStep] = useState<'info' | 'payment' | 'success'>('info');
@@ -39,7 +42,7 @@ export function Plans() {
       const maxSize = 5 * 1024 * 1024; 
       if (selectedFile.size > maxSize) {
         toast.error("Le fichier est trop lourd. Maximum 5 Mo autorisé.");
-        e.target.value = ""; // Réinitialise l'input
+        e.target.value = ""; 
         return;
       }
 
@@ -71,7 +74,6 @@ export function Plans() {
     setIsSubmitting(true);
 
     try {
-      // Génération d'un nom de fichier unique et sécurisé
       const fileExt = file.name.split('.').pop();
       const uniqueFileName = `${(appUser as any).id}-${Date.now()}.${fileExt}`;
       const filePath = `${uniqueFileName}`;
@@ -139,10 +141,13 @@ export function Plans() {
               <Sparkles className="h-4 w-4 fill-yellow-500" /> Espace Membre Premium
             </div>
             <h1 className="text-3xl md:text-5xl font-serif font-bold mb-6 tracking-tight">
-              Découvrez tous les avantages d'un abonnement VIP
+              {isUserVip ? "Votre Abonnement VIP est Actif" : "Découvrez tous les avantages d'un abonnement VIP"}
             </h1>
             <p className="text-muted-foreground text-base md:text-lg">
-              En devenant membre VIP de Haitian Nud, vous bénéficierez d'un accès exclusif et illimité à l'intégralité de notre contenu privé.
+              {isUserVip 
+                ? "Merci pour votre confiance ! Vous disposez actuellement d'un accès illimité et sécurisé à l'ensemble de la plateforme."
+                : "En devenant membre VIP de Haitian Nud, vous bénéficierez d'un accès exclusif et illimité à l'intégralité de notre contenu privé."
+              }
             </p>
           </div>
 
@@ -173,23 +178,48 @@ export function Plans() {
             </Card>
           </div>
 
-          <div className="max-w-md mx-auto text-center p-6 bg-secondary/30 rounded-2xl border border-border">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-semibold font-bold text-yellow-500">Abonnement de 1 Mois</p>
-            <div className="text-3xl font-bold font-mono text-primary my-2 flex items-center justify-center gap-1">
-              <DollarSign className="h-7 w-7 text-yellow-500" /> 20 USD <span className="text-muted-foreground text-sm font-normal">ou</span> 2 500 HTG
+          {/* RENDU CONDITIONNEL : On vérifie si l'utilisateur est VIP */}
+          {isUserVip ? (
+            /* --- CONTENU SI L'UTILISATEUR EST DÉJÀ VIP --- */
+            <div className="max-w-md mx-auto text-center p-6 bg-gradient-to-b from-yellow-500/10 to-transparent rounded-2xl border border-yellow-500/30 relative overflow-hidden backdrop-blur-sm">
+              <div className="absolute top-0 right-0 p-3 opacity-10">
+                <Crown className="h-24 w-24 text-yellow-500 fill-yellow-500" />
+              </div>
+              
+              <div className="w-12 h-12 bg-yellow-500/10 text-yellow-500 rounded-full flex items-center justify-center mx-auto border border-yellow-500/20 mb-3 shadow-inner">
+                <Crown className="h-6 w-6 fill-yellow-500" />
+              </div>
+              
+              <p className="text-xs uppercase tracking-widest font-bold text-yellow-500 mb-1">Compte Premium Actif</p>
+              <h3 className="text-xl font-bold mb-2">Bienvenue dans l'Espace VIP</h3>
+              <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
+                Votre abonnement est actuellement actif sur ce compte. Vous n'avez plus besoin d'effectuer de virement. Profitez pleinement des galeries et vidéos HD !
+              </p>
+              
+              <Button onClick={() => setLocation("/")} className="w-full py-6 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl gap-2 shadow-lg">
+                Explorer le catalogue privé <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground mb-6">Vous bénéficierez également d'un accès prioritaire aux nouveaux contenus régulièrement ajoutés.</p>
-            
-            {isSignedIn ? (
-              <Button onClick={() => setStep('payment')} className="w-full py-6 text-base font-bold rounded-xl shadow-lg gap-2">
-                Devenir VIP maintenant <ArrowRight className="h-5 w-5" />
-              </Button>
-            ) : (
-              <Button onClick={() => setLocation("/auth")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
-                <LogIn className="h-5 w-5" /> Connectez-vous pour vous abonner
-              </Button>
-            )}
-          </div>
+          ) : (
+            /* --- CONTENU STANDARD S'IL N'EST PAS VIP --- */
+            <div className="max-w-md mx-auto text-center p-6 bg-secondary/30 rounded-2xl border border-border">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold text-yellow-500">Abonnement de 1 Mois</p>
+              <div className="text-3xl font-bold font-mono text-primary my-2 flex items-center justify-center gap-1">
+                <DollarSign className="h-7 w-7 text-yellow-500" /> 20 USD <span className="text-muted-foreground text-sm font-normal">ou</span> 2 500 HTG
+              </div>
+              <p className="text-xs text-muted-foreground mb-6">Vous bénéficierez également d'un accès prioritaire aux nouveaux contenus régulièrement ajoutés.</p>
+              
+              {isSignedIn ? (
+                <Button onClick={() => setStep('payment')} className="w-full py-6 text-base font-bold rounded-xl shadow-lg gap-2">
+                  Devenir VIP maintenant <ArrowRight className="h-5 w-5" />
+                </Button>
+              ) : (
+                <Button onClick={() => setLocation("/auth")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
+                  <LogIn className="h-5 w-5" /> Connectez-vous pour vous abonner
+                </Button>
+              )}
+            </div>
+          )}
 
           <div className="max-w-xl mx-auto border-t pt-8">
             <h3 className="text-lg font-bold mb-4 flex items-center gap-2 justify-center">
