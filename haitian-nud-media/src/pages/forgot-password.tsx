@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Mail, ArrowLeft, KeyRound, ShieldCheck } from "lucide-react";
+import { Mail, ArrowLeft, KeyRound, ShieldCheck, AlertCircle } from "lucide-react";
 
 export function ForgotPasswordPage() {
   const { resetPassword } = useAuth();
@@ -13,20 +13,40 @@ export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(null);
+
     try {
-      const { error } = await resetPassword(email);
-      if (error) {
-        toast.error(error.message || "Erreur lors de l'envoi");
+      // 1. Interrogation de ton API privée sur Render pour valider l'existence de l'e-mail
+      const response = await fetch("https://api-6rzs.onrender.com/api/auth/check-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const checkResult = await response.json();
+
+      if (!response.ok || !checkResult.exists) {
+        setError("Cet e-mail n'existe pas sur la plateforme.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Si l'e-mail existe, on procède à l'envoi du lien de réinitialisation via Supabase
+      const { error: resetError } = await resetPassword(email);
+      if (resetError) {
+        toast.error(resetError.message || "Erreur lors de l'envoi");
       } else {
         setSent(true);
         toast.success("Email envoyé ! Vérifiez votre boîte de réception.");
       }
     } catch (err: any) {
-      toast.error(err?.message || "Erreur");
+      setError("Impossible de joindre le serveur de sécurité.");
+      toast.error("Erreur de connexion au serveur.");
     } finally {
       setLoading(false);
     }
@@ -49,6 +69,17 @@ export function ForgotPasswordPage() {
           </p>
         </div>
 
+        {/* Bloc d'erreur visuel si l'e-mail n'est pas présent dans la DB */}
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 animate-in fade-in-50">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-semibold">Erreur : </span>
+              {error}
+            </div>
+          </div>
+        )}
+
         {!sent ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -59,7 +90,10 @@ export function ForgotPasswordPage() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setError(null);
+                  }}
                   placeholder="votre@email.com"
                   className="pl-10"
                   required
@@ -71,7 +105,7 @@ export function ForgotPasswordPage() {
               disabled={loading}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
             >
-              {loading ? "Envoi..." : "Envoyer le lien de réinitialisation"}
+              {loading ? "Vérification..." : "Envoyer le lien de réinitialisation"}
             </Button>
           </form>
         ) : (
@@ -88,6 +122,7 @@ export function ForgotPasswordPage() {
               onClick={() => {
                 setSent(false);
                 setEmail("");
+                setError(null);
               }}
             >
               Renvoyer l'email
