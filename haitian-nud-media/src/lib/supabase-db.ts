@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 export const FREE_DOWNLOAD_LIMIT = 3;
-const ADMIN_ITEMS_PER_PAGE = 1000; // 🔐 FIX #11: Add pagination limit
+const ADMIN_ITEMS_PER_PAGE = 1000; // 🔐 FIX #11: Augmenté à 1000 pour tout voir d'un coup
 
 // Types
 export interface Video {
@@ -323,7 +323,7 @@ export async function adminCreateVideo(video: Omit<Video, 'id' | 'createdAt' | '
 export async function adminDeleteVideo(id: string) {
   const { error } = await supabase
     .from('videos')
-    .update({ published: false })
+    .delete() // 🌟 Option B : Supprime définitivement la ligne de la table
     .eq('id', id);
   if (error) throw error;
 }
@@ -356,7 +356,7 @@ export async function adminCreatePhoto(photo: Omit<Photo, 'id' | 'createdAt' | '
 export async function adminDeletePhoto(id: string) {
   const { error } = await supabase
     .from('photos')
-    .update({ published: false })
+    .delete() // 🌟 Option B : Supprime définitivement la ligne de la table
     .eq('id', id);
   if (error) throw error;
 }
@@ -446,6 +446,7 @@ export async function updateBannerVideo(url: string): Promise<boolean> {
     throw err;
   }
 }
+
 // ====================================================
 //  FONCTIONS DE GESTION DU LIVE
 // ====================================================
