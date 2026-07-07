@@ -13,17 +13,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Send, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight } from "lucide-react";
+import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
-
-const TELEGRAM_LINKS = [
-  { label: "Groupe 1", url: "https://t.me/dg_haitiannud" },
-  { label: "Groupe 2", url: "https://t.me/+UXtFEcF2Dw8zNGYx" },
-  { label: "Canal 1", url: "https://t.me/hatiannud_canal" },
-  { label: "Canal 2", url: "https://t.me/haiti_annud" },
-];
 
 function VipGate() {
   return (
@@ -124,7 +117,6 @@ export function Watch() {
   const [offlineDownloading, setOfflineDownloading] = useState(false);
   const [isOfflineAvailable, setIsOfflineAvailable] = useState(false);
 
-  // Détection si l'utilisateur connecté possède un abonnement VIP actif
   const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
   useEffect(() => {
@@ -335,7 +327,6 @@ export function Watch() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           
-          {/* 🌟 FIX : Activé pour TOUS les comptes connectés (Free et VIP) sur n'importe quelle vidéo */}
           {isSignedIn && (
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-xs text-muted-foreground font-medium">Lecture en continu</span>
@@ -343,7 +334,6 @@ export function Watch() {
             </div>
           )}
 
-          {/* ZONE DU LECTEUR VIDÉO AVEC SECURITÉ CONDITIONNELLE VIP */}
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-4 group">
             {!isSignedIn ? (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center">
@@ -360,18 +350,11 @@ export function Watch() {
                       Se connecter
                     </Button>
                   </Link>
-                  <Link href="/login">
-                    <Button size="sm" variant="secondary" className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-5">
-                      S'inscrire
-                    </Button>
-                  </Link>
                 </div>
               </div>
             ) : video.isVip && !isUserVip ? (
-              /* 🌟 LOCK POUR LES MEMBRES GRATUITS SUR LES VIDÉOS VIP */
               <VipGate />
             ) : video.videoUrl ? (
-              /* 🌟 LECTURE SÉCURISÉE ACCESSIBLE POUR LES MEMBRES VIP OU VIDÉOS PUBLIQUES */
               <video
                 src={video.videoUrl}
                 poster={video.thumbnailUrl || '/logo.jpg'}
@@ -417,7 +400,6 @@ export function Watch() {
                   <Copy className="h-4 w-4 mr-2" /> Copier le lien
                 </Button>
                 
-                {/* ACCÈS AUX OUTILS DE TÉLÉCHARGEMENT CONDITIONNÉ AU STATUT VIP SI REQUIS */}
                 {isSignedIn && (!video.isVip || isUserVip) && (
                   <>
                     <Button onClick={handleDownload} disabled={downloadPending} className="rounded-full bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(30,94,255,0.3)]">
@@ -451,7 +433,6 @@ export function Watch() {
               <p className="text-sm whitespace-pre-wrap">{video.description}</p>
             </div>
 
-            {/* 🌟 LE MESSAGE VIP DU BAS N'EST PLUS AFFICHÉ QUE POUR LES NON-VIP SUR LES CONTENUS BLOCKÉS */}
             {isSignedIn && video.isVip && !isUserVip && (
               <div className="mt-4 p-5 bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl">
                 <h3 className="font-bold mb-1 flex items-center gap-2">
@@ -485,7 +466,6 @@ export function Watch() {
                     <AvatarFallback className="bg-primary/10 text-primary">{(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    {/* 🌟 FIX ICI : Changé TrashArea par Textarea */}
                     <Textarea
                       placeholder="Ajouter un commentaire..."
                       className="min-h-[80px] bg-background border-border resize-none focus-visible:ring-primary mb-3"

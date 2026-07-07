@@ -10,8 +10,11 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { 
   Send, Star, CheckCircle2, ShieldCheck, DollarSign, 
-  Smartphone, Upload, Sparkles, LogIn, ArrowRight, FileImage, Crown
+  Smartphone, Upload, Sparkles, LogIn, ArrowRight, FileImage, Crown, BellRing, ShieldAlert
 } from "lucide-react";
+
+// Utilisation de tes fonctions d'alertes push natives
+import { isPushSupported, getPushPermission, subscribeToPush } from "@/lib/push-notifications";
 
 const TELEGRAM_LINKS = [
   { label: "Groupe 1", url: "https://t.me/+R3geXsW7ZL8zNTM5", desc: "Groupe principal" },
@@ -24,41 +27,50 @@ export function Plans() {
   const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Détection si l'utilisateur connecté est déjà membre VIP
   const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
+  const supported = isPushSupported();
 
-  // Gestion des étapes : 'info' | 'payment' | 'success'
   const [step, setStep] = useState<'info' | 'payment' | 'success'>('info');
   const [paymentMethod, setPaymentMethod] = useState<"moncash" | "natcash">("moncash");
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pushPending, setPushPending] = useState(false);
 
-  // Validation et sécurité du fichier sélectionné
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-
-      // Mesure de sécurité 1 : Limiter la taille du fichier (Max 5 Mo)
       const maxSize = 5 * 1024 * 1024; 
       if (selectedFile.size > maxSize) {
         toast.error("Le fichier est trop lourd. Maximum 5 Mo autorisé.");
         e.target.value = ""; 
         return;
       }
-
-      // Mesure de sécurité 2 : Vérifier les extensions de fichiers autorisées
       const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
       if (!allowedTypes.includes(selectedFile.type)) {
         toast.error("Format non supporté. Veuillez envoyer une image (JPG, JPEG ou PNG).");
         e.target.value = "";
         return;
       }
-
       setFile(selectedFile);
     }
   };
 
-  // Traitement et téléversement sécurisé vers Supabase + Notification Admin
+  const handleActivatePushBeforeSubmit = async () => {
+    setPushPending(true);
+    try {
+      const ok = await subscribeToPush((appUser as any)?.id);
+      if (ok) {
+        toast.success("Notifications système activées !");
+      } else if (getPushPermission() === "denied") {
+        toast.error("Veuillez autoriser les notifications dans les paramètres de votre navigateur.");
+      } else {
+        toast.error("Échec de la souscription aux notifications.");
+      }
+    } finally {
+      setPushPending(false);
+    }
+  };
+
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSignedIn || !appUser) {
@@ -71,6 +83,12 @@ export function Plans() {
       return;
     }
 
+    // Protection : Bloquer si le navigateur supporte le push mais que l'utilisateur n'a pas encore validé
+    if (supported && getPushPermission() !== "granted") {
+      toast.error("Action requise : Veuillez activer les notifications système avant d'envoyer.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -78,22 +96,16 @@ export function Plans() {
       const uniqueFileName = `${(appUser as any).id}-${Date.now()}.${fileExt}`;
       const filePath = `${uniqueFileName}`;
 
-      // 1. Upload du fichier dans le bucket 'vip-proofs'
       const { error: uploadError } = await supabase.storage
         .from("vip-proofs")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false
-        });
+        .upload(filePath, file, { cacheControl: "3600", upsert: false });
 
-      if (uploadError) throw new Error(`Erreur lors de l'upload de l'image : ${uploadError.message}`);
+      if (uploadError) throw new Error(`Erreur upload : ${uploadError.message}`);
 
-      // 2. Récupération de l'URL publique de la preuve de paiement
       const { data: { publicUrl } } = supabase.storage
         .from("vip-proofs")
         .getPublicUrl(filePath);
 
-      // 3. Insertion des informations dans la table vip_requests
       const { error: dbError } = await supabase.from("vip_requests").insert({
         user_id: (appUser as any).id,
         user_email: (appUser as any).email,
@@ -104,7 +116,6 @@ export function Plans() {
 
       if (dbError) throw dbError;
 
-      // 4. Appel API pour notifier l'administration sur Render
       try {
         await fetch("https://api-6rzs.onrender.com/api/push/send", {
           method: "POST",
@@ -114,7 +125,7 @@ export function Plans() {
             body: `L'utilisateur ${(appUser as any).email} a envoyé une preuve via ${paymentMethod.toUpperCase()}.`,
             url: "/admin",
             icon: "/logo.jpg",
-            targetUserId: "admin" // 🌟 Identifiant ciblé pour router vers ton appareil d'administration en toute sécurité
+            targetUserId: "admin"
           })
         });
       } catch (pushErr) {
@@ -133,7 +144,6 @@ export function Plans() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-16 min-h-screen max-w-4xl">
-      
       {step === 'info' && (
         <div className="space-y-12 animate-fade-in">
           <div className="text-center max-w-2xl mx-auto">
@@ -178,37 +188,30 @@ export function Plans() {
             </Card>
           </div>
 
-          {/* RENDU CONDITIONNEL : On vérifie si l'utilisateur est VIP */}
           {isUserVip ? (
-            /* --- CONTENU SI L'UTILISATEUR EST DÉJÀ VIP --- */
             <div className="max-w-md mx-auto text-center p-6 bg-gradient-to-b from-yellow-500/10 to-transparent rounded-2xl border border-yellow-500/30 relative overflow-hidden backdrop-blur-sm">
               <div className="absolute top-0 right-0 p-3 opacity-10">
                 <Crown className="h-24 w-24 text-yellow-500 fill-yellow-500" />
               </div>
-              
               <div className="w-12 h-12 bg-yellow-500/10 text-yellow-500 rounded-full flex items-center justify-center mx-auto border border-yellow-500/20 mb-3 shadow-inner">
                 <Crown className="h-6 w-6 fill-yellow-500" />
               </div>
-              
               <p className="text-xs uppercase tracking-widest font-bold text-yellow-500 mb-1">Compte Premium Actif</p>
               <h3 className="text-xl font-bold mb-2">Bienvenue dans l'Espace VIP</h3>
               <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
                 Votre abonnement est actuellement actif sur ce compte. Vous n'avez plus besoin d'effectuer de virement. Profitez pleinement des galeries et vidéos HD !
               </p>
-              
-              <Button onClick={() => setLocation("/vip-catalog")} className="w-full py-6 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl gap-2 shadow-lg">
+              <Button onClick={() => setLocation("/")} className="w-full py-6 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl gap-2 shadow-lg">
                 Explorer le catalogue privé <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
           ) : (
-            /* --- CONTENU STANDARD S'IL N'EST PAS VIP --- */
             <div className="max-w-md mx-auto text-center p-6 bg-secondary/30 rounded-2xl border border-border">
               <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold text-yellow-500">Abonnement de 1 Mois</p>
               <div className="text-3xl font-bold font-mono text-primary my-2 flex items-center justify-center gap-1">
                 <DollarSign className="h-7 w-7 text-yellow-500" /> 20 USD <span className="text-muted-foreground text-sm font-normal">ou</span> 2 500 HTG
               </div>
               <p className="text-xs text-muted-foreground mb-6">Vous bénéficierez également d'un accès prioritaire aux nouveaux contenus régulièrement ajoutés.</p>
-              
               {isSignedIn ? (
                 <Button onClick={() => setStep('payment')} className="w-full py-6 text-base font-bold rounded-xl shadow-lg gap-2">
                   Devenir VIP maintenant <ArrowRight className="h-5 w-5" />
@@ -242,7 +245,6 @@ export function Plans() {
 
       {step === 'payment' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
-          
           <div className="lg:col-span-7 space-y-6">
             <div className="border-b pb-4">
               <h2 className="text-2xl font-serif font-bold">Comment payer votre abonnement VIP ?</h2>
@@ -261,19 +263,16 @@ export function Plans() {
                 <p><span className="font-semibold text-foreground text-primary">Étape 5 :</span> Sélectionnez le pays de destination (Haïti +509).</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 6 :</span> Saisissez le montant (20 $).</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 7 :</span> Ajoutez le nom du destinataire du paiement selon votre choix :</p>
-                
                 <div className="pl-4 border-l-2 border-primary/30 py-1 space-y-1 my-2 bg-muted/30 rounded-r-md">
                   <p>• Si vous choisissez <span className="font-bold text-foreground">MonCash</span>, utilisez le numéro MonCash indiqué sur le site et le nom associé.</p>
                   <p>• Si vous choisissez <span className="font-bold text-foreground">NatCash</span>, utilisez le numéro NatCash indiqué sur le site et le nom fourni.</p>
                 </div>
-
                 <p>Cliquez ensuite sur « Suivant ».</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 8 :</span> Saisissez votre adresse e-mail (@email.com).</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 9 :</span> Saisissez les informations de contact demandées et cliquez sur « Enregistrer ».</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 10 :</span> Vérifiez toutes les informations et cliquez sur « Envoyer ».</p>
               </div>
             </div>
-            
             <Button variant="ghost" onClick={() => setStep('info')} className="text-xs text-muted-foreground hover:text-foreground">
               ← Retour aux avantages
             </Button>
@@ -289,28 +288,14 @@ export function Plans() {
                 <form onSubmit={handlePaymentSubmit} className="space-y-6">
                   <div className="space-y-2">
                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">1. Mode de paiement utilisé</Label>
-                    <RadioGroup 
-                      value={paymentMethod} 
-                      onValueChange={(v: any) => setPaymentMethod(v)} 
-                      className="grid grid-cols-2 gap-3"
-                    >
+                    <RadioGroup value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)} className="grid grid-cols-2 gap-3">
                       <div>
                         <RadioGroupItem value="moncash" id="moncash" className="sr-only" />
-                        <Label 
-                          htmlFor="moncash" 
-                          className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'moncash' ? 'border-foreground bg-primary/10 text-foreground' : 'border-border bg-background hover:bg-muted'}`}
-                        >
-                          MonCash
-                        </Label>
+                        <Label htmlFor="moncash" className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'moncash' ? 'border-foreground bg-primary/10 text-foreground' : 'border-border bg-background hover:bg-muted'}`}>MonCash</Label>
                       </div>
                       <div>
                         <RadioGroupItem value="natcash" id="natcash" className="sr-only" />
-                        <Label 
-                          htmlFor="natcash" 
-                          className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'natcash' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500' : 'border-border bg-background hover:bg-muted'}`}
-                        >
-                          NatCash
-                        </Label>
+                        <Label htmlFor="natcash" className={`flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center transition-all ${paymentMethod === 'natcash' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500' : 'border-border bg-background hover:bg-muted'}`}>NatCash</Label>
                       </div>
                     </RadioGroup>
                   </div>
@@ -331,39 +316,40 @@ export function Plans() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="proof-file" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      2. Capture d'écran ou reçu (Image)
-                    </Label>
-                    
+                    <Label htmlFor="proof-file" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">2. Capture d'écran ou reçu (Image)</Label>
                     <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-4 bg-background hover:bg-muted/20 transition-all cursor-pointer group">
-                      <input 
-                        type="file" 
-                        id="proof-file" 
-                        required
-                        accept="image/png, image/jpeg, image/jpg"
-                        onChange={handleFileChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      />
+                      <input type="file" id="proof-file" required accept="image/png, image/jpeg, image/jpg" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                       <FileImage className={`h-8 w-8 mb-2 ${file ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} transition-colors`} />
-                      <p className="text-xs font-medium text-center text-foreground max-w-[200px] truncate">
-                        {file ? file.name : "Cliquez pour choisir un fichier"}
-                      </p>
+                      <p className="text-xs font-medium text-center text-foreground max-w-[200px] truncate">{file ? file.name : "Cliquez pour choisir un fichier"}</p>
                       <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, JPEG jusqu'à 5 Mo</p>
                     </div>
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting || !file} 
-                    className="w-full py-5 text-sm font-bold rounded-xl mt-4"
-                  >
-                    {isSubmitting ? "Sécurisation & Envoi..." : "Envoyer ma preuve de paiement"}
-                  </Button>
+                  {/* Verrouillage Push Intégré */}
+                  {supported && getPushPermission() !== "granted" ? (
+                    <div className="p-3 border border-amber-500/30 bg-amber-500/5 rounded-xl space-y-2">
+                      <p className="text-[11px] text-muted-foreground leading-normal">
+                        ⚠️ <strong>Action Requise :</strong> Autorisez les notifications système pour débloquer l'envoi. Cela garantit la réception immédiate de l'alerte d'activation de votre compte.
+                      </p>
+                      {getPushPermission() === "denied" ? (
+                        <p className="text-[11px] text-destructive font-bold flex items-center gap-1">
+                          <ShieldAlert className="h-3.5 w-3.5" /> Autorisation bloquée. Modifiez les réglages de votre navigateur.
+                        </p>
+                      ) : (
+                        <Button type="button" onClick={handleActivatePushBeforeSubmit} disabled={pushPending} className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs py-2 rounded-lg gap-1.5">
+                          <BellRing className="h-3.5 w-3.5" /> {pushPending ? "Activation..." : "Activer les notifications système"}
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <Button type="submit" disabled={isSubmitting || !file} className="w-full py-5 text-sm font-bold rounded-xl mt-4">
+                      {isSubmitting ? "Sécurisation & Envoi..." : "Envoyer ma preuve de paiement"}
+                    </Button>
+                  )}
                 </form>
               </CardContent>
             </Card>
           </div>
-
         </div>
       )}
 
@@ -372,36 +358,21 @@ export function Plans() {
           <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-inner">
             <ShieldCheck className="h-8 w-8" />
           </div>
-          
           <div className="space-y-2">
             <h2 className="text-3xl font-serif font-bold tracking-tight">Merci pour votre confiance !</h2>
             <p className="text-sm text-muted-foreground px-4">
               Votre preuve de paiement via <span className="font-semibold text-foreground uppercase">{paymentMethod}</span> a été stockée de manière sécurisée et transmise aux administrateurs.
             </p>
           </div>
-
           <div className="p-4 bg-card border rounded-2xl text-left text-xs text-muted-foreground leading-relaxed">
             <p className="font-semibold text-foreground text-sm mb-1">Qu'arrive-t-il maintenant ?</p>
             Notre équipe vérifiera manuellement la validité de votre transfert et votre accès VIP complet sera activé sur votre compte <span className="font-semibold text-foreground">{appUser?.email}</span> en moins de 5 minutes. Vous recevrez une notification dès validation.
           </div>
-
-          <div className="pt-4 border-t space-y-3">
-            <p className="text-xs font-medium text-foreground">En attendant la validation, restez connecté avec nous :</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {TELEGRAM_LINKS.slice(0, 2).map((link) => (
-                <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 text-xs font-semibold">
-                  <Send className="h-3 w-3 text-primary" /> {link.label}
-                </a>
-              ))}
-            </div>
-          </div>
-
           <Button onClick={() => setLocation("/")} variant="outline" className="w-full py-5 rounded-xl text-xs font-semibold">
             Retourner au Catalogue Public
           </Button>
         </div>
       )}
-
     </div>
   );
 }
