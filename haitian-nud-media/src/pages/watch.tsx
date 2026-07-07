@@ -335,7 +335,8 @@ export function Watch() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           
-          {isSignedIn && !video.isVip && (
+          {/* 🌟 FIX : Activé pour TOUS les comptes connectés (Free et VIP) sur n'importe quelle vidéo */}
+          {isSignedIn && (
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-xs text-muted-foreground font-medium">Lecture en continu</span>
               <NetworkStatusIcon />
@@ -484,7 +485,7 @@ export function Watch() {
                     <AvatarFallback className="bg-primary/10 text-primary">{(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <Textarea
+                    <TrashArea
                       placeholder="Ajouter un commentaire..."
                       className="min-h-[80px] bg-background border-border resize-none focus-visible:ring-primary mb-3"
                       value={commentBody}
