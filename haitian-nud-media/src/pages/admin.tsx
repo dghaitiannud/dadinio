@@ -148,7 +148,6 @@ function VideosTab() {
     setDeletePending(id);
     try {
       await adminDeleteVideo(id);
-      // Correction: mise à jour immédiate de l'état local pour faire disparaître l'élément
       setVideos(prev => prev.filter(v => v.id !== id));
       toast.success("Vidéo supprimée");
     } catch (e: any) {
@@ -202,7 +201,6 @@ function VideosTab() {
         </Dialog>
       </CardHeader>
       <CardContent>
-        {/* Correction: Ajout du conteneur de scroll vertical et horizontal */}
         <div className="w-full overflow-x-auto rounded-xl border border-border">
           <div className="max-h-[600px] overflow-y-auto">
             <Table>
@@ -267,7 +265,6 @@ function PhotosTab() {
     setDeletePending(id);
     try {
       await adminDeletePhoto(id);
-      // Correction: mise à jour immédiate de l'état local pour faire disparaître l'élément
       setPhotos(prev => prev.filter(p => p.id !== id));
       toast.success("Photo archivée");
     } catch (err: any) {
@@ -317,7 +314,6 @@ function PhotosTab() {
         </Dialog>
       </CardHeader>
       <CardContent>
-        {/* Correction: Ajout du conteneur de scroll vertical et horizontal */}
         <div className="w-full overflow-x-auto rounded-xl border border-border">
           <div className="max-h-[600px] overflow-y-auto">
             <Table>
@@ -328,7 +324,8 @@ function PhotosTab() {
                     <TableCell><img src={p.imageUrl} alt="" className="w-10 h-10 object-cover rounded border" /></TableCell>
                     <TableCell className="font-medium">{p.title}</TableCell>
                     <TableCell><span className="px-2 py-1 bg-accent text-accent-foreground rounded text-xs">{p.category}</span></TableCell>
-                    <TableCell>{v.views || 0}</TableCell>
+                    {/* CORRECTION ICI : Remplacement de v.views par p.views pour éviter l'erreur "v is not defined" */}
+                    <TableCell>{p.views || 0}</TableCell>
                     <TableCell>{p.isVip ? "Oui" : "Non"}</TableCell>
                     <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} disabled={deletePending === p.id} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
                   </TableRow>
@@ -401,7 +398,6 @@ function VipRequestsTab() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Correction: Ajout du conteneur de scroll vertical et horizontal */}
         <div className="w-full overflow-x-auto rounded-xl border border-border">
           <div className="max-h-[600px] overflow-y-auto">
             <Table>
@@ -550,7 +546,6 @@ function UsersTab() {
     <Card className="bg-card">
       <CardHeader><CardTitle>Utilisateurs</CardTitle></CardHeader>
       <CardContent>
-        {/* Correction: Ajout du conteneur de scroll vertical et horizontal */}
         <div className="w-full overflow-x-auto rounded-xl border border-border">
           <div className="max-h-[600px] overflow-y-auto">
             <Table>
