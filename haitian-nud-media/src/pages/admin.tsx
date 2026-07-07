@@ -45,14 +45,14 @@ export function Admin() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 min-h-screen">
       <h1 className="text-3xl font-serif font-bold mb-8 flex items-center gap-3">
         <Shield className="h-8 w-8 text-primary" />
         Panneau d'Administration
       </h1>
       <AdminStatsCards />
       <Tabs defaultValue="videos" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-7 mb-6">
+        <TabsList className="grid w-full grid-cols-7 mb-6 overflow-x-auto">
           <TabsTrigger value="videos">Vidéos</TabsTrigger>
           <TabsTrigger value="photos">Photos</TabsTrigger>
           <TabsTrigger value="vip" className="text-yellow-500 font-semibold gap-1">
@@ -148,10 +148,12 @@ function VideosTab() {
     setDeletePending(id);
     try {
       await adminDeleteVideo(id);
+      // Correction: mise à jour immédiate de l'état local pour faire disparaître l'élément
+      setVideos(prev => prev.filter(v => v.id !== id));
       toast.success("Vidéo supprimée");
-      await loadVideos();
     } catch (e: any) {
       toast.error(e?.message || "Erreur de suppression");
+      await loadVideos();
     } finally {
       setDeletePending(null);
     }
@@ -200,20 +202,25 @@ function VideosTab() {
         </Dialog>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader><TableRow><TableHead>Titre</TableHead><TableHead>Catégorie</TableHead><TableHead>Vues</TableHead><TableHead>VIP</TableHead><TableHead></TableHead></TableRow></TableHeader>
-          <TableBody>
-            {videos.map((v) => (
-              <TableRow key={v.id}>
-                <TableCell className="font-medium">{v.title}</TableCell>
-                <TableCell><span className="px-2 py-1 bg-accent text-accent-foreground rounded text-xs">{v.category}</span></TableCell>
-                <TableCell>{v.views}</TableCell>
-                <TableCell>{v.isVip ? "Oui" : "Non"}</TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(v.id)} disabled={deletePending === v.id} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {/* Correction: Ajout du conteneur de scroll vertical et horizontal */}
+        <div className="w-full overflow-x-auto rounded-xl border border-border">
+          <div className="max-h-[600px] overflow-y-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Titre</TableHead><TableHead>Catégorie</TableHead><TableHead>Vues</TableHead><TableHead>VIP</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableBody>
+                {videos.map((v) => (
+                  <TableRow key={v.id}>
+                    <TableCell className="font-medium">{v.title}</TableCell>
+                    <TableCell><span className="px-2 py-1 bg-accent text-accent-foreground rounded text-xs">{v.category}</span></TableCell>
+                    <TableCell>{v.views}</TableCell>
+                    <TableCell>{v.isVip ? "Oui" : "Non"}</TableCell>
+                    <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(v.id)} disabled={deletePending === v.id} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -260,10 +267,12 @@ function PhotosTab() {
     setDeletePending(id);
     try {
       await adminDeletePhoto(id);
+      // Correction: mise à jour immédiate de l'état local pour faire disparaître l'élément
+      setPhotos(prev => prev.filter(p => p.id !== id));
       toast.success("Photo archivée");
-      await loadPhotos();
     } catch (err: any) {
       toast.error(err?.message || "Erreur de suppression");
+      await loadPhotos();
     } finally {
       setDeletePending(null);
     }
@@ -308,21 +317,26 @@ function PhotosTab() {
         </Dialog>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader><TableRow><TableHead>Aperçu</TableHead><TableHead>Titre</TableHead><TableHead>Catégorie</TableHead><TableHead>Vues</TableHead><TableHead>VIP</TableHead><TableHead></TableHead></TableRow></TableHeader>
-          <TableBody>
-            {photos.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell><img src={p.imageUrl} alt="" className="w-10 h-10 object-cover rounded border" /></TableCell>
-                <TableCell className="font-medium">{p.title}</TableCell>
-                <TableCell><span className="px-2 py-1 bg-accent text-accent-foreground rounded text-xs">{p.category}</span></TableCell>
-                <TableCell>{p.views}</TableCell>
-                <TableCell>{p.isVip ? "Oui" : "Non"}</TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} disabled={deletePending === p.id} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {/* Correction: Ajout du conteneur de scroll vertical et horizontal */}
+        <div className="w-full overflow-x-auto rounded-xl border border-border">
+          <div className="max-h-[600px] overflow-y-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Aperçu</TableHead><TableHead>Titre</TableHead><TableHead>Catégorie</TableHead><TableHead>Vues</TableHead><TableHead>VIP</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableBody>
+                {photos.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell><img src={p.imageUrl} alt="" className="w-10 h-10 object-cover rounded border" /></TableCell>
+                    <TableCell className="font-medium">{p.title}</TableCell>
+                    <TableCell><span className="px-2 py-1 bg-accent text-accent-foreground rounded text-xs">{p.category}</span></TableCell>
+                    <TableCell>{v.views || 0}</TableCell>
+                    <TableCell>{p.isVip ? "Oui" : "Non"}</TableCell>
+                    <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} disabled={deletePending === p.id} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -349,11 +363,9 @@ function VipRequestsTab() {
     const duration = parseInt(selectedDuration[requestId] || "30", 10);
     
     try {
-      // 1. Processus en base de données via Supabase
       await adminProcessVipRequest(requestId, userId, action, duration);
       toast.success(action === "approved" ? "Abonnement VIP activé avec succès !" : "Demande rejetée");
       
-      // 2. Notification Push ciblée spécifique (userId)
       try {
         await fetch("https://api-6rzs.onrender.com/api/push/send", {
           method: "POST",
@@ -361,12 +373,12 @@ function VipRequestsTab() {
           body: JSON.stringify({
             title: action === "approved" ? "👑 Votre accès VIP est Actif !" : "❌ Reçu VIP non validé",
             body: action === "approved" 
-              ? `Félicitations ! Votre abonnement VIP d'un mois a été validé.` 
+              ? `Félicitations ! Votre abonnement VIP a été validé.` 
               : "Le reçu envoyé pour l'abonnement VIP a été refusé. Veuillez contacter le support.",
             url: "/vip",
             icon: "/logo.jpg",
-            targetUserId: userId, // Ciblage direct
-            adminSecret: "TON_PUSH_ADMIN_SECRET" 
+            targetUserId: userId,
+            adminSecret: "Pourquoi2020??" 
           })
         });
       } catch (pushErr) {
@@ -389,115 +401,120 @@ function VipRequestsTab() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Email Utilisateur</TableHead>
-              <TableHead>Méthode</TableHead>
-              <TableHead>Preuve / Reçu</TableHead>
-              <TableHead>Date d'envoi</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Durée Forfait</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {requests.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                  Aucune demande VIP enregistrée pour le moment.
-                </TableCell>
-              </TableRow>
-            ) : (
-              requests.map((r) => (
-                <TableRow key={r.id} className={r.status !== 'pending' ? "opacity-60" : ""}>
-                  <TableCell className="font-semibold">{r.userEmail}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${r.paymentMethod === 'moncash' ? 'bg-muted border' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
-                      {r.paymentMethod}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <div className="relative w-12 h-12 rounded border border-border overflow-hidden cursor-pointer group bg-muted">
-                          <img src={r.proofUrl} alt="Reçu" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-[9px] text-white font-bold">Agrandir</div>
-                        </div>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-xl bg-background">
-                        <DialogHeader>
-                          <DialogTitle className="text-sm text-muted-foreground flex items-center justify-between">
-                            <span>Preuve envoyée par : {r.userEmail}</span>
-                            <a href={r.proofUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary text-xs hover:underline">
-                              Ouvrir l'original <ExternalLink className="h-3 w-3" />
-                            </a>
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="mt-2 rounded-xl border overflow-hidden bg-black max-h-[70vh] flex justify-center">
-                          <img src={r.proofUrl} alt="Reçu grand format" className="max-w-full max-h-[70vh] object-contain" />
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {format(new Date(r.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
-                  </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-[11px] font-medium uppercase ${r.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : r.status === 'rejected' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-500'}`}>
-                      {r.status === 'approved' ? 'Validé' : r.status === 'rejected' ? 'Refusé' : 'En attente'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {r.status === 'pending' ? (
-                      <Select 
-                        value={selectedDuration[r.id] || "30"} 
-                        onValueChange={(val) => setSelectedDuration({ ...selectedDuration, [r.id]: val })}
-                      >
-                        <SelectTrigger className="w-28 h-8 text-xs bg-background">
-                          <SelectValue placeholder="30 Jours" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="30">30 Jours</SelectItem>
-                          <SelectItem value="90">90 Jours</SelectItem>
-                          <SelectItem value="365">1 An (Privilège)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {r.status === 'pending' ? (
-                      <div className="flex gap-2 justify-end">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-8 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 gap-1"
-                          disabled={processingId === r.id}
-                          onClick={() => handleAction(r.id, r.userId, r.userEmail, 'approved')}
-                        >
-                          <Check className="h-3.5 w-3.5" /> Accepter
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="h-8 border-destructive text-destructive hover:bg-destructive/10 gap-1"
-                          disabled={processingId === r.id}
-                          onClick={() => handleAction(r.id, r.userId, r.userEmail, 'rejected')}
-                        >
-                          <X className="h-3.5 w-3.5" /> Rejeter
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-xs italic text-muted-foreground">Traité</span>
-                    )}
-                  </TableCell>
+        {/* Correction: Ajout du conteneur de scroll vertical et horizontal */}
+        <div className="w-full overflow-x-auto rounded-xl border border-border">
+          <div className="max-h-[600px] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Email Utilisateur</TableHead>
+                  <TableHead>Méthode</TableHead>
+                  <TableHead>Preuve / Reçu</TableHead>
+                  <TableHead>Date d'envoi</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Durée Forfait</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              </TableHeader>
+              <TableBody>
+                {requests.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      Aucune demande VIP enregistrée pour le moment.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  requests.map((r) => (
+                    <TableRow key={r.id} className={r.status !== 'pending' ? "opacity-60" : ""}>
+                      <TableCell className="font-semibold">{r.userEmail}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${r.paymentMethod === 'moncash' ? 'bg-muted border' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
+                          {r.paymentMethod}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <div className="relative w-12 h-12 rounded border border-border overflow-hidden cursor-pointer group bg-muted">
+                              <img src={r.proofUrl} alt="Reçu" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-[9px] text-white font-bold">Agrandir</div>
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-xl bg-background">
+                            <DialogHeader>
+                              <DialogTitle className="text-sm text-muted-foreground flex items-center justify-between">
+                                <span>Preuve envoyée par : {r.userEmail}</span>
+                                <a href={r.proofUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary text-xs hover:underline">
+                                  Ouvrir l'original <ExternalLink className="h-3 w-3" />
+                                </a>
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="mt-2 rounded-xl border overflow-hidden bg-black max-h-[70vh] flex justify-center">
+                              <img src={r.proofUrl} alt="Reçu grand format" className="max-w-full max-h-[70vh] object-contain" />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {format(new Date(r.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-[11px] font-medium uppercase ${r.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : r.status === 'rejected' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-500'}`}>
+                          {r.status === 'approved' ? 'Validé' : r.status === 'rejected' ? 'Refusé' : 'En attente'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {r.status === 'pending' ? (
+                          <Select 
+                            value={selectedDuration[r.id] || "30"} 
+                            onValueChange={(val) => setSelectedDuration({ ...selectedDuration, [r.id]: val })}
+                          >
+                            <SelectTrigger className="w-28 h-8 text-xs bg-background">
+                              <SelectValue placeholder="30 Jours" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="30">30 Jours</SelectItem>
+                              <SelectItem value="90">90 Jours</SelectItem>
+                              <SelectItem value="365">1 An (Privilège)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {r.status === 'pending' ? (
+                          <div className="flex gap-2 justify-end">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 border-emerald-500 text-emerald-500 hover:bg-emerald-500/10 gap-1"
+                              disabled={processingId === r.id}
+                              onClick={() => handleAction(r.id, r.userId, r.userEmail, 'approved')}
+                            >
+                              <Check className="h-3.5 w-3.5" /> Accepter
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="h-8 border-destructive text-destructive hover:bg-destructive/10 gap-1"
+                              disabled={processingId === r.id}
+                              onClick={() => handleAction(r.id, r.userId, r.userEmail, 'rejected')}
+                            >
+                              <X className="h-3.5 w-3.5" /> Rejeter
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs italic text-muted-foreground">Traité</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -533,20 +550,25 @@ function UsersTab() {
     <Card className="bg-card">
       <CardHeader><CardTitle>Utilisateurs</CardTitle></CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Plan</TableHead><TableHead>Date d'inscription</TableHead><TableHead>Statut</TableHead><TableHead></TableHead></TableRow></TableHeader>
-          <TableBody>
-            {users.map((u) => (
-              <TableRow key={u.id} className={u.blocked ? "opacity-50" : ""}>
-                <TableCell className="font-medium">{u.email}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded text-xs ${u.plan === 'vip' ? 'bg-primary text-white' : 'bg-muted'}`}>{u.plan.toUpperCase()}</span></TableCell>
-                <TableCell>{format(new Date(u.createdAt), "dd/MM/yyyy")}</TableCell>
-                <TableCell>{u.blocked ? <span className="text-destructive font-medium">Bloqué</span> : "Actif"}</TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => handleToggleBlock(u.id, u.blocked)} disabled={blockPending === u.id} className={u.blocked ? "text-green-500" : "text-destructive"}>{u.blocked ? "Débloquer" : "Bloquer"}</Button></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {/* Correction: Ajout du conteneur de scroll vertical et horizontal */}
+        <div className="w-full overflow-x-auto rounded-xl border border-border">
+          <div className="max-h-[600px] overflow-y-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Plan</TableHead><TableHead>Date d'inscription</TableHead><TableHead>Statut</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableBody>
+                {users.map((u) => (
+                  <TableRow key={u.id} className={u.blocked ? "opacity-50" : ""}>
+                    <TableCell className="font-medium">{u.email}</TableCell>
+                    <TableCell><span className={`px-2 py-1 rounded text-xs ${u.plan === 'vip' ? 'bg-primary text-white' : 'bg-muted'}`}>{u.plan.toUpperCase()}</span></TableCell>
+                    <TableCell>{format(new Date(u.createdAt), "dd/MM/yyyy")}</TableCell>
+                    <TableCell>{u.blocked ? <span className="text-destructive font-medium">Bloqué</span> : "Actif"}</TableCell>
+                    <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => handleToggleBlock(u.id, u.blocked)} disabled={blockPending === u.id} className={u.blocked ? "text-green-500" : "text-destructive"}>{u.blocked ? "Débloquer" : "Bloquer"}</Button></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -586,7 +608,7 @@ function TicketsTab() {
       <Card className="lg:col-span-2 bg-card">
         <CardHeader><CardTitle>Messages & tickets</CardTitle></CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
             {tickets.map((t) => (
               <div key={t.id} onClick={() => setSelectedTicket(t)} className={`p-4 border rounded-lg cursor-pointer transition-colors hover:bg-accent ${selectedTicket?.id === t.id ? 'border-primary' : 'border-border'}`}>
                 <div className="flex justify-between">
@@ -749,7 +771,7 @@ function AdminBannerTab() {
       setUrl("");
       toast.success("Bannière réinitialisée");
     } catch (e) {
-      toast.error("Erreur lors de la suppression");
+      toast.error("Erreur lors de l'suppression");
     } finally {
       setPending(false);
     }
