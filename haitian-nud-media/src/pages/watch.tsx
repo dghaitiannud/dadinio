@@ -485,7 +485,8 @@ export function Watch() {
                     <AvatarFallback className="bg-primary/10 text-primary">{(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <TrashArea
+                    {/* 🌟 FIX ICI : Changé TrashArea par Textarea */}
+                    <Textarea
                       placeholder="Ajouter un commentaire..."
                       className="min-h-[80px] bg-background border-border resize-none focus-visible:ring-primary mb-3"
                       value={commentBody}
