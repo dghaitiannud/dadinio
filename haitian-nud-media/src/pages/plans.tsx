@@ -201,7 +201,7 @@ export function Plans() {
               <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
                 Votre abonnement est actuellement actif sur ce compte. Vous n'avez plus besoin d'effectuer de virement. Profitez pleinement des galeries et vidéos HD !
               </p>
-              <Button onClick={() => setLocation("/")} className="w-full py-6 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl gap-2 shadow-lg">
+              <Button onClick={() => setLocation("/vip-catalog")} className="w-full py-6 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl gap-2 shadow-lg">
                 Explorer le catalogue privé <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
