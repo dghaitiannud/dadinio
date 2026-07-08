@@ -39,14 +39,6 @@ function VipGate() {
   );
 }
 
-function GoogleAdsBar() {
-  return (
-    <div className="mt-8 rounded-2xl border border-border bg-card px-4 py-3 text-center text-sm text-muted-foreground">
-      Google Ads
-    </div>
-  );
-}
-
 function NetworkStatusIcon() {
   const [networkQuality, setNetworkQuality] = useState<'excellent' | 'good' | 'poor' | 'unknown'>('unknown');
 
@@ -128,13 +120,19 @@ export function Watch() {
       try {
         const v = await getVideo(id);
         setVideo(v);
-        if (v && user?.id) { 
-          registerView(id, user.id);
-          import("@/lib/local-store").then(({ pushWatchHistory }) =>
-            pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
-          );
-        }
+        
         if (v) {
+          // 🔥 Une vue est comptée immédiatement pour TOUT LE MONDE (style YouTube)
+          registerView(id);
+
+          // L'historique local se met à jour uniquement si l'utilisateur possède un compte
+          if (user?.id) {
+            import("@/lib/local-store").then(({ pushWatchHistory }) =>
+              pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
+            );
+          }
+
+          // Chargement des vidéos associées
           getVideos({ category: v.category })
             .then(vids => setRelatedVideos(vids.filter(vid => vid.id !== id)))
             .catch(err => console.warn('Failed to load related videos:', err));
@@ -553,7 +551,6 @@ export function Watch() {
           </div>
         </div>
       </div>
-      <GoogleAdsBar />
     </div>
   );
 }

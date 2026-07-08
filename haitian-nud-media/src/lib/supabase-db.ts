@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 
 export const FREE_DOWNLOAD_LIMIT = 3;
-const ADMIN_ITEMS_PER_PAGE = 1000; // 🔐 FIX #11: Augmenté à 1000 pour tout voir d'un coup
+const ADMIN_ITEMS_PER_PAGE = 2000; // 🔐 FIX #11: Augmenté à 1000 pour tout voir d'un coup
 
 // Types
 export interface Video {
@@ -106,17 +106,25 @@ export async function getVideo(id: string): Promise<Video | null> {
   return toPublicVideo(data);
 }
 
-export async function registerView(videoId: string, userId?: string) {
+export async function registerView(videoId: string) {
   try {
-    await supabase.from('views').insert({ video_id: videoId, user_id: userId || null });
-    const { data: vid } = await supabase.from('videos').select('views').eq('id', videoId).single();
-    if (vid) {
-      await supabase.from('videos').update({ views: (vid.views || 0) + 1 }).eq('id', videoId);
+    // 🚀 Incrémentation atomique directe (Style YouTube)
+    // On appelle la fonction SQL "increment_video_views" qu'on a créée à l'étape précédente
+    const { error } = await supabase.rpc('increment_video_views', { video_id: videoId });
+    
+    if (error) {
+      // Si tu n'as pas encore créé la fonction SQL dans l'éditeur Supabase, 
+      // voici une solution de secours en pur code (moins robuste mais fonctionnelle) :
+      const { data: vid } = await supabase.from('videos').select('views').eq('id', videoId).single();
+      if (vid) {
+        await supabase.from('videos').update({ views: (vid.views || 0) + 1 }).eq('id', videoId);
+      }
     }
   } catch (err) {
     console.warn('Failed to register view:', err);
   }
 }
+
 
 export async function requestDownload(
   videoId: string,
