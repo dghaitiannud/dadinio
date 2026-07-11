@@ -8,6 +8,8 @@ import { AgeGate } from "./age-gate";
 import { ReactNode } from "react";
 import { BellRing } from "lucide-react";
 import { toast } from "sonner";
+// Import du nouveau composant de chat
+import { FloatingSupport } from "@/components/floating-support"; 
 
 interface LayoutProps {
   children: ReactNode;
@@ -20,10 +22,8 @@ function NotificationWarningBanner() {
   const supported = isPushSupported();
 
   useEffect(() => {
-    // Si l'utilisateur est connecté et que son navigateur supporte les notifications push
     if (isSignedIn && supported) {
       getCurrentSubscription().then(sub => {
-        // Si aucune souscription active et qu'il n'a pas encore bloqué définitivement
         if (!sub && getPushPermission() !== "denied") {
           setShowBanner(true);
         }
@@ -60,18 +60,25 @@ function NotificationWarningBanner() {
 }
 
 export function Layout({ children }: LayoutProps) {
+  // On récupère l'utilisateur connecté ici pour passer son statut au composant de support
+  const { appUser } = useAuth();
+
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background text-foreground">
-      {/* 🌟 La bannière d'alerte apparaît tout en haut du site */}
       <NotificationWarningBanner />
       
       <AgeGate />
       <Header />
+      
       <main className="flex-1 w-full relative">
         {children}
       </main>
+      
       <Footer />
       <BottomNav />
+
+      {/* Le bouton de chat flottant est ajouté ici, il sera présent sur toutes les pages */}
+      <FloatingSupport currentUser={appUser} />
     </div>
   );
 }
