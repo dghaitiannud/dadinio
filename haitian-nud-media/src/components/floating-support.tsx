@@ -33,7 +33,7 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `💬 Support: ${subject.trim()}`,
+          title: `Support: ${subject.trim()}`,
           body: `Message de ${currentUser.email}`,
           url: "/admin", // Redirige l'admin sur son panneau
           icon: "/logo.jpg",
@@ -91,7 +91,7 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
           <div className="p-4 bg-background">
             {success ? (
               <div className="text-center py-8 text-emerald-500 font-medium text-sm">
-                ✨ Votre message a bien été transmis ! <br/>
+                 Votre message a bien été transmis ! <br/>
                 L'équipe vous répondra sous peu.
               </div>
             ) : (

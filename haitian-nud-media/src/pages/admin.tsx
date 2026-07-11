@@ -324,7 +324,6 @@ function PhotosTab() {
                     <TableCell><img src={p.imageUrl} alt="" className="w-10 h-10 object-cover rounded border" /></TableCell>
                     <TableCell className="font-medium">{p.title}</TableCell>
                     <TableCell><span className="px-2 py-1 bg-accent text-accent-foreground rounded text-xs">{p.category}</span></TableCell>
-                    {/* CORRECTION ICI : Remplacement de v.views par p.views pour éviter l'erreur "v is not defined" */}
                     <TableCell>{p.views || 0}</TableCell>
                     <TableCell>{p.isVip ? "Oui" : "Non"}</TableCell>
                     <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} disabled={deletePending === p.id} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
@@ -586,8 +585,28 @@ function TicketsTab() {
     if (!selectedTicket || !replyText) return;
     setReplyPending(true);
     try {
+      // 1. Enregistrement de la réponse sur Supabase
       await adminReplyTicket(selectedTicket.id, replyText);
       toast.success("Réponse envoyée");
+
+      // 2. Envoi de la notification Push à l'utilisateur concerné
+      try {
+        await fetch("https://api-6rzs.onrender.com/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "📩 Nouvelle réponse à votre ticket",
+            body: `Le support a répondu à votre message : "${selectedTicket.subject}"`,
+            url: "/account", 
+            icon: "/logo.jpg",
+            targetUserId: selectedTicket.user_id, 
+            adminSecret: "Pourquoi2020??"
+          })
+        });
+      } catch (pushErr) {
+        console.warn("Échec de l'envoi de la notification push au client :", pushErr);
+      }
+
       setSelectedTicket(null);
       setReplyText("");
       await loadTickets();
@@ -624,7 +643,9 @@ function TicketsTab() {
               <div><Label className="text-muted-foreground">Message Original</Label><div className="p-3 bg-muted rounded mt-1 text-sm">{selectedTicket.message}</div></div>
               {selectedTicket.reply && <div><Label className="text-muted-foreground">Réponse Précédente</Label><div className="p-3 bg-primary/10 text-primary rounded mt-1 text-sm">{selectedTicket.reply}</div></div>}
               <div className="space-y-2"><Label>Votre Réponse</Label><Textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={5} className="resize-none" /></div>
-              <Button onClick={handleReply} disabled={!replyText || replyPending} className="w-full">Envoyer & Fermer</Button>
+              <Button onClick={handleReply} disabled={!replyText || replyPending} className="w-full">
+                {replyPending ? "Envoi..." : "Envoyer & Fermer"}
+              </Button>
             </div>
           ) : <div className="text-center py-12 text-muted-foreground">Sélectionnez un ticket pour répondre</div>}
         </CardContent>
