@@ -45,7 +45,7 @@ function ScrollToTop() {
   return null;
 }
 
-// 🌐 MOTEUR DE TRADUCTION AUTOMATIQUE (Zéro Manuel)
+// 🌐 MOTEUR DE TRADUCTION INVISIBLE PAR COOKIE (Anti-barre natif)
 function AutoTranslator() {
   useEffect(() => {
     // 1. Injection dynamique du script Google Translate si absent
@@ -61,10 +61,16 @@ function AutoTranslator() {
         {
           pageLanguage: "fr",
           includedLanguages: "fr,ht,en,es",
-          autoDisplay: false,
+          autoDisplay: false, // Bloque l'affichage automatique de la bannière par Google
         },
         "google_translate_element"
       );
+    };
+
+    // Force la langue directement dans la structure attendue par le cookie Google Translate (/langue_source/langue_cible)
+    const forceGoogleCookie = (lang: string) => {
+      document.cookie = `googtrans=/fr/${lang}; path=/; domain=.haitiannud.com`;
+      document.cookie = `googtrans=/fr/${lang}; path=/;`; // Sécurité locale / environnements de test
     };
 
     // 2. Détection automatique par IP si aucune configuration manuelle n'existe
@@ -79,12 +85,15 @@ function AutoTranslator() {
           else if (["US", "CA", "GB"].includes(country)) targetLang = "en";
           else if (["ES", "DO", "MX", "AR"].includes(country)) targetLang = "es";
 
+          localStorage.setItem("auto-lang", targetLang);
+          forceGoogleCookie(targetLang);
           applyLanguage(targetLang);
         })
         .catch(() => applyLanguage("fr"));
     } else {
-      // Si une langue a déjà été choisie/sauvegardée, on l'applique au démarrage
+      // Si une langue a déjà été choisie/sauvegardée, on l'injecte dans le cookie et on l'applique
       const savedLang = localStorage.getItem("auto-lang") || "fr";
+      forceGoogleCookie(savedLang);
       const interval = setInterval(() => {
         if (applyLanguage(savedLang)) clearInterval(interval);
       }, 300);
@@ -92,7 +101,6 @@ function AutoTranslator() {
   }, []);
 
   const applyLanguage = (lang: string) => {
-    localStorage.setItem("auto-lang", lang);
     const selectElem = document.querySelector(".goog-te-combo") as HTMLSelectElement;
     if (selectElem) {
       selectElem.value = lang;
@@ -102,7 +110,8 @@ function AutoTranslator() {
     return false;
   };
 
-  return <div id="google_translate_element" className="hidden" />;
+  // On cache l'élément d'ancrage de Google via les styles inline stricts pour être sûr à 100%
+  return <div id="google_translate_element" style={{ display: 'none', width: 0, height: 0, opacity: 0 }} />;
 }
 
 function App() {
