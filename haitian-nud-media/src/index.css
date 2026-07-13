@@ -142,57 +142,39 @@
 .animate-page-fade {
   animation: fadeInUp 0.4s ease-out forwards;
 }
-/* Masquer la bannière de traduction Google en haut de page */
-.goog-te-banner-frame, .goog-te-banner {
-  display: none !important;
-}
+
+/* ========================================== */
+/*   CORRECTION & NETTOYAGE GOOGLE TRANSLATE  */
+/* ========================================== */
+
+/* 1. Forcer le body à rester en haut sans décalage de bannière */
 body {
   top: 0 !important;
 }
-/* Masquer les popups de survol sur les textes traduits */
-.goog-tooltip, .goog-tooltip:hover {
-  display: none !important;
-  box-shadow: none !important;
-}
-.goog-text-highlight {
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-/* Bloquer les popups natifs de traduction Chrome/Google sur mobile */
-.vi-container, 
-iframe[id^=":"] {
-  display: none !important;
-  visibility: hidden !important;
-}
 
-#goog-gt-tt, 
-.goog-te-balloon-frame {
-  display: none !important;
-}
-
-.goog-text-highlight {
-  background-color: transparent !important;
-  box-shadow: none !important;
-}
-/* Suppression stricte de toutes les briques graphiques de traduction Google Mobile */
+/* 2. Masquage total et propre des barres et popups Google Translate */
 .goog-te-banner-frame, 
 .goog-te-banner, 
 .goog-te-popup, 
 .goog-te-balloon-frame,
+.goog-tooltip, 
+.goog-tooltip:hover,
 #goog-gt-tt, 
-.vi-container,
-iframe[id^=":"] {
+.vi-container {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
 }
 
-body {
-  top: 0 !important;
+/* 3. Correction sélecteur iframe (Échappement du double point pour Tailwind v4) */
+iframe[id^="\\:"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
+/* 4. Enlever l'effet jaune/surligné moche au survol des textes traduits */
 .goog-text-highlight {
   background-color: transparent !important;
   box-shadow: none !important;
 }
-
