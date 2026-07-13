@@ -1,0 +1,405 @@
+./haitian-nud-media/src/pages/account.tsx:>Mon Compte<
+./haitian-nud-media/src/pages/account.tsx:>{appUser?.displayName || "Utilisateur"}<
+./haitian-nud-media/src/pages/account.tsx:>{appUser?.email}<
+./haitian-nud-media/src/pages/account.tsx:>Membre Gratuit<
+./haitian-nud-media/src/pages/account.tsx:>Abonnement<
+./haitian-nud-media/src/pages/account.tsx:>Historique<
+./haitian-nud-media/src/pages/account.tsx:>Paramètres<
+./haitian-nud-media/src/pages/account.tsx:>Support<
+./haitian-nud-media/src/pages/account.tsx:>Abonnement Actif<
+./haitian-nud-media/src/pages/account.tsx:>VIP<
+./haitian-nud-media/src/pages/account.tsx:>Plan<
+./haitian-nud-media/src/pages/account.tsx:>VIP<
+./haitian-nud-media/src/pages/account.tsx:>Expire le<
+./haitian-nud-media/src/pages/account.tsx:>Vous êtes sur le plan Gratuit<
+./haitian-nud-media/src/pages/account.tsx:>Devenir VIP maintenant<
+./haitian-nud-media/src/pages/account.tsx:>Quota restant<
+./haitian-nud-media/src/pages/account.tsx:>3 téléchargements gratuits par compte<
+./haitian-nud-media/src/pages/account.tsx:> : <
+./haitian-nud-media/src/pages/account.tsx:>{h.title}<
+./haitian-nud-media/src/pages/account.tsx:>Profil<
+./haitian-nud-media/src/pages/account.tsx:>Nom affiché<
+./haitian-nud-media/src/pages/account.tsx:>Enregistrer<
+./haitian-nud-media/src/pages/account.tsx:>Email<
+./haitian-nud-media/src/pages/account.tsx:>Contacter le support<
+./haitian-nud-media/src/pages/account.tsx:>Sujet<
+./haitian-nud-media/src/pages/account.tsx:>Message<
+./haitian-nud-media/src/pages/account.tsx:>Chargement...<
+./haitian-nud-media/src/pages/account.tsx:>{ticket.subject}<
+./haitian-nud-media/src/pages/account.tsx:>{ticket.message}<
+./haitian-nud-media/src/pages/account.tsx:>Réponse du support:<
+./haitian-nud-media/src/pages/account.tsx:>Les notifications push ne sont pas supportées par votre navigateur.<
+./haitian-nud-media/src/pages/admin-live.tsx:>Console de Streaming Pro<
+./haitian-nud-media/src/pages/admin-live.tsx:>Le flux est actuellement hors ligne<
+./haitian-nud-media/src/pages/admin-live.tsx:>Configurez votre logiciel d'envoi et lancez le direct.<
+./haitian-nud-media/src/pages/admin-live.tsx:> Interrompre la diffusion<
+./haitian-nud-media/src/pages/admin-live.tsx:> Activer le flux sur le site<
+./haitian-nud-media/src/pages/admin.tsx:>Chargement...<
+./haitian-nud-media/src/pages/admin.tsx:>Accès Refusé<
+./haitian-nud-media/src/pages/admin.tsx:>Vous n'avez pas les droits d'administration.<
+./haitian-nud-media/src/pages/admin.tsx:> setLocation("/")}>Retour à l'accueil<
+./haitian-nud-media/src/pages/admin.tsx:>Vidéos<
+./haitian-nud-media/src/pages/admin.tsx:>Photos<
+./haitian-nud-media/src/pages/admin.tsx:>Utilisateurs<
+./haitian-nud-media/src/pages/admin.tsx:>Messages<
+./haitian-nud-media/src/pages/admin.tsx:>Alertes<
+./haitian-nud-media/src/pages/admin.tsx:>Bannière<
+./haitian-nud-media/src/pages/admin.tsx:>{value}<
+./haitian-nud-media/src/pages/admin.tsx:>{title}<
+./haitian-nud-media/src/pages/admin.tsx:>Gestion des Vidéos<
+./haitian-nud-media/src/pages/admin.tsx:>Ajouter une vidéo<
+./haitian-nud-media/src/pages/admin.tsx:>Nouvelle Vidéo<
+./haitian-nud-media/src/pages/admin.tsx:>Titre<
+./haitian-nud-media/src/pages/admin.tsx:>Catégorie<
+./haitian-nud-media/src/pages/admin.tsx:>Année<
+./haitian-nud-media/src/pages/admin.tsx:>{YEARS.map(y => <
+./haitian-nud-media/src/pages/admin.tsx:>{y}<
+./haitian-nud-media/src/pages/admin.tsx:>)}<
+./haitian-nud-media/src/pages/admin.tsx:>Catégorie finale : <
+./haitian-nud-media/src/pages/admin.tsx:>{buildCategory() || "—"}<
+./haitian-nud-media/src/pages/admin.tsx:>Description<
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, description: e.target.value })} /><
+./haitian-nud-media/src/pages/admin.tsx:>URL Miniature<
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, thumbnailUrl: e.target.value })} /><
+./haitian-nud-media/src/pages/admin.tsx:>URL Vidéo<
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, videoUrl: e.target.value })} /><
+./haitian-nud-media/src/pages/admin.tsx:>Durée (sec)<
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, durationSec: Number(e.target.value) })} /><
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, isVip: c })} /><
+./haitian-nud-media/src/pages/admin.tsx:>Réservé VIP<
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, published: c })} /><
+./haitian-nud-media/src/pages/admin.tsx:>Publié<
+./haitian-nud-media/src/pages/admin.tsx:>{createPending ? "Enregistrement..." : "Enregistrer la vidéo"}<
+./haitian-nud-media/src/pages/admin.tsx:>Titre<
+./haitian-nud-media/src/pages/admin.tsx:>Catégorie<
+./haitian-nud-media/src/pages/admin.tsx:>Vues<
+./haitian-nud-media/src/pages/admin.tsx:>VIP<
+./haitian-nud-media/src/pages/admin.tsx:>{v.title}<
+./haitian-nud-media/src/pages/admin.tsx:>{v.category}<
+./haitian-nud-media/src/pages/admin.tsx:>{v.views}<
+./haitian-nud-media/src/pages/admin.tsx:>{v.isVip ? "Oui" : "Non"}<
+./haitian-nud-media/src/pages/admin.tsx:> handleDelete(v.id)} disabled={deletePending === v.id} className="text-destructive"><
+./haitian-nud-media/src/pages/admin.tsx:>Gestion de la Galerie Photo<
+./haitian-nud-media/src/pages/admin.tsx:>Ajouter une photo<
+./haitian-nud-media/src/pages/admin.tsx:>Nouvelle Photo<
+./haitian-nud-media/src/pages/admin.tsx:>Titre de l'image<
+./haitian-nud-media/src/pages/admin.tsx:>Catégorie<
+./haitian-nud-media/src/pages/admin.tsx:>Année<
+./haitian-nud-media/src/pages/admin.tsx:>{YEARS.map(y => <
+./haitian-nud-media/src/pages/admin.tsx:>{y}<
+./haitian-nud-media/src/pages/admin.tsx:>)}<
+./haitian-nud-media/src/pages/admin.tsx:>Catégorie finale : <
+./haitian-nud-media/src/pages/admin.tsx:>{buildCategory() || "—"}<
+./haitian-nud-media/src/pages/admin.tsx:>Description / Légende<
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, description: e.target.value })} /><
+./haitian-nud-media/src/pages/admin.tsx:>URL de la Photo<
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, imageUrl: e.target.value })} placeholder="Lien Supabase storage ou externe..." /><
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, isVip: c })} /><
+./haitian-nud-media/src/pages/admin.tsx:>Contenu VIP<
+./haitian-nud-media/src/pages/admin.tsx:> setFormData({ ...formData, published: c })} /><
+./haitian-nud-media/src/pages/admin.tsx:>Publier immédiatement<
+./haitian-nud-media/src/pages/admin.tsx:>{createPending ? "Envoi..." : "Ajouter la photo"}<
+./haitian-nud-media/src/pages/admin.tsx:>Aperçu<
+./haitian-nud-media/src/pages/admin.tsx:>Titre<
+./haitian-nud-media/src/pages/admin.tsx:>Catégorie<
+./haitian-nud-media/src/pages/admin.tsx:>Vues<
+./haitian-nud-media/src/pages/admin.tsx:>VIP<
+./haitian-nud-media/src/pages/admin.tsx:>{p.title}<
+./haitian-nud-media/src/pages/admin.tsx:>{p.category}<
+./haitian-nud-media/src/pages/admin.tsx:>{p.views || 0}<
+./haitian-nud-media/src/pages/admin.tsx:>{p.isVip ? "Oui" : "Non"}<
+./haitian-nud-media/src/pages/admin.tsx:> handleDelete(p.id)} disabled={deletePending === p.id} className="text-destructive"><
+./haitian-nud-media/src/pages/admin.tsx:>Email Utilisateur<
+./haitian-nud-media/src/pages/admin.tsx:>Méthode<
+./haitian-nud-media/src/pages/admin.tsx:>Preuve / Reçu<
+./haitian-nud-media/src/pages/admin.tsx:>Date d'envoi<
+./haitian-nud-media/src/pages/admin.tsx:>Statut<
+./haitian-nud-media/src/pages/admin.tsx:>Durée Forfait<
+./haitian-nud-media/src/pages/admin.tsx:>Actions<
+./haitian-nud-media/src/pages/admin.tsx:>{r.userEmail}<
+./haitian-nud-media/src/pages/admin.tsx:>Agrandir<
+./haitian-nud-media/src/pages/admin.tsx:>Preuve envoyée par : {r.userEmail}<
+./haitian-nud-media/src/pages/admin.tsx:>30 Jours<
+./haitian-nud-media/src/pages/admin.tsx:>90 Jours<
+./haitian-nud-media/src/pages/admin.tsx:>1 An (Privilège)<
+./haitian-nud-media/src/pages/admin.tsx:>—<
+./haitian-nud-media/src/pages/admin.tsx:>Traité<
+./haitian-nud-media/src/pages/admin.tsx:>Utilisateurs<
+./haitian-nud-media/src/pages/admin.tsx:>Email<
+./haitian-nud-media/src/pages/admin.tsx:>Plan<
+./haitian-nud-media/src/pages/admin.tsx:>Date d'inscription<
+./haitian-nud-media/src/pages/admin.tsx:>Statut<
+./haitian-nud-media/src/pages/admin.tsx:>{u.email}<
+./haitian-nud-media/src/pages/admin.tsx:>{u.plan.toUpperCase()}<
+./haitian-nud-media/src/pages/admin.tsx:>{format(new Date(u.createdAt), "dd/MM/yyyy")}<
+./haitian-nud-media/src/pages/admin.tsx:>{u.blocked ? <
+./haitian-nud-media/src/pages/admin.tsx:>Bloqué<
+./haitian-nud-media/src/pages/admin.tsx:> : "Actif"}<
+./haitian-nud-media/src/pages/admin.tsx:> handleToggleBlock(u.id, u.blocked)} disabled={blockPending === u.id} className={u.blocked ? "text-green-500" : "text-destructive"}>{u.blocked ? "Débloquer" : "Bloquer"}<
+./haitian-nud-media/src/pages/admin.tsx:>Messages & tickets<
+./haitian-nud-media/src/pages/admin.tsx:>{t.subject}<
+./haitian-nud-media/src/pages/admin.tsx:>{t.status}<
+./haitian-nud-media/src/pages/admin.tsx:>{t.message}<
+./haitian-nud-media/src/pages/admin.tsx:>Répondre<
+./haitian-nud-media/src/pages/admin.tsx:>Message Original<
+./haitian-nud-media/src/pages/admin.tsx:>{selectedTicket.message}<
+./haitian-nud-media/src/pages/admin.tsx:>Réponse Précédente<
+./haitian-nud-media/src/pages/admin.tsx:>{selectedTicket.reply}<
+./haitian-nud-media/src/pages/admin.tsx:>Votre Réponse<
+./haitian-nud-media/src/pages/admin.tsx:> setReplyText(e.target.value)} rows={5} className="resize-none" /><
+./haitian-nud-media/src/pages/admin.tsx:>Sélectionnez un ticket pour répondre<
+./haitian-nud-media/src/pages/admin.tsx:>Titre<
+./haitian-nud-media/src/pages/admin.tsx:>Message<
+./haitian-nud-media/src/pages/admin.tsx:>Lien (page à ouvrir)<
+./haitian-nud-media/src/pages/admin.tsx:>Secret admin (PUSH_ADMIN_SECRET)<
+./haitian-nud-media/src/pages/admin.tsx:> Informations<
+./haitian-nud-media/src/pages/admin.tsx:>Variables d'environnement requises<
+./haitian-nud-media/src/pages/admin.tsx:>VAPID_PUBLIC_KEY=BAM-Ab_F...<
+./haitian-nud-media/src/pages/admin.tsx:>VAPID_PRIVATE_KEY=e6Qt_r7...<
+./haitian-nud-media/src/pages/admin.tsx:>PUSH_ADMIN_SECRET=ton-secret<
+./haitian-nud-media/src/pages/admin.tsx:>SUPABASE_URL=https://...<
+./haitian-nud-media/src/pages/admin.tsx:>SUPABASE_SERVICE_KEY=eyJ...<
+./haitian-nud-media/src/pages/admin.tsx:> Table Supabase requise<
+./haitian-nud-media/src/pages/admin.tsx:>Table <
+./haitian-nud-media/src/pages/admin.tsx:>push_subscriptions<
+./haitian-nud-media/src/pages/admin.tsx:> — créée via le SQL setup.<
+./haitian-nud-media/src/pages/admin.tsx:> Les abonnés<
+./haitian-nud-media/src/pages/admin.tsx:>Les users s'abonnent depuis Compte → Paramètres → Notifications.<
+./haitian-nud-media/src/pages/admin.tsx:>URL de la vidéo (.mp4 recommandés)<
+./haitian-nud-media/src/pages/admin.tsx:>Aperçu du rendu final :<
+./haitian-nud-media/src/pages/admin.tsx:>Aperçu direct<
+./haitian-nud-media/src/pages/admin.tsx:>HAITIAN NUD<
+./haitian-nud-media/src/pages/downloads.tsx:>Mes téléchargements<
+./haitian-nud-media/src/pages/downloads.tsx:>Aucune vidéo téléchargée<
+./haitian-nud-media/src/pages/downloads.tsx:>Parcourir les vidéos<
+./haitian-nud-media/src/pages/downloads.tsx:>{video.title}<
+./haitian-nud-media/src/pages/forgot-password.tsx:> : <
+./haitian-nud-media/src/pages/forgot-password.tsx:>Erreur : <
+./haitian-nud-media/src/pages/forgot-password.tsx:>Email<
+./haitian-nud-media/src/pages/home.tsx:>Nouveau sur HAITIAN NUD<
+./haitian-nud-media/src/pages/home.tsx:>{haitianPart}<
+./haitian-nud-media/src/pages/home.tsx:>{nudPart}<
+./haitian-nud-media/src/pages/home.tsx:>Pass VIP Exclusif<
+./haitian-nud-media/src/pages/home.tsx:>{photo.title}<
+./haitian-nud-media/src/pages/home.tsx:>{photo.category}<
+./haitian-nud-media/src/pages/home.tsx:> {photo.views}<
+./haitian-nud-media/src/pages/legal.tsx:>Conditions d'utilisation<
+./haitian-nud-media/src/pages/legal.tsx:>1. Avertissement — Site pour adultes<
+./haitian-nud-media/src/pages/legal.tsx:>strictement interdit aux mineurs<
+./haitian-nud-media/src/pages/legal.tsx:>avoir au moins 18 ans (ou l'âge de la majorité dans votre pays) ;<
+./haitian-nud-media/src/pages/legal.tsx:>visionner ces contenus de votre plein gré, à titre privé ;<
+./haitian-nud-media/src/pages/legal.tsx:>résider dans un pays où ce type de contenu est autorisé par la loi.<
+./haitian-nud-media/src/pages/legal.tsx:>2. Confirmation d'âge<
+./haitian-nud-media/src/pages/legal.tsx:>3. Contenus & propriété<
+./haitian-nud-media/src/pages/legal.tsx:>4. Abonnement VIP & paiements<
+./haitian-nud-media/src/pages/legal.tsx:>5. Vie privée & cookies<
+./haitian-nud-media/src/pages/legal.tsx:>6. Commentaires & comportement<
+./haitian-nud-media/src/pages/legal.tsx:>7. Signalement & contact<
+./haitian-nud-media/src/pages/legal.tsx:>8. Si vous êtes mineur·e<
+./haitian-nud-media/src/pages/live.tsx:> : <
+./haitian-nud-media/src/pages/live.tsx:>Aucun live en cours<
+./haitian-nud-media/src/pages/live.tsx:>Revenez plus tard ou attendez le signal de l'administrateur.<
+./haitian-nud-media/src/pages/live.tsx:>Discussion en direct<
+./haitian-nud-media/src/pages/live.tsx:> sendReaction("❤️")}>❤️<
+./haitian-nud-media/src/pages/live.tsx:> sendReaction("🔥")}>🔥<
+./haitian-nud-media/src/pages/live.tsx:> sendReaction("😂")}>😂<
+./haitian-nud-media/src/pages/live.tsx:> sendReaction("👑")}>👑<
+./haitian-nud-media/src/pages/live.tsx:>{m.user}<
+./haitian-nud-media/src/pages/live.tsx:>{m.text}<
+./haitian-nud-media/src/pages/login.tsx:>HAITIAN NUD<
+./haitian-nud-media/src/pages/login.tsx:>Erreur : <
+./haitian-nud-media/src/pages/login.tsx:>Nom d'utilisateur<
+./haitian-nud-media/src/pages/login.tsx:>Email<
+./haitian-nud-media/src/pages/login.tsx:>Mot de passe<
+./haitian-nud-media/src/pages/login.tsx:> : <
+./haitian-nud-media/src/pages/plans.tsx:>Regardez toutes les anciennes vidéos, ainsi que les nouvelles publications d'influenceurs haïtiens et internationaux dès leur mise en ligne.<
+./haitian-nud-media/src/pages/plans.tsx:>En tant qu'abonné VIP, vous aurez également accès à des vidéos d'influenceurs que nous n'avons pas encore publiées officiellement.<
+./haitian-nud-media/src/pages/plans.tsx:>Téléchargez autant de vidéos et de photos que vous le souhaitez, sans aucune limite ni restriction.<
+./haitian-nud-media/src/pages/plans.tsx:>Accédez à tout le contenu en Full HD 4K pour une qualité d'image supérieure et une expérience visuelle exceptionnelle.<
+./haitian-nud-media/src/pages/plans.tsx:>Compte Premium Actif<
+./haitian-nud-media/src/pages/plans.tsx:>Bienvenue dans l'Espace VIP<
+./haitian-nud-media/src/pages/plans.tsx:>Abonnement de 1 Mois<
+./haitian-nud-media/src/pages/plans.tsx:> 20 USD <
+./haitian-nud-media/src/pages/plans.tsx:>ou<
+./haitian-nud-media/src/pages/plans.tsx:>Vous bénéficierez également d'un accès prioritaire aux nouveaux contenus régulièrement ajoutés.<
+./haitian-nud-media/src/pages/plans.tsx:>{link.label}<
+./haitian-nud-media/src/pages/plans.tsx:>{link.desc}<
+./haitian-nud-media/src/pages/plans.tsx:>Rejwenn<
+./haitian-nud-media/src/pages/plans.tsx:>Comment payer votre abonnement VIP ?<
+./haitian-nud-media/src/pages/plans.tsx:>Le paiement est simple, rapide et sécurisé via MonCash ou NatCash.<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 1 :<
+./haitian-nud-media/src/pages/plans.tsx:> Téléchargez l'application TapTap Send depuis l'App Store ou le Google Play Store.<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 2 :<
+./haitian-nud-media/src/pages/plans.tsx:> Cliquez sur « S'inscrire » ou sur le logo Google.<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 3 :<
+./haitian-nud-media/src/pages/plans.tsx:> Saisissez vos nom et prénom.<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 4 :<
+./haitian-nud-media/src/pages/plans.tsx:> Saisissez votre numéro de téléphone et le code de confirmation reçu par SMS.<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 5 :<
+./haitian-nud-media/src/pages/plans.tsx:> Sélectionnez le pays de destination (Haïti +509).<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 6 :<
+./haitian-nud-media/src/pages/plans.tsx:> Saisissez le montant (20 $).<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 7 :<
+./haitian-nud-media/src/pages/plans.tsx:> Ajoutez le nom du destinataire du paiement selon votre choix :<
+./haitian-nud-media/src/pages/plans.tsx:>• Si vous choisissez <
+./haitian-nud-media/src/pages/plans.tsx:>MonCash<
+./haitian-nud-media/src/pages/plans.tsx:>, utilisez le numéro MonCash indiqué sur le site et le nom associé.<
+./haitian-nud-media/src/pages/plans.tsx:>• Si vous choisissez <
+./haitian-nud-media/src/pages/plans.tsx:>NatCash<
+./haitian-nud-media/src/pages/plans.tsx:>, utilisez le numéro NatCash indiqué sur le site et le nom fourni.<
+./haitian-nud-media/src/pages/plans.tsx:>Cliquez ensuite sur « Suivant ».<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 8 :<
+./haitian-nud-media/src/pages/plans.tsx:> Saisissez votre adresse e-mail (@email.com).<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 9 :<
+./haitian-nud-media/src/pages/plans.tsx:> Saisissez les informations de contact demandées et cliquez sur « Enregistrer ».<
+./haitian-nud-media/src/pages/plans.tsx:>Étape 10 :<
+./haitian-nud-media/src/pages/plans.tsx:> Vérifiez toutes les informations et cliquez sur « Envoyer ».<
+./haitian-nud-media/src/pages/plans.tsx:>1. Mode de paiement utilisé<
+./haitian-nud-media/src/pages/plans.tsx:>MonCash<
+./haitian-nud-media/src/pages/plans.tsx:>NatCash<
+./haitian-nud-media/src/pages/plans.tsx:>📞 Infos de transfert :<
+./haitian-nud-media/src/pages/plans.tsx:>Numéro MonCash : <
+./haitian-nud-media/src/pages/plans.tsx:>+509 34 25 08 08<
+./haitian-nud-media/src/pages/plans.tsx:>Nom Destinataire : <
+./haitian-nud-media/src/pages/plans.tsx:>Jhon Wood Antoine<
+./haitian-nud-media/src/pages/plans.tsx:>Numéro NatCash : <
+./haitian-nud-media/src/pages/plans.tsx:>+509 32 49 24 65<
+./haitian-nud-media/src/pages/plans.tsx:>Nom Destinataire : <
+./haitian-nud-media/src/pages/plans.tsx:>Dafca Saint Vill<
+./haitian-nud-media/src/pages/plans.tsx:>2. Capture d'écran ou reçu (Image)<
+./haitian-nud-media/src/pages/plans.tsx:>{file ? file.name : "Cliquez pour choisir un fichier"}<
+./haitian-nud-media/src/pages/plans.tsx:>PNG, JPG, JPEG jusqu'à 5 Mo<
+./haitian-nud-media/src/pages/plans.tsx:>Action Requise :<
+./haitian-nud-media/src/pages/plans.tsx:>Merci pour votre confiance !<
+./haitian-nud-media/src/pages/plans.tsx:>{paymentMethod}<
+./haitian-nud-media/src/pages/plans.tsx:>Qu'arrive-t-il maintenant ?<
+./haitian-nud-media/src/pages/plans.tsx:>{appUser?.email}<
+./haitian-nud-media/src/pages/reset-password.tsx:> : <
+./haitian-nud-media/src/pages/reset-password.tsx:>Nouveau mot de passe<
+./haitian-nud-media/src/pages/reset-password.tsx:> : <
+./haitian-nud-media/src/pages/reset-password.tsx:>Confirmer le mot de passe<
+./haitian-nud-media/src/pages/reset-password.tsx:> : <
+./haitian-nud-media/src/pages/search.tsx:>Rechercher<
+./haitian-nud-media/src/pages/search.tsx:>Aucun résultat<
+./haitian-nud-media/src/pages/search.tsx:>Essayez d'autres mots-clés ou parcourez nos catégories.<
+./haitian-nud-media/src/pages/watch.tsx:>Espace Privé & Vidéos VIP<
+./haitian-nud-media/src/pages/watch.tsx:>En ligne<
+./haitian-nud-media/src/pages/watch.tsx:>ID vidéo invalide<
+./haitian-nud-media/src/pages/watch.tsx:>L'URL de cette vidéo n'est pas valide.<
+./haitian-nud-media/src/pages/watch.tsx:>Retour à l'accueil<
+./haitian-nud-media/src/pages/watch.tsx:>Erreur de chargement<
+./haitian-nud-media/src/pages/watch.tsx:>{videoError || "Vidéo introuvable"}<
+./haitian-nud-media/src/pages/watch.tsx:>Retour à l'accueil<
+./haitian-nud-media/src/pages/watch.tsx:>Lecture en continu<
+./haitian-nud-media/src/pages/watch.tsx:>Kontni sa a restrien<
+./haitian-nud-media/src/pages/watch.tsx:>Lien de la vidéo introuvable.<
+./haitian-nud-media/src/pages/watch.tsx:>{video.category}<
+./haitian-nud-media/src/pages/watch.tsx:>{video.title}<
+./haitian-nud-media/src/pages/watch.tsx:>{video.views.toLocaleString()} vues<
+./haitian-nud-media/src/pages/watch.tsx:>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true, locale: fr })}<
+./haitian-nud-media/src/pages/watch.tsx:> Téléchargement...<
+./haitian-nud-media/src/pages/watch.tsx:> Regarder offline<
+./haitian-nud-media/src/pages/watch.tsx:>{video.description}<
+./haitian-nud-media/src/pages/watch.tsx:>{(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}<
+./haitian-nud-media/src/pages/watch.tsx:>Poster en anonyme<
+./haitian-nud-media/src/pages/watch.tsx:>Commenter<
+./haitian-nud-media/src/pages/watch.tsx:>Connectez-vous pour participer à la discussion.<
+./haitian-nud-media/src/pages/watch.tsx:>Connexion<
+./haitian-nud-media/src/pages/watch.tsx:>{(comment.displayName || "U").charAt(0).toUpperCase()}<
+./haitian-nud-media/src/pages/watch.tsx:>{comment.anonymous ? "Anonyme" : (comment.displayName || "Utilisateur")}<
+./haitian-nud-media/src/pages/watch.tsx:>{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: fr })}<
+./haitian-nud-media/src/pages/watch.tsx:>{comment.body}<
+./haitian-nud-media/src/pages/watch.tsx:>Soyez le premier à commenter.<
+./haitian-nud-media/src/pages/watch.tsx:>Dans la même catégorie<
+./haitian-nud-media/src/pages/watch.tsx:>VIP<
+./haitian-nud-media/src/pages/watch.tsx:>{vid.title}<
+./haitian-nud-media/src/pages/watch.tsx:>{vid.views.toLocaleString()} vues<
+./haitian-nud-media/src/pages/watch.tsx:>Aucune vidéo similaire.<
+./haitian-nud-media/src/pages/vip-catalog.tsx:>{vipVideos.length}<
+./haitian-nud-media/src/pages/vip-catalog.tsx:>Vidéos VIP<
+./haitian-nud-media/src/pages/vip-catalog.tsx:>{vipPhotos.length}<
+./haitian-nud-media/src/pages/vip-catalog.tsx:>Photos VIP<
+./haitian-nud-media/src/pages/vip-catalog.tsx:>Vidéo Premium<
+./haitian-nud-media/src/pages/vip-catalog.tsx:>Photos Premium<
+./haitian-nud-media/src/pages/vip-catalog.tsx:>{photo.title}<
+./haitian-nud-media/src/pages/vip-catalog.tsx:>{photo.category}<
+./haitian-nud-media/src/pages/vip-catalog.tsx:> {photo.views}<
+./haitian-nud-media/src/components/age-gate.tsx:>18+<
+./haitian-nud-media/src/components/age-gate.tsx:>Avertissement<
+./haitian-nud-media/src/components/bottom-nav.tsx:>Accueil<
+./haitian-nud-media/src/components/bottom-nav.tsx:>En direct<
+./haitian-nud-media/src/components/bottom-nav.tsx:>VIP<
+./haitian-nud-media/src/components/bottom-nav.tsx:>Téléchargements<
+./haitian-nud-media/src/components/bottom-nav.tsx:>Compte<
+./haitian-nud-media/src/components/footer.tsx:>HAITIAN NUD<
+./haitian-nud-media/src/components/footer.tsx:>Navigation<
+./haitian-nud-media/src/components/footer.tsx:>Accueil<
+./haitian-nud-media/src/components/footer.tsx:>Recherche<
+./haitian-nud-media/src/components/footer.tsx:>Devenir VIP<
+./haitian-nud-media/src/components/footer.tsx:>Mon Compte<
+./haitian-nud-media/src/components/footer.tsx:>Canaux distributions<
+./haitian-nud-media/src/components/footer.tsx:>Rejoindre le groupe<
+./haitian-nud-media/src/components/footer.tsx:>Voye yon zen pa whatsapp<
+./haitian-nud-media/src/components/footer.tsx:>Voye yon zen pa telegram<
+./haitian-nud-media/src/components/footer.tsx:>Légal<
+./haitian-nud-media/src/components/footer.tsx:>Conditions d'utilisation<
+./haitian-nud-media/src/components/footer.tsx:>Politique de confidentialité<
+./haitian-nud-media/src/components/footer.tsx:>Mentions légales<
+./haitian-nud-media/src/components/footer.tsx:>Réservé aux adultes (18+)<
+./haitian-nud-media/src/components/footer.tsx:>© 2026 HAITIAN NUD. Tous droits réservés.<
+./haitian-nud-media/src/components/header.tsx:>Menu<
+./haitian-nud-media/src/components/header.tsx:>HAITIAN NUD<
+./haitian-nud-media/src/components/header.tsx:> <
+./haitian-nud-media/src/components/header.tsx:>Accueil<
+./haitian-nud-media/src/components/header.tsx:> <
+./haitian-nud-media/src/components/header.tsx:>Recherche<
+./haitian-nud-media/src/components/header.tsx:> <
+./haitian-nud-media/src/components/header.tsx:>Devenir VIP<
+./haitian-nud-media/src/components/header.tsx:> <
+./haitian-nud-media/src/components/header.tsx:>En Direct<
+./haitian-nud-media/src/components/header.tsx:> <
+./haitian-nud-media/src/components/header.tsx:>Mon Compte<
+./haitian-nud-media/src/components/header.tsx:> <
+./haitian-nud-media/src/components/header.tsx:>Déconnexion<
+./haitian-nud-media/src/components/header.tsx:>Connexion<
+./haitian-nud-media/src/components/header.tsx:>Accueil<
+./haitian-nud-media/src/components/header.tsx:>Recherche<
+./haitian-nud-media/src/components/header.tsx:>VIP<
+./haitian-nud-media/src/components/header.tsx:> <
+./haitian-nud-media/src/components/header.tsx:>En Direct<
+./haitian-nud-media/src/components/header.tsx:>Compte<
+./haitian-nud-media/src/components/header.tsx:>Connexion<
+./haitian-nud-media/src/components/layout.tsx:>Activez vos notifications pour être alerté dès que votre accès VIP est validé et ne manquer aucune nouvelle vidéo !<
+./haitian-nud-media/src/components/pwa-install.tsx:> Promise<
+./haitian-nud-media/src/components/pwa-install.tsx:>Installer l'application<
+./haitian-nud-media/src/components/ui/accordion.tsx:>{children}<
+./haitian-nud-media/src/components/ui/alert.tsx:> & VariantProps<
+./haitian-nud-media/src/components/ui/breadcrumb.tsx:>(({ ...props }, ref) => <
+./haitian-nud-media/src/components/ui/breadcrumb.tsx:>More<
+./haitian-nud-media/src/components/ui/button-group.tsx:> & VariantProps<
+./haitian-nud-media/src/components/ui/carousel.tsx:>Previous slide<
+./haitian-nud-media/src/components/ui/carousel.tsx:>Next slide<
+./haitian-nud-media/src/components/ui/chart.tsx:>{value}<
+./haitian-nud-media/src/components/ui/dialog.tsx:>Close<
+./haitian-nud-media/src/components/ui/empty.tsx:> & VariantProps<
+./haitian-nud-media/src/components/ui/field.tsx:> & VariantProps<
+./haitian-nud-media/src/components/ui/field.tsx:>{error.message}<
+./haitian-nud-media/src/components/ui/form.tsx:> = FieldPath<
+./haitian-nud-media/src/components/ui/form.tsx:> = FieldPath<
+./haitian-nud-media/src/components/ui/input-group.tsx:> & VariantProps<
+./haitian-nud-media/src/components/ui/item.tsx:> & VariantProps<
+./haitian-nud-media/src/components/ui/pagination.tsx:>Previous<
+./haitian-nud-media/src/components/ui/pagination.tsx:>Next<
+./haitian-nud-media/src/components/ui/pagination.tsx:>More pages<
+./haitian-nud-media/src/components/ui/select.tsx:>{children}<
+./haitian-nud-media/src/components/ui/sheet.tsx:>Close<
+./haitian-nud-media/src/components/video-card.tsx:>{video.category}<
+./haitian-nud-media/src/components/video-card.tsx:>{video.views.toLocaleString()} vues<
+./haitian-nud-media/src/components/floating-support.tsx:>Support en ligne<
+./haitian-nud-media/src/components/floating-support.tsx:>Une question ? Écrivez-nous.<
+./haitian-nud-media/src/components/floating-support.tsx:>Sujet<
+./haitian-nud-media/src/components/floating-support.tsx:>Message<
+./haitian-nud-media/src/components/LanguageSwitcher.tsx:>Français<
+./haitian-nud-media/src/components/LanguageSwitcher.tsx:>Kreyòl Ayisyen<
+./haitian-nud-media/src/components/LanguageSwitcher.tsx:>English<
+./haitian-nud-media/src/components/LanguageSwitcher.tsx:>Español<

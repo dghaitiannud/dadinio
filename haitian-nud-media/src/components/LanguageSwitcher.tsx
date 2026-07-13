@@ -1,17 +1,15 @@
+import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function LanguageSwitcher() {
+  const { i18n } = useTranslation();
+
   const changeLanguage = (lang: string) => {
-    localStorage.setItem("auto-lang", lang);
-    const select = document.querySelector(".goog-te-combo") as HTMLSelectElement;
-    if (select) {
-      select.value = lang;
-      select.dispatchEvent(new Event("change"));
-    }
+    i18n.changeLanguage(lang);
   };
 
   return (
-    <Select onValueChange={changeLanguage} defaultValue={localStorage.getItem("auto-lang") || "fr"}>
+    <Select onValueChange={changeLanguage} defaultValue={i18n.language || "fr"}>
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Langue" />
       </SelectTrigger>
