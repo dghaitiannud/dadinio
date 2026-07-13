@@ -158,3 +158,19 @@ body {
   background-color: transparent !important;
   box-shadow: none !important;
 }
+/* Bloquer les popups natifs de traduction Chrome/Google sur mobile */
+.vi-container, 
+iframe[id^=":"] {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+#goog-gt-tt, 
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
