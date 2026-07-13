@@ -43,5 +43,23 @@
   <body class="notranslate">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <!-- 🛡️ SCRIPT ANTI-BARRE GOOGLE -->
+    <script>
+      const observer = new MutationObserver((mutations) => {
+        const elementsToRemove = [
+          '.goog-te-banner-frame',
+          '.goog-te-balloon-frame',
+          '#goog-gt-tt',
+          '.vi-container',
+          'iframe[id^=":"]'
+        ];
+        
+        elementsToRemove.forEach(selector => {
+          const el = document.querySelector(selector);
+          if (el) el.remove();
+        });
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    </script>
   </body>
 </html>
