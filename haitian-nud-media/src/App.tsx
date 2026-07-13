@@ -5,6 +5,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth-context";
+import { useTranslation } from "react-i18next";
 
 // 🌐 Configuration de la traduction native (i18n)
 import "./i18n";
@@ -41,8 +42,37 @@ function ScrollToTop() {
   return null;
 }
 
+// 🌐 Détection IP native pour i18next
+function useIpLocationDetection() {
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    // Si l'utilisateur a déjà un choix de langue enregistré, on respecte sa décision
+    if (!localStorage.getItem("i18nextLng")) {
+      fetch("https://ipapi.co/json/")
+        .then((res) => res.json())
+        .then((data) => {
+          const country = data.country_code;
+          let targetLang = "fr";
+
+          if (country === "HT") targetLang = "ht";
+          else if (["US", "CA", "GB"].includes(country)) targetLang = "en";
+          else if (["ES", "DO", "MX", "AR"].includes(country)) targetLang = "es";
+
+          i18n.changeLanguage(targetLang);
+        })
+        .catch(() => {
+          i18n.changeLanguage("fr"); // Repli sur le français par sécurité
+        });
+    }
+  }, [i18n]);
+}
+
 function App() {
   const [location] = useLocation();
+  
+  // 🚀 Initialisation de la détection de pays automatique
+  useIpLocationDetection();
 
   return (
     <WouterRouter base={basePath}>
