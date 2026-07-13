@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
@@ -18,6 +17,9 @@ import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Lock, Cop
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
+
+// 🌐 Récupération de la fonction t globale définie dans App.tsx
+const t = (key: string, options?: any) => (window as any).t ? (window as any).t(key, options) : key;
 
 function VipGate() {
   return (
@@ -45,7 +47,6 @@ function NetworkStatusIcon() {
 
   useEffect(() => {
     const updateStatus = () => {
-  const { t } = useTranslation();
       // @ts-ignore
       const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       if (conn && conn.downlink !== undefined) {
@@ -124,17 +125,12 @@ export function Watch() {
         setVideo(v);
         
         if (v) {
-          // 🔥 Une vue est comptée immédiatement pour TOUT LE MONDE (style YouTube)
           registerView(id);
-
-          // L'historique local se met à jour uniquement si l'utilisateur possède un compte
           if (user?.id) {
             import("@/lib/local-store").then(({ pushWatchHistory }) =>
               pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
             );
           }
-
-          // Chargement des vidéos associées
           getVideos({ category: v.category })
             .then(vids => setRelatedVideos(vids.filter(vid => vid.id !== id)))
             .catch(err => console.warn('Failed to load related videos:', err));
@@ -173,6 +169,9 @@ export function Watch() {
     checkOffline();
   }, [id, user?.id]);
 
+  // ... (le reste de ton code reste inchangé, les fonctions handleLike, handleDownload, etc.)
+  // Assure-toi de garder toutes tes fonctions inchangées ici
+  
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -293,6 +292,8 @@ export function Watch() {
     );
   }
 
+  // ... (le reste du rendu JSX reste identique, tant que tu as bien supprimé le `const { t } = ...`)
+  
   if (isLoadingVideo || authLoading) {
     return (
       <div className="container mx-auto px-4 py-6 max-w-7xl">
