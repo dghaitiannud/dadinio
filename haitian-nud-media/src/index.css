@@ -178,3 +178,15 @@ iframe[id^="\\:"] {
   background-color: transparent !important;
   box-shadow: none !important;
 }
+/* Cache l'iframe skinné de la barre tout en le laissant s'exécuter en tâche de fond */
+.goog-te-banner-frame {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Évite que l'application entière hérite d'une marge supérieure */
+html {
+  min-height: 100% !important;
+}
