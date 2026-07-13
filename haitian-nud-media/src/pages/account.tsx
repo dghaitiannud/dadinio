@@ -12,13 +12,16 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio } from "lucide-react";
+import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { getWatchHistory, clearWatchHistory, getNotifPrefs, type WatchEntry, type NotifPrefs } from "@/lib/local-store";
 import { listMyTickets, createTicket, type SupportTicket } from "@/lib/supabase-db";
 import { PwaInstallButton } from "@/components/pwa-install";
 import { isPushSupported, getPushPermission, subscribeToPush, unsubscribeFromPush, getCurrentSubscription, type PushPermission } from "@/lib/push-notifications";
 import { LIVE_ADMIN_EMAIL } from "@/lib/supabase";
+
+// 🌐 AJOUTÉ : Importation de ton sélecteur automatique de langue
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function Account() {
   const { isSignedIn, user, appUser, signOut, isAdmin, refreshUser } = useAuth();
@@ -337,6 +340,21 @@ export function Account() {
                     <Label>Email</Label>
                     <Input value={appUser?.email ?? ""} readOnly disabled className="bg-background" />
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* 🌐 AJOUTÉ : Bloc de Configuration de la Langue */}
+              <Card className="border-border bg-card shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-primary" /> Langue de l'application
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Sélectionnez votre langue préférée. L'ensemble du catalogue et de l'interface s'adaptera automatiquement.
+                  </p>
+                  <LanguageSwitcher />
                 </CardContent>
               </Card>
 
