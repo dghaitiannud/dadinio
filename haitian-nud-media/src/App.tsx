@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Switch, Route, useLocation, Router as WouterRouter } from 'wouter';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -26,7 +26,12 @@ import { AdminLive } from "@/pages/admin-live";
 // 🌟 AJOUTÉ : Importation du catalogue privé VIP
 import { VipCatalog } from "@/pages/vip-catalog";
 
-import { useAuth } from "@/lib/auth-context";
+declare global {
+  interface Window {
+    googleTranslateElementInit: () => void;
+    google: any;
+  }
+}
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -40,11 +45,74 @@ function ScrollToTop() {
   return null;
 }
 
+// 🌐 MOTEUR DE TRADUCTION AUTOMATIQUE (Zéro Manuel)
+function AutoTranslator() {
+  useEffect(() => {
+    // 1. Injection dynamique du script Google Translate si absent
+    if (!document.getElementById("google-translate-script")) {
+      const addScript = document.createElement("script");
+      addScript.id = "google-translate-script";
+      addScript.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+      document.body.appendChild(addScript);
+    }
+
+    window.googleTranslateElementInit = () => {
+      new window.google.translate.TranslateElement(
+        {
+          pageLanguage: "fr",
+          includedLanguages: "fr,ht,en,es",
+          autoDisplay: false,
+        },
+        "google_translate_element"
+      );
+    };
+
+    // 2. Détection automatique par IP si aucune configuration manuelle n'existe
+    if (!localStorage.getItem("auto-lang")) {
+      fetch("https://ipapi.co/json/")
+        .then((res) => res.json())
+        .then((data) => {
+          const country = data.country_code;
+          let targetLang = "fr";
+
+          if (country === "HT") targetLang = "ht";
+          else if (["US", "CA", "GB"].includes(country)) targetLang = "en";
+          else if (["ES", "DO", "MX", "AR"].includes(country)) targetLang = "es";
+
+          applyLanguage(targetLang);
+        })
+        .catch(() => applyLanguage("fr"));
+    } else {
+      // Si une langue a déjà été choisie/sauvegardée, on l'applique au démarrage
+      const savedLang = localStorage.getItem("auto-lang") || "fr";
+      const interval = setInterval(() => {
+        if (applyLanguage(savedLang)) clearInterval(interval);
+      }, 300);
+    }
+  }, []);
+
+  const applyLanguage = (lang: string) => {
+    localStorage.setItem("auto-lang", lang);
+    const selectElem = document.querySelector(".goog-te-combo") as HTMLSelectElement;
+    if (selectElem) {
+      selectElem.value = lang;
+      selectElem.dispatchEvent(new Event("change"));
+      return true;
+    }
+    return false;
+  };
+
+  return <div id="google_translate_element" className="hidden" />;
+}
+
 function App() {
   const [location] = useLocation(); // Récupère l'URL courante pour forcer l'animation
 
   return (
     <WouterRouter base={basePath}>
+      {/* Injecté au sommet de l'arbre du routeur pour s'appliquer de manière globale */}
+      <AutoTranslator />
+      
       <TooltipProvider>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
