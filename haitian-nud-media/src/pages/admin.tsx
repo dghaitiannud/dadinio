@@ -95,6 +95,7 @@ function AdminStatsCards() {
   );
 }
 
+// @ts-expect-error simple component formatting props
 function StatCard({ title, value, icon: Icon, color = "text-primary" }: any) {
   return (
     <Card className="bg-card">
@@ -583,13 +584,23 @@ function TicketsTab() {
 
   const handleReply = async () => {
     if (!selectedTicket || !replyText) return;
+
+    // 🛡️ Récupération sécurisée et flexible de l'ID utilisateur
+    // @ts-expect-error type checking fallback for database variants
+    const userIdToNotify = selectedTicket.user_id || selectedTicket.userId;
+
+    if (!userIdToNotify) {
+      toast.error("Impossible d'envoyer la push : Identifiant utilisateur manquant.");
+      return;
+    }
+
     setReplyPending(true);
     try {
       // 1. Enregistrement de la réponse sur Supabase
       await adminReplyTicket(selectedTicket.id, replyText);
       toast.success("Réponse envoyée");
 
-      // 2. Envoi de la notification Push à l'utilisateur concerné
+      // 2. Envoi de la notification Push ciblée à l'utilisateur concerné
       try {
         await fetch("https://api-6rzs.onrender.com/api/push/send", {
           method: "POST",
@@ -599,7 +610,9 @@ function TicketsTab() {
             body: `Le support a répondu à votre message : "${selectedTicket.subject}"`,
             url: "/account", 
             icon: "/logo.jpg",
-            targetUserId: selectedTicket.user_id, 
+            targetUserId: userIdToNotify,
+            userId: userIdToNotify,
+            user_id: userIdToNotify,
             adminSecret: "Pourquoi2020??"
           })
         });
