@@ -5,10 +5,9 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth-context";
-import { useTranslation } from "react-i18next";
 
 // 🌐 Configuration de la traduction native (i18n)
-import "./i18n";
+import i18n from "./i18n";
 
 import { Layout } from "@/components/layout";
 import { Home } from "@/pages/home";
@@ -42,50 +41,41 @@ function ScrollToTop() {
   return null;
 }
 
-// 🌐 Détection IP native corrigée (Spéciale Haïti + Nettoyage i18next)
-function useIpLocationDetection() {
-  const { i18n } = useTranslation();
+// 🌐 Détection IP pure JavaScript (Pas de Hook, évite l'erreur 321)
+function initIpLocation() {
+  if (!localStorage.getItem("i18nextLng") && !localStorage.getItem("auto-lang")) {
+    fetch("https://ipapi.co/json/")
+      .then((res) => res.json())
+      .then((data) => {
+        const country = data.country_code;
+        let targetLang = "fr";
 
-  useEffect(() => {
-    // On vérifie les deux clés pour éviter de surcharger un choix utilisateur existant
-    if (!localStorage.getItem("i18nextLng") && !localStorage.getItem("auto-lang")) {
-      fetch("https://ipapi.co/json/")
-        .then((res) => res.json())
-        .then((data) => {
-          const country = data.country_code;
-          let targetLang = "fr"; // Par défaut, repli sur le Français
+        if (country === "HT") {
+          targetLang = "ht"; // Haïti -> Kreyòl d'office
+        } else if (["US", "CA", "GB"].includes(country)) {
+          targetLang = "en";
+        } else if (["ES", "DO", "MX", "AR"].includes(country)) {
+          targetLang = "es";
+        }
 
-          if (country === "HT") {
-            targetLang = "ht"; // Détecté en Haïti -> Kreyòl d'office
-          } else if (["US", "CA", "GB"].includes(country)) {
-            targetLang = "en";
-          } else if (["ES", "DO", "MX", "AR"].includes(country)) {
-            targetLang = "es";
-          }
-
-          localStorage.setItem("auto-lang", targetLang);
-          i18n.changeLanguage(targetLang);
-        })
-        .catch(() => {
-          // Si l'API bloque ou échoue, repli de sécurité en français
-          localStorage.setItem("auto-lang", "fr");
-          i18n.changeLanguage("fr");
-        });
-    }
-  }, [i18n]);
+        localStorage.setItem("auto-lang", targetLang);
+        i18n.changeLanguage(targetLang);
+      })
+      .catch(() => {
+        localStorage.setItem("auto-lang", "fr");
+        i18n.changeLanguage("fr");
+      });
+  }
 }
 
 function App() {
   const [location] = useLocation();
-  const { t, i18n } = useTranslation();
   
-  // 🚀 FIX DE SÉCURITÉ : Assure que la fonction t globale reste synchronisée avec l'état de i18n
+  // 🚀 Initialisation de la détection et injection globale sécurisée de 't'
   useEffect(() => {
-    (window as any).t = t;
-  }, [t, i18n.language]);
-  
-  // 🚀 Initialisation de la détection de pays automatique sécurisée
-  useIpLocationDetection();
+    (window as any).t = (key: string, options?: any) => i18n.t(key, options);
+    initIpLocation();
+  }, []);
 
   return (
     <WouterRouter base={basePath}>
