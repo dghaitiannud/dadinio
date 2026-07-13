@@ -142,3 +142,19 @@
 .animate-page-fade {
   animation: fadeInUp 0.4s ease-out forwards;
 }
+/* Masquer la bannière de traduction Google en haut de page */
+.goog-te-banner-frame, .goog-te-banner {
+  display: none !important;
+}
+body {
+  top: 0 !important;
+}
+/* Masquer les popups de survol sur les textes traduits */
+.goog-tooltip, .goog-tooltip:hover {
+  display: none !important;
+  box-shadow: none !important;
+}
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
