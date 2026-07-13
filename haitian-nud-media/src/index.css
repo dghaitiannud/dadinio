@@ -174,3 +174,25 @@ iframe[id^=":"] {
   background-color: transparent !important;
   box-shadow: none !important;
 }
+/* Suppression stricte de toutes les briques graphiques de traduction Google Mobile */
+.goog-te-banner-frame, 
+.goog-te-banner, 
+.goog-te-popup, 
+.goog-te-balloon-frame,
+#goog-gt-tt, 
+.vi-container,
+iframe[id^=":"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+body {
+  top: 0 !important;
+}
+
+.goog-text-highlight {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
