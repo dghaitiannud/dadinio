@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Search, Home, Star, User, Menu, LogOut, Radio } from "lucide-react"; // AJOUTÉ : Radio
+import { Search, Home, Star, User, Menu, LogOut, Radio } from "lucide-react"; 
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
@@ -20,6 +20,7 @@ export function Header() {
   };
 
   return (
+    /* 🌐 Ajout de la classe "skiptranslate" si nécessaire, mais ici on laisse Google agir de force avec l'arbre du DOM rafraîchi */
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
@@ -36,19 +37,18 @@ export function Header() {
               </SheetHeader>
               <nav className="flex flex-col gap-4 mt-8">
                 <Link href="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg hover:text-primary transition-colors">
-                  <Home className="h-5 w-5" /> Accueil
+                  <Home className="h-5 w-5" /> <span>Accueil</span>
                 </Link>
                 <Link href="/search" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg hover:text-primary transition-colors">
-                  <Search className="h-5 w-5" /> Recherche
+                  <Search className="h-5 w-5" /> <span>Recherche</span>
                 </Link>
                 <Link href="/plans" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg hover:text-primary transition-colors">
-                  <Star className="h-5 w-5" /> Devenir VIP
+                  <Star className="h-5 w-5" /> <span>Devenir VIP</span>
                 </Link>
                 
-                {/* AJOUTÉ : Lien Live dans le menu Mobile pour les connectés */}
                 {isSignedIn && (
                   <Link href="/live" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg text-red-500 font-semibold hover:text-red-600 transition-colors">
-                    <Radio className="h-5 w-5" /> En Direct
+                    <Radio className="h-5 w-5" /> <span>En Direct</span>
                   </Link>
                 )}
 
@@ -56,17 +56,17 @@ export function Header() {
                   {isSignedIn ? (
                     <>
                       <Link href="/account" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg hover:text-primary transition-colors">
-                        <User className="h-5 w-5" /> Mon Compte
+                        <User className="h-5 w-5" /> <span>Mon Compte</span>
                       </Link>
                       <div className="px-2 mt-4">
                         <Button variant="outline" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => { handleLogout(); setIsMenuOpen(false); }}>
-                          <LogOut className="h-4 w-4 mr-2" /> Déconnexion
+                          <LogOut className="h-4 w-4 mr-2" /> <span>Déconnexion</span>
                         </Button>
                       </div>
                     </>
                   ) : (
                     <Link href="/login" onClick={() => setIsMenuOpen(false)}>
-                      <Button className="w-full">Connexion</Button>
+                      <Button className="w-full"><span>Connexion</span></Button>
                     </Link>
                   )}
                 </div>
@@ -81,20 +81,19 @@ export function Header() {
           </Link>
         </div>
 
-        {/* MODIFIÉ : Menu PC avec l'onglet "En Direct" si l'utilisateur est connecté */}
         <nav className="hidden md:flex items-center gap-6">
           <Link href="/" className={`text-sm font-medium transition-colors hover:text-primary ${location === '/' ? 'text-primary' : 'text-muted-foreground'}`}>
-            Accueil
+            <span>Accueil</span>
           </Link>
           <Link href="/search" className={`text-sm font-medium transition-colors hover:text-primary ${location === '/search' ? 'text-primary' : 'text-muted-foreground'}`}>
-            Recherche
+            <span>Recherche</span>
           </Link>
           <Link href="/plans" className={`text-sm font-medium transition-colors hover:text-primary ${location === '/plans' ? 'text-primary' : 'text-muted-foreground'}`}>
-            VIP
+            <span>VIP</span>
           </Link>
           {isSignedIn && (
             <Link href="/live" className={`text-sm font-semibold transition-colors flex items-center gap-1.5 hover:text-red-500 ${location === '/live' ? 'text-red-500' : 'text-muted-foreground'}`}>
-              <Radio className="h-4 w-4 animate-pulse text-red-500" /> En Direct
+              <Radio className="h-4 w-4 animate-pulse text-red-500" /> <span>En Direct</span>
             </Link>
           )}
         </nav>
@@ -107,7 +106,7 @@ export function Header() {
           {isSignedIn ? (
             <div className="flex items-center gap-4">
               <Link href="/account" className="hidden sm:block">
-                <Button variant="ghost" size="sm">Compte</Button>
+                <Button variant="ghost" size="sm"><span>Compte</span></Button>
               </Link>
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
@@ -118,7 +117,7 @@ export function Header() {
           ) : (
             <Link href="/login">
               <Button size="sm" className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground">
-                Connexion
+                <span>Connexion</span>
               </Button>
             </Link>
           )}
