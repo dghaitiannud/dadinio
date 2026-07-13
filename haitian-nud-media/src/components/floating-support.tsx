@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React, { useState } from 'react';
 import { MessageSquare, X, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { createTicket } from "@/lib/supabase-db";
 import { ADMIN_EMAIL } from "@/lib/supabase";
 
 export function FloatingSupport({ currentUser }: { currentUser: any }) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -97,7 +99,7 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Sujet</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t('common.subject')}</label>
                   <Input
                     placeholder="Ex: Problème d'abonnement"
                     value={subject}
@@ -107,7 +109,7 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Message</label>
+                  <label className="text-xs font-semibold text-muted-foreground">{t('common.message')}</label>
                   <Textarea
                     placeholder="Décrivez votre problème en détail..."
                     rows={4}

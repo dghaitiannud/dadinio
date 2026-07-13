@@ -1,8 +1,10 @@
+import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "wouter";
 import { Home, Star, User, Download, Radio } from "lucide-react"; 
 import { useAuth } from "@/lib/auth-context";
 
 export function BottomNav() {
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const { isSignedIn } = useAuth();
 
@@ -11,7 +13,7 @@ export function BottomNav() {
       <div className="flex justify-around items-center h-16">
         <Link href="/" className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location === '/' ? 'text-primary' : 'text-muted-foreground'}`}>
           <Home className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Accueil</span>
+          <span className="text-[10px] font-medium">{t('common.home')}</span>
         </Link>
 
         {/* 🚀 MODIFIÉ : Remplacement de l'onglet Recherche par l'onglet En Direct */}
@@ -32,17 +34,17 @@ export function BottomNav() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
             </span>
           </div>
-          <span className="text-[10px] font-medium">En direct</span>
+          <span className="text-[10px] font-medium">{t('nav.live_stream')}</span>
         </Link>
 
         <Link href="/plans" className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location === '/plans' ? 'text-primary' : 'text-muted-foreground'}`}>
           <Star className="h-5 w-5" />
-          <span className="text-[10px] font-medium">VIP</span>
+          <span className="text-[10px] font-medium">{t('common.vip')}</span>
         </Link>
         
         <Link href="/downloads" className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location === '/downloads' ? 'text-primary' : 'text-muted-foreground'}`}>
           <Download className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Téléchargements</span>
+          <span className="text-[10px] font-medium">{t('common.downloads')}</span>
         </Link>
         
         <Link 
@@ -56,7 +58,7 @@ export function BottomNav() {
           className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${location.startsWith('/account') || location.startsWith('/login') ? 'text-primary' : 'text-muted-foreground'}`}
         >
           <User className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Compte</span>
+          <span className="text-[10px] font-medium">{t('common.account')}</span>
         </Link>
       </div>
     </div>

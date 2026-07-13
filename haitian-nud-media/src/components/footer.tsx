@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { PwaInstallButton } from "@/components/pwa-install";
@@ -52,6 +53,7 @@ function WhatsAppIcon() {
 }
 
 export function Footer() {
+  const { t } = useTranslation();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
   return (
@@ -106,35 +108,35 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="font-semibold mb-4">Navigation</h4>
+          <h4 className="font-semibold mb-4">{t('footer.navigation')}</h4>
           <ul className="space-y-2">
-            <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Accueil</Link></li>
-            <li><Link href="/search" className="text-muted-foreground hover:text-primary transition-colors">Recherche</Link></li>
-            <li><Link href="/plans" className="text-muted-foreground hover:text-primary transition-colors">Devenir VIP</Link></li>
-            <li><Link href="/account" className="text-muted-foreground hover:text-primary transition-colors">Mon Compte</Link></li>
+            <li><Link href="/" className="text-muted-foreground hover:text-primary transition-colors">{t('common.home')}</Link></li>
+            <li><Link href="/search" className="text-muted-foreground hover:text-primary transition-colors">{t('common.search')}</Link></li>
+            <li><Link href="/plans" className="text-muted-foreground hover:text-primary transition-colors">{t('nav.become_vip')}</Link></li>
+            <li><Link href="/account" className="text-muted-foreground hover:text-primary transition-colors">{t('nav.my_account')}</Link></li>
           </ul>
 
-          <h4 className="font-semibold mt-6 mb-4">Canaux distributions</h4>
+          <h4 className="font-semibold mt-6 mb-4">{t('footer.distribution_channels')}</h4>
           <ul className="space-y-2">
-            <li><a href="https://t.me/+R3geXsW7ZL8zNTM5" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Rejoindre le groupe</a></li>
-            <li><a href="https://wa.me/50931310227" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen pa whatsapp</a></li>
-            <li><a href="https://T.me/dg_haitiannud" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">Voye yon zen pa telegram</a></li>
+            <li><a href="https://t.me/+R3geXsW7ZL8zNTM5" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">{t('footer.join_group')}</a></li>
+            <li><a href="https://wa.me/50931310227" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">{t('footer.send_zen_whatsapp')}</a></li>
+            <li><a href="https://T.me/dg_haitiannud" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">{t('footer.send_zen_telegram')}</a></li>
           </ul>
         </div>
 
         <div>
           <h4 className="font-semibold mb-4">Légal</h4>
           <ul className="space-y-2">
-            <li><Link href="/legal" className="text-muted-foreground hover:text-primary transition-colors">Conditions d'utilisation</Link></li>
-            <li><Link href="/legal" className="text-muted-foreground hover:text-primary transition-colors">Politique de confidentialité</Link></li>
-            <li><Link href="/legal" className="text-muted-foreground hover:text-primary transition-colors">Mentions légales</Link></li>
-            <li><span className="text-muted-foreground text-sm mt-4 block">Réservé aux adultes (18+)</span></li>
+            <li><Link href="/legal" className="text-muted-foreground hover:text-primary transition-colors">{t('legal.terms')}</Link></li>
+            <li><Link href="/legal" className="text-muted-foreground hover:text-primary transition-colors">{t('footer.privacy_policy')}</Link></li>
+            <li><Link href="/legal" className="text-muted-foreground hover:text-primary transition-colors">{t('footer.legal_notice')}</Link></li>
+            <li><span className="text-muted-foreground text-sm mt-4 block">{t('footer.adults_only')}</span></li>
           </ul>
         </div>
       </div>
 
       <div className="container mx-auto px-4 mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-        <p>© 2026 HAITIAN NUD. Tous droits réservés.</p>
+        <p>{t('footer.rights_reserved')}</p>
       </div>
     </footer>
   );

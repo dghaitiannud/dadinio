@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { getVideos, getPhotos, type Video, type Photo } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
@@ -10,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 type CatalogTab = "all-vip" | "video-vip" | "photo-vip";
 
 export function VipCatalog() {
+  const { t } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
   const [activeTab, setActiveTab] = useState<CatalogTab>("all-vip");
   const [vipVideos, setVipVideos] = useState<Video[]>([]);
@@ -72,9 +74,7 @@ export function VipCatalog() {
             </Link>
           )}
           <Link href="/">
-            <Button size="lg" variant="outline" className="w-full">
-              Retour à l'accueil
-            </Button>
+            <Button size="lg" variant="outline" className="w-full">{t('watch.back_home')}</Button>
           </Link>
         </div>
       </div>
@@ -183,8 +183,7 @@ export function VipCatalog() {
                         <div className="aspect-square w-full bg-muted relative overflow-hidden">
                           <img src={photo.imageUrl} alt={photo.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                           <div className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-md">
-                            <Star className="h-3 w-3 fill-current text-yellow-400" /> VIP
-                          </div>
+                            <Star className="h-3 w-3 fill-current text-yellow-400" />{t('common.vip')}</div>
                         </div>
                         <div className="p-3">
                           <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{photo.title}</h3>

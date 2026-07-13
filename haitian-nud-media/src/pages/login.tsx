@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -10,6 +11,7 @@ import { LogIn, UserPlus, Mail, Lock, ArrowLeft, AlertCircle, Eye, EyeOff } from
 const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
 
 export function LoginPage() {
+  const { t } = useTranslation();
   const { signIn, signUp, isSignedIn } = useAuth();
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -104,8 +106,7 @@ export function LoginPage() {
             className="flex-1"
             onClick={() => { setMode("signin"); setFormError(null); }}
           >
-            <LogIn className="h-4 w-4 mr-2" /> Connexion
-          </Button>
+            <LogIn className="h-4 w-4 mr-2" />{t('nav.login')}</Button>
           <Button
             type="button"
             variant={mode === "signup" ? "default" : "outline"}
@@ -121,7 +122,7 @@ export function LoginPage() {
           <div className="mb-4 flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 animate-in fade-in-50">
             <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold">Erreur : </span>
+              <span className="font-semibold">{t('common.error')}</span>
               {formError === "User already registered" ? "Cet e-mail possède déjà un compte." : formError}
             </div>
           </div>
@@ -130,7 +131,7 @@ export function LoginPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (
             <div className="space-y-2">
-              <Label htmlFor="name">Nom d'utilisateur</Label>
+              <Label htmlFor="name">{t('auth.username')}</Label>
               <Input
                 id="name"
                 value={displayName}
@@ -141,7 +142,7 @@ export function LoginPage() {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('account.email')}</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -156,7 +157,7 @@ export function LoginPage() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Mot de passe</Label>
+            <Label htmlFor="password">{t('auth.password')}</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -202,8 +203,7 @@ export function LoginPage() {
           )}
           <div className="text-center">
             <Button variant="ghost" size="sm" onClick={() => setLocation("/")} className="text-muted-foreground">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Retour à l'accueil
-            </Button>
+              <ArrowLeft className="h-4 w-4 mr-2" />{t('watch.back_home')}</Button>
           </div>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -24,6 +25,7 @@ const TELEGRAM_LINKS = [
 ];
 
 export function Plans() {
+  const { t } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -165,25 +167,25 @@ export function Plans() {
             <Card className="bg-card/50 border-border hover:border-primary/30 transition-all">
               <CardContent className="p-5 flex gap-4 items-start">
                 <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground">Regardez toutes les anciennes vidéos, ainsi que les nouvelles publications d'influenceurs haïtiens et internationaux dès leur mise en ligne.</p>
+                <p className="text-sm text-muted-foreground">{t('plans.vip_desc_1')}</p>
               </CardContent>
             </Card>
             <Card className="bg-card/50 border-border hover:border-primary/30 transition-all">
               <CardContent className="p-5 flex gap-4 items-start">
                 <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground">En tant qu'abonné VIP, vous aurez également accès à des vidéos d'influenceurs que nous n'avons pas encore publiées officiellement.</p>
+                <p className="text-sm text-muted-foreground">{t('plans.vip_desc_2')}</p>
               </CardContent>
             </Card>
             <Card className="bg-card/50 border-border hover:border-primary/30 transition-all">
               <CardContent className="p-5 flex gap-4 items-start">
                 <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground">Téléchargez autant de vidéos et de photos que vous le souhaitez, sans aucune limite ni restriction.</p>
+                <p className="text-sm text-muted-foreground">{t('plans.vip_desc_3')}</p>
               </CardContent>
             </Card>
             <Card className="bg-card/50 border-border hover:border-primary/30 transition-all">
               <CardContent className="p-5 flex gap-4 items-start">
                 <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
-                <p className="text-sm text-muted-foreground">Accédez à tout le contenu en Full HD 4K pour une qualité d'image supérieure et une expérience visuelle exceptionnelle.</p>
+                <p className="text-sm text-muted-foreground">{t('plans.vip_desc_4')}</p>
               </CardContent>
             </Card>
           </div>
@@ -196,8 +198,8 @@ export function Plans() {
               <div className="w-12 h-12 bg-yellow-500/10 text-yellow-500 rounded-full flex items-center justify-center mx-auto border border-yellow-500/20 mb-3 shadow-inner">
                 <Crown className="h-6 w-6 fill-yellow-500" />
               </div>
-              <p className="text-xs uppercase tracking-widest font-bold text-yellow-500 mb-1">Compte Premium Actif</p>
-              <h3 className="text-xl font-bold mb-2">Bienvenue dans l'Espace VIP</h3>
+              <p className="text-xs uppercase tracking-widest font-bold text-yellow-500 mb-1">{t('plans.premium_active')}</p>
+              <h3 className="text-xl font-bold mb-2">{t('plans.welcome_vip')}</h3>
               <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
                 Votre abonnement est actuellement actif sur ce compte. Vous n'avez plus besoin d'effectuer de virement. Profitez pleinement des galeries et vidéos HD !
               </p>
@@ -207,14 +209,13 @@ export function Plans() {
             </div>
           ) : (
             <div className="max-w-md mx-auto text-center p-6 bg-secondary/30 rounded-2xl border border-border">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold text-yellow-500">Abonnement de 1 Mois</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold text-yellow-500">{t('plans.sub_1_month')}</p>
               <div className="text-3xl font-bold font-mono text-primary my-2 flex items-center justify-center gap-1">
                 <DollarSign className="h-7 w-7 text-yellow-500" /> 20 USD <span className="text-muted-foreground text-sm font-normal">ou</span> 2 500 HTG
               </div>
-              <p className="text-xs text-muted-foreground mb-6">Vous bénéficierez également d'un accès prioritaire aux nouveaux contenus régulièrement ajoutés.</p>
+              <p className="text-xs text-muted-foreground mb-6">{t('plans.priority_access')}</p>
               {isSignedIn ? (
-                <Button onClick={() => setStep('payment')} className="w-full py-6 text-base font-bold rounded-xl shadow-lg gap-2">
-                  Devenir VIP maintenant <ArrowRight className="h-5 w-5" />
+                <Button onClick={() => setStep('payment')} className="w-full py-6 text-base font-bold rounded-xl shadow-lg gap-2">{t('account.become_vip_now')}<ArrowRight className="h-5 w-5" />
                 </Button>
               ) : (
                 <Button onClick={() => setLocation("/login")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
@@ -247,8 +248,8 @@ export function Plans() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
           <div className="lg:col-span-7 space-y-6">
             <div className="border-b pb-4">
-              <h2 className="text-2xl font-serif font-bold">Comment payer votre abonnement VIP ?</h2>
-              <p className="text-sm text-muted-foreground mt-1">Le paiement est simple, rapide et sécurisé via MonCash ou NatCash.</p>
+              <h2 className="text-2xl font-serif font-bold">{t('plans.how_to_pay')}</h2>
+              <p className="text-sm text-muted-foreground mt-1">{t('plans.pay_method_desc')}</p>
             </div>
 
             <div className="bg-card border border-border rounded-xl p-5 space-y-4">
@@ -267,7 +268,7 @@ export function Plans() {
                   <p>• Si vous choisissez <span className="font-bold text-foreground">MonCash</span>, utilisez le numéro MonCash indiqué sur le site et le nom associé.</p>
                   <p>• Si vous choisissez <span className="font-bold text-foreground">NatCash</span>, utilisez le numéro NatCash indiqué sur le site et le nom fourni.</p>
                 </div>
-                <p>Cliquez ensuite sur « Suivant ».</p>
+                <p>{t('plans.step_7_next')}</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 8 :</span> Saisissez votre adresse e-mail (@email.com).</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 9 :</span> Saisissez les informations de contact demandées et cliquez sur « Enregistrer ».</p>
                 <p><span className="font-semibold text-foreground text-primary">Étape 10 :</span> Vérifiez toutes les informations et cliquez sur « Envoyer ».</p>
@@ -287,7 +288,7 @@ export function Plans() {
                 
                 <form onSubmit={handlePaymentSubmit} className="space-y-6">
                   <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">1. Mode de paiement utilisé</Label>
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('plans.payment_method_used')}</Label>
                     <RadioGroup value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)} className="grid grid-cols-2 gap-3">
                       <div>
                         <RadioGroupItem value="moncash" id="moncash" className="sr-only" />
@@ -301,7 +302,7 @@ export function Plans() {
                   </div>
 
                   <div className="p-4 rounded-xl bg-muted/60 border text-xs space-y-2 text-muted-foreground">
-                    <p className="font-bold text-foreground text-sm border-b pb-1">📞 Infos de transfert :</p>
+                    <p className="font-bold text-foreground text-sm border-b pb-1">{t('plans.transfer_infos')}</p>
                     {paymentMethod === 'moncash' ? (
                       <>
                         <p>Numéro MonCash : <span className="font-mono text-foreground font-bold text-sm">+509 34 25 08 08</span></p>
@@ -316,12 +317,12 @@ export function Plans() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="proof-file" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">2. Capture d'écran ou reçu (Image)</Label>
+                    <Label htmlFor="proof-file" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('plans.screenshot_proof')}</Label>
                     <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-4 bg-background hover:bg-muted/20 transition-all cursor-pointer group">
                       <input type="file" id="proof-file" required accept="image/png, image/jpeg, image/jpg" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                       <FileImage className={`h-8 w-8 mb-2 ${file ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} transition-colors`} />
                       <p className="text-xs font-medium text-center text-foreground max-w-[200px] truncate">{file ? file.name : "Cliquez pour choisir un fichier"}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">PNG, JPG, JPEG jusqu'à 5 Mo</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{t('plans.file_limits')}</p>
                     </div>
                   </div>
 
@@ -329,7 +330,7 @@ export function Plans() {
                   {supported && getPushPermission() !== "granted" ? (
                     <div className="p-3 border border-amber-500/30 bg-amber-500/5 rounded-xl space-y-2">
                       <p className="text-[11px] text-muted-foreground leading-normal">
-                        ⚠️ <strong>Action Requise :</strong> Autorisez les notifications système pour débloquer l'envoi. Cela garantit la réception immédiate de l'alerte d'activation de votre compte.
+                        ⚠️ <strong>{t('plans.action_required')}</strong> Autorisez les notifications système pour débloquer l'envoi. Cela garantit la réception immédiate de l'alerte d'activation de votre compte.
                       </p>
                       {getPushPermission() === "denied" ? (
                         <p className="text-[11px] text-destructive font-bold flex items-center gap-1">
@@ -359,13 +360,13 @@ export function Plans() {
             <ShieldCheck className="h-8 w-8" />
           </div>
           <div className="space-y-2">
-            <h2 className="text-3xl font-serif font-bold tracking-tight">Merci pour votre confiance !</h2>
+            <h2 className="text-3xl font-serif font-bold tracking-tight">{t('plans.thank_you')}</h2>
             <p className="text-sm text-muted-foreground px-4">
               Votre preuve de paiement via <span className="font-semibold text-foreground uppercase">{paymentMethod}</span> a été stockée de manière sécurisée et transmise aux administrateurs.
             </p>
           </div>
           <div className="p-4 bg-card border rounded-2xl text-left text-xs text-muted-foreground leading-relaxed">
-            <p className="font-semibold text-foreground text-sm mb-1">Qu'arrive-t-il maintenant ?</p>
+            <p className="font-semibold text-foreground text-sm mb-1">{t('plans.what_happens_next')}</p>
             Notre équipe vérifiera manuellement la validité de votre transfert et votre accès VIP complet sera activé sur votre compte <span className="font-semibold text-foreground">{appUser?.email}</span> en moins de 5 minutes. Vous recevrez une notification dès validation.
           </div>
           <Button onClick={() => setLocation("/")} variant="outline" className="w-full py-5 rounded-xl text-xs font-semibold">

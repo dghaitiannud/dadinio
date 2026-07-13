@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import {
 import { Play, Trash2, WifiOff, Film, ArrowLeft } from "lucide-react";
 
 export function DownloadsPage() {
+  const { t } = useTranslation();
   const [videos, setVideos] = useState<OfflineVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export function DownloadsPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <h1 className="text-2xl font-serif font-bold">Mes téléchargements</h1>
+        <h1 className="text-2xl font-serif font-bold">{t('downloads.my_downloads')}</h1>
       </div>
 
       {loading ? (
@@ -86,12 +88,12 @@ export function DownloadsPage() {
           <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
             <WifiOff className="h-10 w-10 text-muted-foreground" />
           </div>
-          <h2 className="text-xl font-semibold mb-2">Aucune vidéo téléchargée</h2>
+          <h2 className="text-xl font-semibold mb-2">{t('downloads.no_downloads')}</h2>
           <p className="text-muted-foreground max-w-md mb-6">
             Téléchargez des vidéos pour les regarder sans connexion internet. Maximum 5 vidéos.
           </p>
           <Link href="/">
-            <Button className="bg-primary text-white">Parcourir les vidéos</Button>
+            <Button className="bg-primary text-white">{t('downloads.browse_videos')}</Button>
           </Link>
         </div>
       ) : (
@@ -160,9 +162,7 @@ export function DownloadsPage() {
                 size="sm"
                 className="text-white hover:bg-white/10"
                 onClick={handleClosePlayer}
-              >
-                Fermer
-              </Button>
+              >{t('common.close')}</Button>
             </div>
             <video
               src={videoUrl}

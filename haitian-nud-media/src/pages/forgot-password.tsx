@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 import { Mail, ArrowLeft, KeyRound, ShieldCheck, AlertCircle } from "lucide-react";
 
 export function ForgotPasswordPage() {
+  const { t } = useTranslation();
   const { resetPassword } = useAuth();
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
@@ -74,7 +76,7 @@ export function ForgotPasswordPage() {
           <div className="mb-4 flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 animate-in fade-in-50">
             <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold">Erreur : </span>
+              <span className="font-semibold">{t('common.error')}</span>
               {error}
             </div>
           </div>
@@ -83,7 +85,7 @@ export function ForgotPasswordPage() {
         {!sent ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('account.email')}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input

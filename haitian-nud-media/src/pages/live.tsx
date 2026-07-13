@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Redirect } from "wouter";
@@ -23,6 +24,7 @@ interface ChatMessage {
 }
 
 export function Live() {
+  const { t } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
   const [isActive, setIsActive] = useState(false); // Gestion directe de l'état
   const [playbackId, setPlaybackId] = useState<string | null>(null); // Stockage du Playback ID
@@ -164,8 +166,7 @@ export function Live() {
             {/* Overlay d'informations sur le Live */}
             <div className="absolute top-4 left-4 flex gap-2 items-center z-10">
               <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1 uppercase tracking-wider animate-pulse">
-                <Radio className="h-3 w-3" /> En direct
-              </span>
+                <Radio className="h-3 w-3" />{t('nav.live_stream')}</span>
               <span className="bg-black/60 text-white text-xs font-medium px-2 py-1 rounded flex items-center gap-1 backdrop-blur-sm">
                 <Users className="h-3 w-3" /> {viewerCount}
               </span>
@@ -184,8 +185,8 @@ export function Live() {
         ) : (
           <div className="flex flex-col items-center justify-center flex-1 text-center p-8 bg-neutral-900 text-neutral-400 h-full w-full architecture-placeholder">
             <Radio className="h-12 w-12 text-neutral-600 mb-4 animate-bounce" />
-            <h3 className="text-xl font-bold text-white">Aucun live en cours</h3>
-            <p className="text-sm mt-2 max-w-sm">Revenez plus tard ou attendez le signal de l'administrateur.</p>
+            <h3 className="text-xl font-bold text-white">{t('live.no_live')}</h3>
+            <p className="text-sm mt-2 max-w-sm">{t('live.no_live_desc')}</p>
           </div>
         )}
 
@@ -207,7 +208,7 @@ export function Live() {
       <div className="w-full lg:w-96 flex flex-col h-[45vh] lg:h-[75vh] bg-card border border-border rounded-xl shadow-sm overflow-hidden">
         {/* En-tête Chat */}
         <div className="p-3 border-b border-border bg-muted/30 flex items-center justify-between">
-          <span className="font-serif font-bold text-sm">Discussion en direct</span>
+          <span className="font-serif font-bold text-sm">{t('live.live_chat')}</span>
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" className="text-lg p-1 h-8 w-8" onClick={() => sendReaction("❤️")}>❤️</Button>
             <Button variant="ghost" size="sm" className="text-lg p-1 h-8 w-8" onClick={() => sendReaction("🔥")}>🔥</Button>

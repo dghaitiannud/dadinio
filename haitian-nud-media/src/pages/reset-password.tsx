@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 import { Lock, ArrowLeft, CheckCircle, Eye, EyeOff } from "lucide-react";
 
 export function ResetPasswordPage() {
+  const { t } = useTranslation();
   const { updatePassword } = useAuth();
   const [, setLocation] = useLocation();
   const [password, setPassword] = useState("");
@@ -64,7 +66,7 @@ export function ResetPasswordPage() {
         {!done ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Nouveau mot de passe</Label>
+              <Label htmlFor="password">{t('auth.new_password')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -87,7 +89,7 @@ export function ResetPasswordPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm">Confirmer le mot de passe</Label>
+              <Label htmlFor="confirm">{t('auth.confirm_password')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input

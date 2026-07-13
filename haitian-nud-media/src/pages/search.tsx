@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { getVideos, type Video } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
@@ -13,6 +14,7 @@ const TICKER_MESSAGES = [
 ];
 
 export function Search() {
+  const { t } = useTranslation();
   const searchParams = new URLSearchParams(window.location.search);
   const initialQuery = searchParams.get("q") || "";
   
@@ -119,8 +121,8 @@ export function Search() {
         ) : (
           <div className="text-center py-24 bg-card border border-dashed border-border rounded-xl">
             <SearchIcon className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Aucun résultat</h3>
-            <p className="text-muted-foreground">Essayez d'autres mots-clés ou parcourez nos catégories.</p>
+            <h3 className="text-lg font-medium mb-2">{t('search.no_results')}</h3>
+            <p className="text-muted-foreground">{t('search.no_results_desc')}</p>
           </div>
         )}
       </div>

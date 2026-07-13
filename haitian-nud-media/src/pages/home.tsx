@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { getVideos, getTrendingVideos, getBannerVideo, getPhotos, type Video, type Photo } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
@@ -16,6 +17,7 @@ const TABS = [
 ] as const;
 
 export function Home() {
+  const { t } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation(); // 🌟 MODIFIÉ : Hook de navigation active
   const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
@@ -102,7 +104,7 @@ export function Home() {
         
         <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 lg:p-24 container mx-auto z-10">
           <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <Badge className="mb-4 bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 backdrop-blur-sm">Nouveau sur HAITIAN NUD</Badge>
+            <Badge className="mb-4 bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 backdrop-blur-sm">{t('home.new_on_platform')}</Badge>
             
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-8 leading-tight min-h-[50px] md:min-h-[80px]">
               <span>{haitianPart}</span>
@@ -127,8 +129,7 @@ export function Home() {
                   onClick={() => setLocation("/plans")}
                   className="bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm w-full sm:w-auto"
                 >
-                  <Star className="mr-2 h-5 w-5 text-yellow-400" /> Devenir VIP
-                </Button>
+                  <Star className="mr-2 h-5 w-5 text-yellow-400" />{t('nav.become_vip')}</Button>
               )}
             </div>
           </div>
@@ -206,7 +207,7 @@ export function Home() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Star className="h-5 w-5 text-primary fill-primary" />
-                  <h3 className="text-xl md:text-2xl font-bold">Pass VIP Exclusif</h3>
+                  <h3 className="text-xl md:text-2xl font-bold">{t('home.exclusive_vip_pass')}</h3>
                 </div>
                 <p className="text-muted-foreground max-w-md">
                   Accédez à tout le contenu premium, téléchargements illimités et sans publicités. Soutenez les créateurs haïtiens.
@@ -245,8 +246,7 @@ export function Home() {
                       <img src={photo.imageUrl} alt={photo.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                       {photo.isVip && (
                         <div className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-md">
-                          <Star className="h-3 w-3 fill-current text-yellow-400" /> VIP
-                        </div>
+                          <Star className="h-3 w-3 fill-current text-yellow-400" />{t('common.vip')}</div>
                       )}
                     </div>
                     <div className="p-3">

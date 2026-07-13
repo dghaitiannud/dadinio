@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import type { Video } from "@/lib/supabase-db";
 import { formatDistanceToNow } from "date-fns";
@@ -11,6 +12,7 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, className = "" }: VideoCardProps) {
+  const { t } = useTranslation();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
 
   return (
@@ -35,8 +37,7 @@ export function VideoCard({ video, className = "" }: VideoCardProps) {
         {video.isVip && (
           <div className="absolute top-2 left-2">
             <Badge variant="secondary" className="bg-gradient-to-r from-primary to-blue-400 text-white border-0 shadow-lg font-bold gap-1">
-              <Star className="h-3 w-3 fill-current" /> VIP
-            </Badge>
+              <Star className="h-3 w-3 fill-current" />{t('common.vip')}</Badge>
           </div>
         )}
       </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Link, Redirect } from "wouter";
@@ -24,6 +25,7 @@ import { LIVE_ADMIN_EMAIL } from "@/lib/supabase";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function Account() {
+  const { t } = useTranslation();
   const { isSignedIn, user, appUser, signOut, isAdmin, refreshUser } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [isLoadingTickets, setIsLoadingTickets] = useState(false);
@@ -130,7 +132,7 @@ export function Account() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen">
-      <h1 className="text-3xl font-serif font-bold mb-8">Mon Compte</h1>
+      <h1 className="text-3xl font-serif font-bold mb-8">{t('nav.my_account')}</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Profile Sidebar */}
@@ -151,7 +153,7 @@ export function Account() {
                     <Star className="h-3 w-3 mr-1 fill-current" /> Membre VIP
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="mb-2">Membre Gratuit</Badge>
+                  <Badge variant="outline" className="mb-2">{t('account.free_member')}</Badge>
                 )}
 
                 {isAdmin && (
@@ -181,8 +183,7 @@ export function Account() {
             </CardContent>
             <CardFooter className="border-t border-border pt-4 flex justify-center">
               <Button variant="ghost" onClick={handleLogout} className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full">
-                <LogOut className="h-4 w-4 mr-2" /> Déconnexion
-              </Button>
+                <LogOut className="h-4 w-4 mr-2" />{t('nav.logout')}</Button>
             </CardFooter>
           </Card>
 
@@ -193,10 +194,10 @@ export function Account() {
         <div className="md:col-span-2">
           <Tabs defaultValue="subscription" className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="subscription"><Star className="h-4 w-4 mr-1 hidden sm:inline" />Abonnement</TabsTrigger>
-              <TabsTrigger value="history"><History className="h-4 w-4 mr-1 hidden sm:inline" />Historique</TabsTrigger>
-              <TabsTrigger value="settings"><SettingsIcon className="h-4 w-4 mr-1 hidden sm:inline" />Paramètres</TabsTrigger>
-              <TabsTrigger value="support"><Ticket className="h-4 w-4 mr-1 hidden sm:inline" />Support</TabsTrigger>
+              <TabsTrigger value="subscription"><Star className="h-4 w-4 mr-1 hidden sm:inline" />{t('account.subscription')}</TabsTrigger>
+              <TabsTrigger value="history"><History className="h-4 w-4 mr-1 hidden sm:inline" />{t('account.history')}</TabsTrigger>
+              <TabsTrigger value="settings"><SettingsIcon className="h-4 w-4 mr-1 hidden sm:inline" />{t('account.settings')}</TabsTrigger>
+              <TabsTrigger value="support"><Ticket className="h-4 w-4 mr-1 hidden sm:inline" />{t('account.support')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="subscription" className="space-y-6">
@@ -210,16 +211,16 @@ export function Account() {
                   {appUser?.plan === "vip" ? (
                     <div className="space-y-4">
                       <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl text-primary font-medium flex justify-between items-center">
-                        <span>Abonnement Actif</span>
-                        <Badge className="bg-primary text-white">VIP</Badge>
+                        <span>{t('account.active_sub')}</span>
+                        <Badge className="bg-primary text-white">{t('common.vip')}</Badge>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="p-4 bg-background rounded-lg border border-border">
-                          <div className="text-sm text-muted-foreground mb-1">Plan</div>
-                          <div className="font-semibold">VIP</div>
+                          <div className="text-sm text-muted-foreground mb-1">{t('account.plan')}</div>
+                          <div className="font-semibold">{t('common.vip')}</div>
                         </div>
                         <div className="p-4 bg-background rounded-lg border border-border">
-                          <div className="text-sm text-muted-foreground mb-1">Expire le</div>
+                          <div className="text-sm text-muted-foreground mb-1">{t('account.expires_at')}</div>
                           <div className="font-semibold">
                             {appUser?.subscriptionEndsAt ? format(new Date(appUser.subscriptionEndsAt), "dd MMMM yyyy", { locale: fr }) : "À vie"}
                           </div>
@@ -231,12 +232,12 @@ export function Account() {
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                         <Star className="h-8 w-8 text-muted-foreground" />
                       </div>
-                      <h3 className="text-lg font-semibold mb-2">Vous êtes sur le plan Gratuit</h3>
+                      <h3 className="text-lg font-semibold mb-2">{t('account.free_plan_msg')}</h3>
                       <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                         Passez au VIP pour profiter des vidéos sans publicités et des téléchargements illimités.
                       </p>
                       <Link href="/plans">
-                        <Button className="bg-primary text-white">Devenir VIP maintenant</Button>
+                        <Button className="bg-primary text-white">{t('account.become_vip_now')}</Button>
                       </Link>
                     </div>
                   )}
@@ -246,14 +247,13 @@ export function Account() {
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Download className="h-5 w-5 text-primary" /> Téléchargements
-                  </CardTitle>
+                    <Download className="h-5 w-5 text-primary" />{t('common.downloads')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
                     <div>
-                      <div className="font-semibold">Quota restant</div>
-                      <div className="text-sm text-muted-foreground">3 téléchargements gratuits par compte</div>
+                      <div className="font-semibold">{t('account.quota_remaining')}</div>
+                      <div className="text-sm text-muted-foreground">{t('account.free_downloads_limit')}</div>
                     </div>
                     <div className="text-2xl font-bold font-mono">
                       {appUser?.plan === "vip" ? "∞" : (3 - (appUser?.freeDownloadsUsed || 0))}
@@ -326,18 +326,18 @@ export function Account() {
             <TabsContent value="settings" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
-                  <CardTitle>Profil</CardTitle>
+                  <CardTitle>{t('account.profile')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="display-name">Nom affiché</Label>
+                    <Label htmlFor="display-name">{t('account.display_name')}</Label>
                     <div className="flex gap-2">
                       <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Votre nom" className="bg-background" />
-                      <Button onClick={saveDisplayName} disabled={savingName || !displayName.trim()}>Enregistrer</Button>
+                      <Button onClick={saveDisplayName} disabled={savingName || !displayName.trim()}>{t('common.save')}</Button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Email</Label>
+                    <Label>{t('account.email')}</Label>
                     <Input value={appUser?.email ?? ""} readOnly disabled className="bg-background" />
                   </div>
                 </CardContent>
@@ -375,16 +375,16 @@ export function Account() {
             <TabsContent value="support" className="space-y-6">
               <Card className="border-border bg-card shadow-sm">
                 <CardHeader>
-                  <CardTitle>Contacter le support</CardTitle>
+                  <CardTitle>{t('account.contact_support')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSupportSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="subject">Sujet</Label>
+                      <Label htmlFor="subject">{t('common.subject')}</Label>
                       <Input id="subject" placeholder="Ex: Problème d'abonnement" value={subject} onChange={e => setSubject(e.target.value)} className="bg-background" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="message">Message</Label>
+                      <Label htmlFor="message">{t('common.message')}</Label>
                       <Textarea id="message" placeholder="Décrivez votre problem en détail..." rows={4} value={message} onChange={e => setMessage(e.target.value)} className="bg-background resize-none" />
                     </div>
                     <Button type="submit" disabled={ticketPending || !subject || !message}>
@@ -403,7 +403,7 @@ export function Account() {
                 <CardContent>
                   <div className="space-y-4">
                     {isLoadingTickets ? (
-                      <div className="text-center py-4 text-muted-foreground">Chargement...</div>
+                      <div className="text-center py-4 text-muted-foreground">{t('common.loading')}</div>
                     ) : tickets && tickets.length > 0 ? (
                       tickets.map((ticket) => (
                         <div key={ticket.id} className="p-4 border border-border rounded-lg bg-background">
@@ -491,7 +491,7 @@ function PushNotificationCard({ userId }: { userId?: string }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Les notifications push ne sont pas supportées par votre navigateur.</p>
+          <p className="text-sm text-muted-foreground">{t('account.push_not_supported')}</p>
         </CardContent>
       </Card>
     );

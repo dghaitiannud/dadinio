@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -28,10 +29,11 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2009 }, (_, i) => String(CURRENT_YEAR - i));
 
 export function Admin() {
+  const { t } = useTranslation();
   const { appUser, isAdmin, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  if (isLoading) return <div className="p-8 text-center">Chargement...</div>;
+  if (isLoading) return <div className="p-8 text-center">{t('common.loading')}</div>;
 
   if (!isAdmin) {
     return (
@@ -39,7 +41,7 @@ export function Admin() {
         <Shield className="h-16 w-16 mx-auto text-destructive mb-4" />
         <h1 className="text-3xl font-bold">Accès Refusé</h1>
         <p className="text-muted-foreground mt-2">Vous n'avez pas les droits d'administration.</p>
-        <Button className="mt-6" onClick={() => setLocation("/")}>Retour à l'accueil</Button>
+        <Button className="mt-6" onClick={() => setLocation("/")}>{t('watch.back_home')}</Button>
       </div>
     );
   }
@@ -89,7 +91,7 @@ function AdminStatsCards() {
       <StatCard title="Vidéos" value={stats?.totalVideos || 0} icon={VideoIcon} />
       <StatCard title="Photos" value={stats?.totalPhotos || 0} icon={ImageIcon} color="text-emerald-500" />
       <StatCard title="Vues" value={stats?.totalViews || 0} icon={Shield} />
-      <StatCard title="Téléchargements" value={stats?.totalDownloads || 0} icon={Download} />
+      <StatCard title={t('common.downloads')} value={stats?.totalDownloads || 0} icon={Download} />
       <StatCard title="Tickets" value={stats?.openTickets || 0} icon={Ticket} color="text-destructive" />
     </div>
   );
@@ -169,12 +171,12 @@ function VideosTab() {
             <DialogHeader><DialogTitle>Nouvelle Vidéo</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Titre</Label>
+                <Label>{t('common.title')}</Label>
                 <Input required value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Catégorie</Label>
+                  <Label>{t('common.category')}</Label>
                   <Input required placeholder="ex: Kompa, Rasin, Trap..." value={contentType} onChange={e => setContentType(e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -205,7 +207,7 @@ function VideosTab() {
         <div className="w-full overflow-x-auto rounded-xl border border-border">
           <div className="max-h-[600px] overflow-y-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Titre</TableHead><TableHead>Catégorie</TableHead><TableHead>Vues</TableHead><TableHead>VIP</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>{t('common.title')}</TableHead><TableHead>{t('common.category')}</TableHead><TableHead>Vues</TableHead><TableHead>{t('common.vip')}</TableHead><TableHead></TableHead></TableRow></TableHeader>
               <TableBody>
                 {videos.map((v) => (
                   <TableRow key={v.id}>
@@ -291,7 +293,7 @@ function PhotosTab() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Catégorie</Label>
+                  <Label>{t('common.category')}</Label>
                   <Input required placeholder="ex: Shooting, Model, Event..." value={contentType} onChange={e => setContentType(e.target.value)} />
                 </div>
                 <div className="space-y-2">
@@ -318,7 +320,7 @@ function PhotosTab() {
         <div className="w-full overflow-x-auto rounded-xl border border-border">
           <div className="max-h-[600px] overflow-y-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Aperçu</TableHead><TableHead>Titre</TableHead><TableHead>Catégorie</TableHead><TableHead>Vues</TableHead><TableHead>VIP</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Aperçu</TableHead><TableHead>{t('common.title')}</TableHead><TableHead>{t('common.category')}</TableHead><TableHead>Vues</TableHead><TableHead>{t('common.vip')}</TableHead><TableHead></TableHead></TableRow></TableHeader>
               <TableBody>
                 {photos.map((p) => (
                   <TableRow key={p.id}>
@@ -549,7 +551,7 @@ function UsersTab() {
         <div className="w-full overflow-x-auto rounded-xl border border-border">
           <div className="max-h-[600px] overflow-y-auto">
             <Table>
-              <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Plan</TableHead><TableHead>Date d'inscription</TableHead><TableHead>Statut</TableHead><TableHead></TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>{t('account.email')}</TableHead><TableHead>{t('account.plan')}</TableHead><TableHead>Date d'inscription</TableHead><TableHead>Statut</TableHead><TableHead></TableHead></TableRow></TableHeader>
               <TableBody>
                 {users.map((u) => (
                   <TableRow key={u.id} className={u.blocked ? "opacity-50" : ""}>
@@ -723,11 +725,11 @@ function AdminAlerts() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Titre</Label>
+            <Label>{t('common.title')}</Label>
             <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Nouvelle vidéo !" />
           </div>
           <div className="space-y-2">
-            <Label>Message</Label>
+            <Label>{t('common.message')}</Label>
             <Textarea value={body} onChange={e => setBody(e.target.value)} rows={3} className="resize-none" placeholder="Corps de la notification..." />
           </div>
           <div className="space-y-2">

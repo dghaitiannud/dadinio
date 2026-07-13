@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/lib/auth-context';
@@ -10,6 +11,7 @@ import { Radio, VideoOff } from "lucide-react";
 const ADMIN_EMAILS = ["liveadmin@gmail.com", "dghaitiannud@gmail.com"];
 
 export function AdminLive() {
+  const { t } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation();
 
@@ -119,8 +121,7 @@ export function AdminLive() {
         <h1 className="text-xl font-bold tracking-tight">Console de Streaming Pro</h1>
         {isActive && (
           <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white animate-pulse">
-            <Radio className="w-3.5 h-3.5" /> En Direct
-          </span>
+            <Radio className="w-3.5 h-3.5" />{t('common.live')}</span>
         )}
       </div>
 

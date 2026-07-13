@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
 import { useAuth } from "@/lib/auth-context";
@@ -24,7 +25,7 @@ function VipGate() {
       <div className="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center mb-4 border border-yellow-500/20 shadow-inner">
         <Lock className="h-6 w-6 text-yellow-500" />
       </div>
-      <h3 className="text-xl font-bold text-white mb-2">Espace Privé & Vidéos VIP</h3>
+      <h3 className="text-xl font-bold text-white mb-2">{t('watch.private_space')}</h3>
       <p className="text-zinc-400 text-sm text-center mb-6 max-w-xs leading-relaxed">
         Cette vidéo exclusive est réservée aux membres VIP. Devenez Premium pour débloquer tout le catalogue instantanément.
       </p>
@@ -44,6 +45,7 @@ function NetworkStatusIcon() {
 
   useEffect(() => {
     const updateStatus = () => {
+  const { t } = useTranslation();
       // @ts-ignore
       const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
       if (conn && conn.downlink !== undefined) {
@@ -79,7 +81,7 @@ function NetworkStatusIcon() {
 
   return (
     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-xs font-medium text-white transition-all">
-      <span className="text-white/60">En ligne</span>
+      <span className="text-white/60">{t('watch.online')}</span>
       <div className="relative flex items-center">
         <Wifi className={`h-4 w-4 transition-colors duration-300 ${getColorClass()}`} />
         {networkQuality !== 'unknown' && (
@@ -284,9 +286,9 @@ export function Watch() {
     return (
       <div className="container mx-auto px-4 py-24 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-2xl font-bold mb-2">ID vidéo invalide</h2>
-        <p className="text-muted-foreground mb-6">L'URL de cette vidéo n'est pas valide.</p>
-        <Link href="/"><Button>Retour à l'accueil</Button></Link>
+        <h2 className="text-2xl font-bold mb-2">{t('watch.invalid_id')}</h2>
+        <p className="text-muted-foreground mb-6">{t('watch.invalid_url')}</p>
+        <Link href="/"><Button>{t('watch.back_home')}</Button></Link>
       </div>
     );
   }
@@ -313,9 +315,9 @@ export function Watch() {
     return (
       <div className="container mx-auto px-4 py-24 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-2xl font-serif font-bold mb-2">Erreur de chargement</h2>
+        <h2 className="text-2xl font-serif font-bold mb-2">{t('common.error_loading')}</h2>
         <p className="text-muted-foreground mb-6">{videoError || "Vidéo introuvable"}</p>
-        <Link href="/"><Button>Retour à l'accueil</Button></Link>
+        <Link href="/"><Button>{t('watch.back_home')}</Button></Link>
       </div>
     );
   }
@@ -327,7 +329,7 @@ export function Watch() {
           
           {isSignedIn && (
             <div className="flex items-center justify-between mb-2 px-1">
-              <span className="text-xs text-muted-foreground font-medium">Lecture en continu</span>
+              <span className="text-xs text-muted-foreground font-medium">{t('watch.streaming')}</span>
               <NetworkStatusIcon />
             </div>
           )}
@@ -338,7 +340,7 @@ export function Watch() {
                 <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-4 text-red-500">
                   <Lock className="h-6 w-6" />
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">Kontni sa a restrien</h3>
+                <h3 className="text-lg font-bold text-white mb-2">{t('watch.restricted_content')}</h3>
                 <p className="text-zinc-400 text-sm text-center mb-6 max-w-xs">
                   Konekte oswa kreye yon kont pou w ka gade videyo sa a.
                 </p>
@@ -363,7 +365,7 @@ export function Watch() {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
                 <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">Lien de la vidéo introuvable.</p>
+                <p className="text-sm text-muted-foreground">{t('watch.no_video_link')}</p>
               </div>
             )}
           </div>
@@ -375,8 +377,7 @@ export function Watch() {
                   <Badge variant="secondary" className="bg-accent text-accent-foreground border-border">{video.category}</Badge>
                   {video.isVip && (
                     <Badge variant="secondary" className="bg-gradient-to-r from-yellow-500 to-orange-400 text-white border-0">
-                      <Star className="h-3 w-3 mr-1 fill-current" /> VIP
-                    </Badge>
+                      <Star className="h-3 w-3 mr-1 fill-current" />{t('common.vip')}</Badge>
                   )}
                 </div>
                 <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-2 leading-tight">{video.title}</h1>
@@ -416,9 +417,9 @@ export function Watch() {
                         className="rounded-full bg-accent hover:bg-accent/80"
                       >
                         {offlineDownloading ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Téléchargement...</>
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('watch.downloading')}</>
                         ) : (
-                          <><WifiOff className="h-4 w-4 mr-2" /> Regarder offline</>
+                          <><WifiOff className="h-4 w-4 mr-2" />{t('watch.watch_offline')}</>
                         )}
                       </Button>
                     )}
@@ -473,18 +474,18 @@ export function Watch() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Switch id="anonymous" checked={anonymous} onCheckedChange={setAnonymous} />
-                        <Label htmlFor="anonymous" className="text-sm text-muted-foreground cursor-pointer">Poster en anonyme</Label>
+                        <Label htmlFor="anonymous" className="text-sm text-muted-foreground cursor-pointer">{t('watch.post_anonymous')}</Label>
                       </div>
-                      <Button type="submit" disabled={!commentBody.trim() || commentPending}>Commenter</Button>
+                      <Button type="submit" disabled={!commentBody.trim() || commentPending}>{t('watch.comment_btn')}</Button>
                     </div>
                   </div>
                 </div>
               </form>
             ) : (
               <div className="mb-8 p-6 bg-card border border-border rounded-xl text-center">
-                <p className="text-muted-foreground mb-4">Connectez-vous pour participer à la discussion.</p>
+                <p className="text-muted-foreground mb-4">{t('watch.login_to_discuss')}</p>
                 <Link href="/login">
-                  <Button variant="outline">Connexion</Button>
+                  <Button variant="outline">{t('nav.login')}</Button>
                 </Link>
               </div>
             )}
@@ -516,14 +517,14 @@ export function Watch() {
                   </div>
                 ))
               ) : (
-                <p className="text-muted-foreground text-center py-8">Soyez le premier à commenter.</p>
+                <p className="text-muted-foreground text-center py-8">{t('watch.first_comment')}</p>
               )}
             </div>
           </div>
         </div>
 
         <div className="lg:col-span-1">
-          <h3 className="font-serif font-bold text-lg mb-4">Dans la même catégorie</h3>
+          <h3 className="font-serif font-bold text-lg mb-4">{t('watch.same_category')}</h3>
           <div className="flex flex-col gap-4">
             {relatedVideos.length > 0 ? (
               relatedVideos.map((vid) => (
@@ -532,7 +533,7 @@ export function Watch() {
                     <img src={vid.thumbnailUrl || '/logo.jpg'} alt={vid.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                     {vid.isVip && (
                       <div className="absolute top-1 left-1">
-                        <span className="bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded">VIP</span>
+                        <span className="bg-yellow-500 text-black text-[9px] font-bold px-1.5 py-0.5 rounded">{t('common.vip')}</span>
                       </div>
                     )}
                     <div className="absolute bottom-1 right-1 px-1 bg-black/80 text-[10px] text-white rounded">
@@ -546,7 +547,7 @@ export function Watch() {
                 </Link>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">Aucune vidéo similaire.</p>
+              <p className="text-sm text-muted-foreground">{t('watch.no_similar_videos')}</p>
             )}
           </div>
         </div>
