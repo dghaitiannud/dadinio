@@ -42,27 +42,34 @@ function ScrollToTop() {
   return null;
 }
 
-// 🌐 Détection IP native pour i18next
+// 🌐 Détection IP native corrigée (Spéciale Haïti + Nettoyage i18next)
 function useIpLocationDetection() {
   const { i18n } = useTranslation();
 
   useEffect(() => {
-    // Si l'utilisateur a déjà un choix de langue enregistré, on respecte sa décision
-    if (!localStorage.getItem("i18nextLng")) {
+    // On vérifie les deux clés pour éviter de surcharger un choix utilisateur existant
+    if (!localStorage.getItem("i18nextLng") && !localStorage.getItem("auto-lang")) {
       fetch("https://ipapi.co/json/")
         .then((res) => res.json())
         .then((data) => {
           const country = data.country_code;
-          let targetLang = "fr";
+          let targetLang = "fr"; // Par défaut, repli sur le Français
 
-          if (country === "HT") targetLang = "ht";
-          else if (["US", "CA", "GB"].includes(country)) targetLang = "en";
-          else if (["ES", "DO", "MX", "AR"].includes(country)) targetLang = "es";
+          if (country === "HT") {
+            targetLang = "ht"; // Détecté en Haïti -> Kreyòl d'office
+          } else if (["US", "CA", "GB"].includes(country)) {
+            targetLang = "en";
+          } else if (["ES", "DO", "MX", "AR"].includes(country)) {
+            targetLang = "es";
+          }
 
+          localStorage.setItem("auto-lang", targetLang);
           i18n.changeLanguage(targetLang);
         })
         .catch(() => {
-          i18n.changeLanguage("fr"); // Repli sur le français par sécurité
+          // Si l'API bloque ou échoue, repli de sécurité en français
+          localStorage.setItem("auto-lang", "fr");
+          i18n.changeLanguage("fr");
         });
     }
   }, [i18n]);
@@ -71,7 +78,7 @@ function useIpLocationDetection() {
 function App() {
   const [location] = useLocation();
   
-  // 🚀 Initialisation de la détection de pays automatique
+  // 🚀 Initialisation de la détection de pays automatique sécurisée
   useIpLocationDetection();
 
   return (
