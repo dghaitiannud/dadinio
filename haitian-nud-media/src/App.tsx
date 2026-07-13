@@ -77,6 +77,12 @@ function useIpLocationDetection() {
 
 function App() {
   const [location] = useLocation();
+  const { t, i18n } = useTranslation();
+  
+  // 🚀 FIX DE SÉCURITÉ : Assure que la fonction t globale reste synchronisée avec l'état de i18n
+  useEffect(() => {
+    (window as any).t = t;
+  }, [t, i18n.language]);
   
   // 🚀 Initialisation de la détection de pays automatique sécurisée
   useIpLocationDetection();
