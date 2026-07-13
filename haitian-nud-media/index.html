@@ -36,27 +36,25 @@
     <link rel="canonical" href="https://www.haitiannud.com" />
   </head>
   
-  <!-- 🔐 Sécurité absolue appliquée ici pour tous les utilisateurs -->
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- 🛡️ SCRIPT ANTI-BARRE GOOGLE -->
+
+    <!-- 🛡️ SCRIPT ANTI-BARRE FLUIDE (Ne bloque pas la traduction) -->
     <script>
-      const observer = new MutationObserver((mutations) => {
-        const elementsToRemove = [
-          '.goog-te-banner-frame',
-          '.goog-te-balloon-frame',
-          '#goog-gt-tt',
-          '.vi-container',
-          'iframe[id^=":"]'
-        ];
-        
-        elementsToRemove.forEach(selector => {
-          const el = document.querySelector(selector);
-          if (el) el.remove();
-        });
+      const observer = new MutationObserver(() => {
+        // Force le body à ne jamais descendre à cause de la barre Google
+        if (document.body.style.top !== '0px' && document.body.style.top !== '') {
+          document.body.style.top = '0px';
+        }
+        // Masque à la volée la structure de la bannière si elle s'injecte
+        const frame = document.querySelector('.goog-te-banner-frame');
+        if (frame) {
+          frame.style.display = 'none';
+          frame.style.visibility = 'hidden';
+        }
       });
-      observer.observe(document.body, { childList: true, subtree: true });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style'], childList: true, subtree: true });
     </script>
   </body>
 </html>
