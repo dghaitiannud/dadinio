@@ -18,34 +18,42 @@ interface ChatMsg {
 const t = (key: string, options?: any) => (window as any).t ? (window as any).t(key, options) : key;
 
 export function FloatingSupport({ currentUser }: { currentUser: any }) {
+  // 1. DÉCLARATION DE TOUS LES HOOKS TOUT EN HAUT (Règle d'or de React)
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'ticket'>('chat');
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  
+  const [subject, setSubject] = useState('');
+  const [ticketMessage, setTicketMessage] = useState('');
+  const [ticketLoading, setTicketLoading] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState(false);
 
   const [messages, setMessages] = useState<ChatMsg[]>([
     { role: 'bot', content: 'Bonjour ! Comment puis-je vous aider aujourd\'hui ?' },
   ]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  
-  const scrollRef = useRef<HTMLDivElement>(null);
-  // Initialisé à vide pour éviter l'erreur #310 au premier rendu
-  const sessionIdRef = useRef<string>(""); 
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sessionIdRef = useRef<string>("");
+
+  // Génération sécurisée du Session ID uniquement sur le client
   useEffect(() => {
-    // Génération sécurisée du Session ID uniquement sur le client
     if (typeof window !== "undefined") {
       sessionIdRef.current = crypto.randomUUID();
     }
   }, []);
 
-  if (!currentUser || currentUser.email === ADMIN_EMAIL || currentUser.role === 'admin') {
-    return null;
-  }
-
+  // Défilement automatique des messages
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, isTyping]);
 
+  // 2. FILTRE DE SÉCURITÉ (Appliqué UNIQUEMENT après la déclaration des hooks)
+  if (!currentUser || currentUser.email === ADMIN_EMAIL || currentUser.role === 'admin') {
+    return null;
+  }
+
+  // 3. FONCTIONS DE GESTION
   async function handleSend() {
     const text = input.trim();
     if (!text || isTyping) return;
@@ -99,11 +107,6 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
       setTicketLoading(false);
     }
   };
-
-  const [subject, setSubject] = useState('');
-  const [ticketMessage, setTicketMessage] = useState('');
-  const [ticketLoading, setTicketLoading] = useState(false);
-  const [ticketSuccess, setTicketSuccess] = useState(false);
 
   return (
     <div className="fixed bottom-20 right-6 z-50 font-sans">
