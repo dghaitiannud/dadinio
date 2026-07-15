@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, X, Send, Headset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -15,12 +14,10 @@ interface ChatMsg {
   content: string;
 }
 
-function getSessionId() {
-  return crypto.randomUUID();
-}
+// Fonction de traduction globale de secours
+const t = (key: string, options?: any) => (window as any).t ? (window as any).t(key, options) : key;
 
 export function FloatingSupport({ currentUser }: { currentUser: any }) {
-  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'ticket'>('chat');
 
@@ -29,13 +26,17 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
-  const sessionIdRef = useRef(getSessionId());
+  // Initialisé à vide pour éviter l'erreur #310 au premier rendu
+  const sessionIdRef = useRef<string>(""); 
 
-  const [subject, setSubject] = useState('');
-  const [ticketMessage, setTicketMessage] = useState('');
-  const [ticketLoading, setTicketLoading] = useState(false);
-  const [ticketSuccess, setTicketSuccess] = useState(false);
+  useEffect(() => {
+    // Génération sécurisée du Session ID uniquement sur le client
+    if (typeof window !== "undefined") {
+      sessionIdRef.current = crypto.randomUUID();
+    }
+  }, []);
 
   if (!currentUser || currentUser.email === ADMIN_EMAIL || currentUser.role === 'admin') {
     return null;
@@ -98,6 +99,11 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
       setTicketLoading(false);
     }
   };
+
+  const [subject, setSubject] = useState('');
+  const [ticketMessage, setTicketMessage] = useState('');
+  const [ticketLoading, setTicketLoading] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState(false);
 
   return (
     <div className="fixed bottom-20 right-6 z-50 font-sans">
@@ -222,4 +228,4 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
       )}
     </div>
   );
-                                    }
+}
