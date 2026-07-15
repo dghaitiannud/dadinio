@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import React, { useState } from 'react';
-import { MessageSquare, X, Send } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageSquare, X, Send, Headset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,59 +8,99 @@ import { toast } from "sonner";
 import { createTicket } from "@/lib/supabase-db";
 import { ADMIN_EMAIL } from "@/lib/supabase";
 
+const N8N_WEBHOOK_URL = "https://vmi3439201.contaboserver.net/webhook/36f70815-347b-41b9-9ba0-1e5c459f3d36/chat";
+
+interface ChatMsg {
+  role: 'user' | 'bot';
+  content: string;
+}
+
+function getSessionId() {
+  return crypto.randomUUID();
+}
+
 export function FloatingSupport({ currentUser }: { currentUser: any }) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const [subject, setSubject] = useState('');
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [view, setView] = useState<'chat' | 'ticket'>('chat');
 
-  // 1. Sécurité stricte : On masque le chat si pas connecté, ou si c'est l'admin
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    { role: 'bot', content: 'Bonjour ! Comment puis-je vous aider aujourd\'hui ?' },
+  ]);
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sessionIdRef = useRef(getSessionId());
+
+  const [subject, setSubject] = useState('');
+  const [ticketMessage, setTicketMessage] = useState('');
+  const [ticketLoading, setTicketLoading] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState(false);
+
   if (!currentUser || currentUser.email === ADMIN_EMAIL || currentUser.role === 'admin') {
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!subject.trim() || !message.trim() || !currentUser?.id) return;
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, isTyping]);
 
-    setLoading(true);
+  async function handleSend() {
+    const text = input.trim();
+    if (!text || isTyping) return;
+
+    setMessages((prev) => [...prev, { role: 'user', content: text }]);
+    setInput('');
+    setIsTyping(true);
+
     try {
-      // 2. Utilisation de TA fonction native pour insérer dans la bonne table Supabase
-      await createTicket(currentUser.id, subject.trim(), message.trim());
-
-      // 3. Envoi de la notification push à l'admin avec tes paramètres exacts
-      await fetch('https://api-6rzs.onrender.com/api/push/send', {
+      const res = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `Support: ${subject.trim()}`,
-          body: `Message de ${currentUser.email}`,
-          url: "/admin", // Redirige l'admin sur son panneau
-          icon: "/logo.jpg",
-          targetUserId: 'admin', // Cible l'administration
-          adminSecret: "Pourquoi2020??" // Ton secret requis par l'API
+          chatInput: text,
+          sessionId: sessionIdRef.current,
         }),
-      }).catch(err => console.warn("Échec notif push admin:", err));
+      });
 
-      setSuccess(true);
+      if (!res.ok) throw new Error('Erreur réseau');
+
+      const data = await res.json();
+      const reply = data.output ?? data.text ?? "Désolé, je n'ai pas pu traiter votre demande.";
+
+      setMessages((prev) => [...prev, { role: 'bot', content: reply }]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'bot', content: 'Erreur de connexion. Réessayez dans un instant ou contactez un humain.' },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  }
+
+  const handleTicketSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !ticketMessage.trim() || !currentUser?.id) return;
+
+    setTicketLoading(true);
+    try {
+      await createTicket(currentUser.id, subject.trim(), ticketMessage.trim());
+      setTicketSuccess(true);
       setSubject('');
-      setMessage('');
+      setTicketMessage('');
       toast.success("Message envoyé au support");
-      setTimeout(() => setSuccess(false), 4000);
+      setTimeout(() => setTicketSuccess(false), 4000);
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || "Erreur d'envoi");
     } finally {
-      setLoading(false);
+      setTicketLoading(false);
     }
   };
 
   return (
-    // On le décale un peu vers le haut (bottom-20) pour ne pas qu'il chevauche ta barre de navigation mobile <BottomNav />
     <div className="fixed bottom-20 right-6 z-50 font-sans">
-      {/* Bouton Rond Flottant */}
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
@@ -70,67 +110,116 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
         </Button>
       )}
 
-      {/* Fenêtre de Chat de Support */}
       {isOpen && (
-        <div className="w-80 md:w-96 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-5 duration-200">
-          {/* Entête */}
+        <div className="w-80 md:w-96 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-5 duration-200" style={{ height: 480 }}>
           <div className="bg-primary p-4 text-primary-foreground flex justify-between items-center">
             <div>
-              <h3 className="font-bold text-base font-serif">Support en ligne</h3>
-              <p className="text-xs opacity-80">Une question ? Écrivez-nous.</p>
+              <h3 className="font-bold text-base font-serif">
+                {view === 'chat' ? 'Assistant virtuel' : 'Support en ligne'}
+              </h3>
+              <p className="text-xs opacity-80">
+                {view === 'chat' ? 'Posez votre question' : 'Une question ? Écrivez-nous.'}
+              </p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-primary-foreground hover:bg-black/10 rounded-full h-8 w-8"
-              onClick={() => setIsOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-primary-foreground hover:bg-black/10 rounded-full h-8 w-8"
+                title={view === 'chat' ? 'Contacter un humain' : 'Retour au chat'}
+                onClick={() => setView(view === 'chat' ? 'ticket' : 'chat')}
+              >
+                <Headset className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-primary-foreground hover:bg-black/10 rounded-full h-8 w-8"
+                onClick={() => setIsOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
-          {/* Formulaire / Corps */}
-          <div className="p-4 bg-background">
-            {success ? (
-              <div className="text-center py-8 text-emerald-500 font-medium text-sm">
-                 Votre message a bien été transmis ! <br/>
-                L'équipe vous répondra sous peu.
+          {view === 'chat' && (
+            <>
+              <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 bg-background">
+                {messages.map((m, i) => (
+                  <div key={i} className={`my-1.5 ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
+                    <span
+                      className={`inline-block px-3 py-2 rounded-2xl text-sm max-w-[80%] ${
+                        m.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
+                      }`}
+                    >
+                      {m.content}
+                    </span>
+                  </div>
+                ))}
+                {isTyping && (
+                  <p className="text-xs text-muted-foreground my-1.5">En train d'écrire...</p>
+                )}
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">{t('common.subject')}</label>
-                  <Input
-                    placeholder="Ex: Problème d'abonnement"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    className="bg-background"
-                    required
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">{t('common.message')}</label>
-                  <Textarea
-                    placeholder="Décrivez votre problème en détail..."
-                    rows={4}
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    className="bg-background resize-none"
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full flex gap-2" disabled={loading}>
-                  {loading ? 'Envoi...' : (
-                    <>
-                      Envoyer la demande <Send className="h-4 w-4" />
-                    </>
-                  )}
+              <div className="flex items-center gap-2 p-3 border-t border-border bg-card">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                  placeholder="Écrivez un message..."
+                  className="bg-background"
+                />
+                <Button size="icon" onClick={handleSend} disabled={isTyping}>
+                  <Send className="h-4 w-4" />
                 </Button>
-              </form>
-            )}
-          </div>
+              </div>
+            </>
+          )}
+
+          {view === 'ticket' && (
+            <div className="p-4 bg-background flex-1 overflow-y-auto">
+              {ticketSuccess ? (
+                <div className="text-center py-8 text-emerald-500 font-medium text-sm">
+                  Votre message a bien été transmis ! <br />
+                  L'équipe vous répondra sous peu.
+                </div>
+              ) : (
+                <form onSubmit={handleTicketSubmit} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">{t('common.subject')}</label>
+                    <Input
+                      placeholder="Ex: Problème d'abonnement"
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      className="bg-background"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">{t('common.message')}</label>
+                    <Textarea
+                      placeholder="Décrivez votre problème en détail..."
+                      rows={4}
+                      value={ticketMessage}
+                      onChange={(e) => setTicketMessage(e.target.value)}
+                      className="bg-background resize-none"
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full flex gap-2" disabled={ticketLoading}>
+                    {ticketLoading ? 'Envoi...' : (
+                      <>
+                        Envoyer la demande <Send className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
-}
+                                    }
