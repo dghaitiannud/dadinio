@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { getVideos, getTrendingVideos, getBannerVideo, getPhotos, type Video, type Photo } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
-import { useLocation, Link } from "wouter"; // 🌟 MODIFIÉ : Ajout de useLocation
-import { Play, TrendingUp, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye } from "lucide-react";
+import { useLocation, Link } from "wouter";
+import { Play, TrendingUp, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye, Lock, ArrowUpDown, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 
@@ -19,7 +19,7 @@ const TABS = [
 export function Home() {
   const { t } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
-  const [, setLocation] = useLocation(); // 🌟 MODIFIÉ : Hook de navigation active
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
   const [trending, setTrending] = useState<Video[]>([]);
   const [latest, setLatest] = useState<Video[]>([]);
@@ -28,6 +28,12 @@ export function Home() {
   const [isLoadingTrending, setIsLoadingTrending] = useState(true);
   const [isLoadingLatest, setIsLoadingLatest] = useState(true);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
+
+  // Filtre de tri pour les vidéos ("recent" par défaut)
+  const [sortBy, setSortBy] = useState<"recent" | "views">("recent");
+
+  // State pour la modal d'affichage plein écran des photos
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
   const FULL_TEXT = "HAITIAN NUD";
   const [currentText, setCurrentText] = useState("");
@@ -64,13 +70,43 @@ export function Home() {
     }
   }, [currentText]);
 
-  const visibleVideos = (() => {
-    if (!latest) return latest;
-    if (activeTab === "popular") return [...latest].sort((a, b) => b.views - a.views);
-    return latest;
-  })();
+  // Tri dynamique des vidéos (Mise en avant des plus récentes par défaut)
+  const visibleVideos = useMemo(() => {
+    if (!latest) return [];
+    
+    let list = [...latest];
+
+    if (activeTab === "popular" || sortBy === "views") {
+      return list.sort((a, b) => (b.views || 0) - (a.views || 0));
+    }
+
+    // Tri par date d'ajout / nouveautés par défaut
+    return list.sort((a, b) => {
+      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
+      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [latest, activeTab, sortBy]);
+
+  // Tri et filtrage des photos (S'assure qu'il n'y a que des photos)
+  const sortedPhotos = useMemo(() => {
+    if (!photos) return [];
+    return [...photos].sort((a, b) => {
+      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
+      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [photos]);
 
   const isPhotoTab = activeTab === "photo";
+
+  const handlePhotoClick = (photo: Photo) => {
+    if (photo.isVip && !isUserVip) {
+      setLocation("/plans");
+      return;
+    }
+    setSelectedPhoto(photo);
+  };
 
   const haitianPart = currentText.substring(0, 8);
   const nudPart = currentText.substring(8);
@@ -113,7 +149,6 @@ export function Home() {
             </h1>
 
             <div className="flex flex-wrap gap-4">
-              {/* 🌟 FIX : Redirection logicielle forcée au clic pour éviter le blocage de wouter */}
               <Button 
                 size="lg" 
                 onClick={() => setLocation("/vip-catalog")}
@@ -162,39 +197,41 @@ export function Home() {
       </section>
 
       <div className="container mx-auto px-4 py-8 flex flex-col gap-12">
-        {/* Trending Rail */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
-              <TrendingUp className="text-primary h-6 w-6" /> Tendances
-            </h2>
-            <Link href="/search" className="text-sm text-primary hover:underline flex items-center">
-              Voir tout <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {isLoadingTrending ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex flex-col gap-3">
-                  <Skeleton className="aspect-video w-full rounded-xl" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
+        {/* Section Tendances (Affichée uniquement sur les onglets généraux) */}
+        {!isPhotoTab && (
+          <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
+                <TrendingUp className="text-primary h-6 w-6" /> Tendances
+              </h2>
+              <Link href="/search" className="text-sm text-primary hover:underline flex items-center">
+                Voir tout <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {isLoadingTrending ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex flex-col gap-3">
+                    <Skeleton className="aspect-video w-full rounded-xl" />
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                ))
+              ) : trending && trending.length > 0 ? (
+                trending.slice(0, 4).map((video, i) => (
+                  <div key={video.id} className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
+                    <VideoCard video={video} />
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed border-border rounded-xl">
+                  Aucune tendance pour le moment.
                 </div>
-              ))
-            ) : trending && trending.length > 0 ? (
-              trending.slice(0, 4).map((video, i) => (
-                <div key={video.id} className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
-                  <VideoCard video={video} />
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-                Aucune tendance pour le moment.
-              </div>
-            )}
-          </div>
-        </section>
+              )}
+            </div>
+          </section>
+        )}
 
         {!isUserVip && (
           <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card">
@@ -220,44 +257,108 @@ export function Home() {
           </section>
         )}
 
-        {/* Latest / filtered grid */}
+        {/* Section Principale : Vidéos ou Galerie Photos */}
         <section className="mb-8">
-          <h2 className="text-2xl font-serif font-bold mb-6">
-            {activeTab === "all" && "Nouveautés"}
-            {activeTab === "video" && "Toutes les vidéos"}
-            {activeTab === "photo" && "Galerie photo"}
-            {activeTab === "popular" && "Le plus populaire"}
-            {activeTab === "downloads" && "Disponibles en téléchargement"}
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-2xl font-serif font-bold">
+              {activeTab === "all" && "Nouveautés"}
+              {activeTab === "video" && "Toutes les vidéos"}
+              {activeTab === "photo" && "Galerie photo (Tendances & Nouveautés)"}
+              {activeTab === "popular" && "Le plus populaire"}
+              {activeTab === "downloads" && "Disponibles en téléchargement"}
+            </h2>
 
+            {/* Boutons de Filtre pour les Vidéos */}
+            {!isPhotoTab && (
+              <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border self-start sm:self-auto">
+                <span className="text-xs text-muted-foreground px-2 flex items-center gap-1">
+                  <ArrowUpDown className="h-3 w-3" /> Trier:
+                </span>
+                <Button
+                  size="sm"
+                  variant={sortBy === "recent" ? "default" : "ghost"}
+                  onClick={() => setSortBy("recent")}
+                  className="text-xs h-7 px-2.5 rounded-md"
+                >
+                  Plus récentes
+                </Button>
+                <Button
+                  size="sm"
+                  variant={sortBy === "views" ? "default" : "ghost"}
+                  onClick={() => setSortBy("views")}
+                  className="text-xs h-7 px-2.5 rounded-md"
+                >
+                  Plus de vues
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* RENDU ONGLET PHOTO (3 photos par ligne, 16:9, flou VIP) */}
           {isPhotoTab ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {isLoadingPhotos ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <div key={`photo-sk-${i}`} className="flex flex-col gap-3">
-                    <Skeleton className="aspect-square w-full rounded-xl" />
+                Array.from({ length: 6 }).map((_, i) => (
+                  <div key={`photo-sk-${i}`} className="flex flex-col gap-2">
+                    <Skeleton className="aspect-video w-full rounded-xl" />
                     <Skeleton className="h-4 w-3/4" />
                   </div>
                 ))
-              ) : photos && photos.length > 0 ? (
-                photos.map((photo, i) => (
-                  <div key={photo.id} className="group relative rounded-xl overflow-hidden border border-border bg-card animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: `${(i % 4) * 100}ms`, animationFillMode: 'both' }}>
-                    <div className="aspect-square w-full bg-muted relative overflow-hidden">
-                      <img src={photo.imageUrl} alt={photo.title} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                      {photo.isVip && (
-                        <div className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-md">
-                          <Star className="h-3 w-3 fill-current text-yellow-400" />{t('common.vip')}</div>
-                      )}
-                    </div>
-                    <div className="p-3">
-                      <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">{photo.title}</h3>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                        <span className="bg-accent px-1.5 py-0.5 rounded text-[11px] font-medium">{photo.category}</span>
-                        <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {photo.views}</span>
+              ) : sortedPhotos && sortedPhotos.length > 0 ? (
+                sortedPhotos.map((photo, i) => {
+                  const isLocked = photo.isVip && !isUserVip;
+
+                  return (
+                    <div
+                      key={photo.id}
+                      onClick={() => handlePhotoClick(photo)}
+                      className="group relative rounded-xl overflow-hidden border border-border bg-card cursor-pointer animate-in fade-in zoom-in-95 duration-500"
+                      style={{ animationDelay: `${(i % 3) * 100}ms`, animationFillMode: 'both' }}
+                    >
+                      {/* Format 16:9 strict */}
+                      <div className="aspect-video w-full bg-muted relative overflow-hidden">
+                        <img
+                          src={photo.imageUrl}
+                          alt={photo.title}
+                          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                            isLocked ? "blur-md scale-110 select-none" : ""
+                          }`}
+                        />
+
+                        {/* Overlay cadenas + bouton redirection pour VIP Gratuit */}
+                        {isLocked && (
+                          <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4 text-center z-10 transition-opacity group-hover:bg-black/70">
+                            <Lock className="h-6 w-6 text-yellow-400 mb-1 animate-bounce" />
+                            <span className="text-xs font-bold text-yellow-400 mb-2">Contenu VIP Exclusif</span>
+                            <span className="text-[10px] bg-primary text-white px-2 py-1 rounded-full font-semibold shadow">
+                              Devenir VIP pour débloquer
+                            </span>
+                          </div>
+                        )}
+
+                        {photo.isVip && !isLocked && (
+                          <div className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-md z-10">
+                            <Star className="h-3 w-3 fill-current text-yellow-400" /> VIP
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3">
+                        <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
+                          {photo.title}
+                        </h3>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                          <span className="bg-accent px-1.5 py-0.5 rounded text-[11px] font-medium">
+                            {photo.category}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" /> {photo.views}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="col-span-full py-24 text-center text-muted-foreground border border-dashed border-border rounded-xl">
                   Aucune photo disponible pour l'instant.
@@ -265,6 +366,7 @@ export function Home() {
               )}
             </div>
           ) : (
+            /* RENDU ONGLET VIDÉO */
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 gap-y-10">
               {isLoadingLatest ? (
                 Array.from({ length: 8 }).map((_, i) => (
@@ -289,6 +391,32 @@ export function Home() {
           )}
         </section>
       </div>
+
+      {/* Lightbox / Modal pour visualiser la photo en grand */}
+      {selectedPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute -top-10 right-0 text-white hover:text-primary transition-colors flex items-center gap-1 font-bold"
+            >
+              <X className="h-6 w-6" /> Fermer
+            </button>
+            <img
+              src={selectedPhoto.imageUrl}
+              alt={selectedPhoto.title}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg border border-border shadow-2xl"
+            />
+            <div className="mt-4 text-center text-white">
+              <h3 className="text-lg font-bold">{selectedPhoto.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1">{selectedPhoto.category}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
