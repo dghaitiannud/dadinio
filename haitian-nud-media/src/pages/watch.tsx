@@ -169,9 +169,6 @@ export function Watch() {
     checkOffline();
   }, [id, user?.id]);
 
-  // ... (le reste de ton code reste inchangé, les fonctions handleLike, handleDownload, etc.)
-  // Assure-toi de garder toutes tes fonctions inchangées ici
-  
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
@@ -204,6 +201,7 @@ export function Watch() {
     }
   };
 
+  // 🌟 CORRECTION PROBLÈME 2 : Téléchargement direct dans le stockage de l'appareil
   const handleDownload = async () => {
     if (!id || !appUser) return;
     if (!isSignedIn) {
@@ -215,23 +213,60 @@ export function Watch() {
       return;
     }
     setDownloadPending(true);
+    const toastId = toast.loading("Préparation du téléchargement...");
+
     try {
       const res = await requestDownload(id, appUser.id, isUserVip, appUser.freeDownloadsUsed);
-      toast.success(isUserVip ? "Téléchargement VIP lancé !" : `Téléchargement lancé. ${res.remaining} restants.`);
-      window.open(res.url, "_blank");
+      const downloadUrl = res.url || video?.videoUrl;
+
+      if (!downloadUrl) {
+        throw new Error("Lien de téléchargement introuvable.");
+      }
+
+      // Forcer le téléchargement physique du fichier MP4 via Blob
+      const fileResponse = await fetch(downloadUrl, { mode: "cors" });
+      if (!fileResponse.ok) {
+        throw new Error(`Erreur réseau (${fileResponse.status})`);
+      }
+
+      const blob = await fileResponse.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      const safeTitle = (video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_");
+      link.download = `${safeTitle}.mp4`;
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(blobUrl);
+
+      toast.success(
+        isUserVip ? "Téléchargement enregistré sur l'appareil !" : `Téléchargement réussi. ${res.remaining} restants.`,
+        { id: toastId }
+      );
     } catch (e: any) {
       if (e.message === 'vip_required') {
-        toast.error("Abonnement VIP requis pour cette vidéo.");
+        toast.error("Abonnement VIP requis pour cette vidéo.", { id: toastId });
       } else if (e.message === 'quota_exceeded') {
-        toast.error("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité.");
+        toast.error("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité.", { id: toastId });
       } else {
-        toast.error(e?.message || "Erreur de téléchargement");
+        // En cas de restriction CORS serveur, redirection de fallback
+        if (video?.videoUrl) {
+          window.open(video.videoUrl, "_blank");
+          toast.success("Téléchargement démarré.", { id: toastId });
+        } else {
+          toast.error(e?.message || "Erreur de téléchargement", { id: toastId });
+        }
       }
     } finally {
       setDownloadPending(false);
     }
   };
 
+  // 🌟 CORRECTION PROBLÈME 1 : Gestion robuste pour éviter l'erreur 503 Offline
   const handleOfflineDownload = async () => {
     if (!video || !video.videoUrl) return;
     if (!isSignedIn) {
@@ -239,6 +274,8 @@ export function Watch() {
       return;
     }
     setOfflineDownloading(true);
+    const toastId = toast.loading("Démarrage de la sauvegarde offline...");
+
     try {
       await downloadAndSaveVideo(
         video.id,
@@ -251,14 +288,19 @@ export function Watch() {
         (loaded, total) => {
           const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
           if (pct % 10 === 0) {
-            toast.loading(`Téléchargement offline : ${pct}%`, { id: "offline-download" });
+            toast.loading(`Téléchargement offline : ${pct}%`, { id: toastId });
           }
         }
       );
-      toast.success("Vidéo disponible offline !", { id: "offline-download" });
+      toast.success("Vidéo disponible offline !", { id: toastId });
       setIsOfflineAvailable(true);
     } catch (e: any) {
-      toast.error(e?.message || "Erreur de téléchargement offline", { id: "offline-download" });
+      console.error("Erreur Offline 503/Network:", e);
+      let msg = e?.message || "Erreur de téléchargement offline";
+      if (msg.includes("503") || msg.includes("Failed to fetch")) {
+        msg = "Serveur indisponible (503). Vérifiez votre connexion internet ou réessayez dans quelques instants.";
+      }
+      toast.error(msg, { id: toastId });
     } finally {
       setOfflineDownloading(false);
     }
@@ -292,8 +334,6 @@ export function Watch() {
     );
   }
 
-  // ... (le reste du rendu JSX reste identique, tant que tu as bien supprimé le `const { t } = ...`)
-  
   if (isLoadingVideo || authLoading) {
     return (
       <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -403,8 +443,8 @@ export function Watch() {
                 {isSignedIn && (!video.isVip || isUserVip) && (
                   <>
                     <Button onClick={handleDownload} disabled={downloadPending} className="rounded-full bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(30,94,255,0.3)]">
-                      <Download className="h-4 w-4 mr-2" />
-                      {downloadPending ? "..." : "Télécharger"}
+                      {downloadPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                      {downloadPending ? "Téléchargement..." : "Télécharger"}
                     </Button>
                     {isOfflineAvailable ? (
                       <Button variant="secondary" className="rounded-full bg-green-500/20 text-green-600 hover:bg-green-500/30 border-green-500/30">
