@@ -1,10 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { useState, useEffect, useMemo } from "react";
-import { getVideos, getTrendingVideos, getBannerVideo, getPhotos, type Video, type Photo } from "@/lib/supabase-db";
+import { getVideos, getBannerVideo, getPhotos, type Video, type Photo } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
-import { Play, TrendingUp, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye, Lock, ArrowUpDown, X } from "lucide-react";
+import { Play, Sparkles, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye, Lock, ArrowUpDown, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 
@@ -21,15 +21,13 @@ export function Home() {
   const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
-  const [trending, setTrending] = useState<Video[]>([]);
-  const [latest, setLatest] = useState<Video[]>([]);
+  const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [bannerVideoUrl, setBannerVideoUrl] = useState<string>("");
-  const [isLoadingTrending, setIsLoadingTrending] = useState(true);
-  const [isLoadingLatest, setIsLoadingLatest] = useState(true);
+  const [isLoadingVideos, setIsLoadingVideos] = useState(true);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
 
-  // Filtre de tri pour les vidéos ("recent" par défaut)
+  // Filtre de tri pour la section principale ("recent" par défaut)
   const [sortBy, setSortBy] = useState<"recent" | "views">("recent");
 
   // State pour la modal d'affichage plein écran des photos
@@ -41,20 +39,16 @@ export function Home() {
   const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
   useEffect(() => {
-    setIsLoadingTrending(true);
-    setIsLoadingLatest(true);
+    setIsLoadingVideos(true);
     setIsLoadingPhotos(true);
     
     getBannerVideo().then(url => setBannerVideoUrl(url));
 
-    getTrendingVideos().then(v => {
-      setTrending(v);
-      setIsLoadingTrending(false);
-    });
     getVideos().then(v => {
-      setLatest(v);
-      setIsLoadingLatest(false);
+      setAllVideos(v);
+      setIsLoadingVideos(false);
     });
+
     getPhotos().then(p => {
       setPhotos(p);
       setIsLoadingPhotos(false);
@@ -70,25 +64,35 @@ export function Home() {
     }
   }, [currentText]);
 
-  // Tri dynamique des vidéos (Mise en avant des plus récentes par défaut)
+  // 1. Les plus récentes vidéos (pour le rail du haut "Nouvelles vidéos")
+  const newestVideos = useMemo(() => {
+    if (!allVideos) return [];
+    return [...allVideos].sort((a, b) => {
+      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
+      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [allVideos]);
+
+  // 2. Tri dynamique pour le catalogue principal du bas
   const visibleVideos = useMemo(() => {
-    if (!latest) return [];
+    if (!allVideos) return [];
     
-    let list = [...latest];
+    let list = [...allVideos];
 
     if (activeTab === "popular" || sortBy === "views") {
       return list.sort((a, b) => (b.views || 0) - (a.views || 0));
     }
 
-    // Tri par date d'ajout / nouveautés par défaut
+    // Tri par date / nouveautés par défaut
     return list.sort((a, b) => {
       const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
       const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [latest, activeTab, sortBy]);
+  }, [allVideos, activeTab, sortBy]);
 
-  // Tri et filtrage des photos (S'assure qu'il n'y a que des photos)
+  // 3. Galerie photo
   const sortedPhotos = useMemo(() => {
     if (!photos) return [];
     return [...photos].sort((a, b) => {
@@ -197,12 +201,12 @@ export function Home() {
       </section>
 
       <div className="container mx-auto px-4 py-8 flex flex-col gap-12">
-        {/* Section Tendances (Affichée uniquement sur les onglets généraux) */}
+        {/* Rail supérieur : Nouvelles Vidéos (remplace Tendances) */}
         {!isPhotoTab && (
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
-                <TrendingUp className="text-primary h-6 w-6" /> Tendances
+                <Sparkles className="text-primary h-6 w-6" /> Nouvelles vidéos
               </h2>
               <Link href="/search" className="text-sm text-primary hover:underline flex items-center">
                 Voir tout <ChevronRight className="h-4 w-4" />
@@ -210,7 +214,7 @@ export function Home() {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {isLoadingTrending ? (
+              {isLoadingVideos ? (
                 Array.from({ length: 4 }).map((_, i) => (
                   <div key={i} className="flex flex-col gap-3">
                     <Skeleton className="aspect-video w-full rounded-xl" />
@@ -218,15 +222,15 @@ export function Home() {
                     <Skeleton className="h-3 w-1/2" />
                   </div>
                 ))
-              ) : trending && trending.length > 0 ? (
-                trending.slice(0, 4).map((video, i) => (
+              ) : newestVideos && newestVideos.length > 0 ? (
+                newestVideos.slice(0, 4).map((video, i) => (
                   <div key={video.id} className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
                     <VideoCard video={video} />
                   </div>
                 ))
               ) : (
                 <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-                  Aucune tendance pour le moment.
+                  Aucune nouvelle vidéo pour le moment.
                 </div>
               )}
             </div>
@@ -261,9 +265,9 @@ export function Home() {
         <section className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h2 className="text-2xl font-serif font-bold">
-              {activeTab === "all" && "Nouveautés"}
+              {activeTab === "all" && "Toutes les vidéos"}
               {activeTab === "video" && "Toutes les vidéos"}
-              {activeTab === "photo" && "Galerie photo (Tendances & Nouveautés)"}
+              {activeTab === "photo" && "Galerie photo (Nouveautés)"}
               {activeTab === "popular" && "Le plus populaire"}
               {activeTab === "downloads" && "Disponibles en téléchargement"}
             </h2>
@@ -325,7 +329,7 @@ export function Home() {
                           }`}
                         />
 
-                        {/* Overlay cadenas + bouton redirection pour VIP Gratuit */}
+                        {/* Overlay cadenas pour VIP Gratuit */}
                         {isLocked && (
                           <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4 text-center z-10 transition-opacity group-hover:bg-black/70">
                             <Lock className="h-6 w-6 text-yellow-400 mb-1 animate-bounce" />
@@ -366,9 +370,9 @@ export function Home() {
               )}
             </div>
           ) : (
-            /* RENDU ONGLET VIDÉO */
+            /* RENDU CATALOGUE VIDÉOS */
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 gap-y-10">
-              {isLoadingLatest ? (
+              {isLoadingVideos ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <div key={`latest-${i}`} className="flex flex-col gap-3">
                     <Skeleton className="aspect-video w-full rounded-xl" />
@@ -392,7 +396,7 @@ export function Home() {
         </section>
       </div>
 
-      {/* Lightbox / Modal pour visualiser la photo en grand */}
+      {/* Modal d'affichage de photo grand écran */}
       {selectedPhoto && (
         <div
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200"
