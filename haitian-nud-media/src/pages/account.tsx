@@ -13,20 +13,18 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio, Globe } from "lucide-react";
+import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio, Globe, User, Send, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
-import { getWatchHistory, clearWatchHistory, getNotifPrefs, type WatchEntry, type NotifPrefs } from "@/lib/local-store";
+import { getWatchHistory, clearWatchHistory, type WatchEntry } from "@/lib/local-store";
 import { listMyTickets, createTicket, type SupportTicket } from "@/lib/supabase-db";
 import { PwaInstallButton } from "@/components/pwa-install";
 import { isPushSupported, getPushPermission, subscribeToPush, unsubscribeFromPush, getCurrentSubscription, type PushPermission } from "@/lib/push-notifications";
 import { LIVE_ADMIN_EMAIL } from "@/lib/supabase";
-
-// 🌐 AJOUTÉ : Importation de ton sélecteur automatique de langue
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function Account() {
   const { t } = useTranslation();
-  const { isSignedIn, user, appUser, signOut, isAdmin, refreshUser } = useAuth();
+  const { isSignedIn, appUser, signOut, isAdmin, refreshUser } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [isLoadingTickets, setIsLoadingTickets] = useState(false);
   const [subject, setSubject] = useState("");
@@ -131,317 +129,368 @@ export function Account() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl min-h-screen">
-      <h1 className="text-3xl font-serif font-bold mb-8">{t('nav.my_account')}</h1>
+    <div className="container mx-auto px-4 py-6 max-w-5xl min-h-screen space-y-6">
+      
+      {/* Header Profil & Badge Status (Bento Style) */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 md:p-8 shadow-sm">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent pointer-events-none" />
+        
+        <div className="relative flex flex-col md:flex-row items-center md:items-start justify-between gap-6">
+          <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+            <Avatar className="h-20 w-20 md:h-24 md:w-24 border-2 border-primary/30 shadow-md">
+              <AvatarFallback className="text-2xl font-bold bg-muted text-foreground">
+                {(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Profile Sidebar */}
-        <div className="md:col-span-1 space-y-6">
-          <Card className="border-border bg-card shadow-sm">
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center text-center">
-                <Avatar className="h-24 w-24 mb-4 border-2 border-primary/20">
-                  <AvatarFallback className="text-2xl bg-accent text-accent-foreground">
-                    {(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <h2 className="text-xl font-bold">{appUser?.displayName || "Utilisateur"}</h2>
-                <p className="text-muted-foreground text-sm mb-4">{appUser?.email}</p>
-
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <h1 className="text-2xl md:text-3xl font-serif font-bold">{appUser?.displayName || "Utilisateur"}</h1>
                 {appUser?.plan === "vip" ? (
-                  <Badge variant="secondary" className="bg-gradient-to-r from-primary to-blue-500 text-white border-0 shadow-lg px-3 py-1 mb-2">
-                    <Star className="h-3 w-3 mr-1 fill-current" /> Membre VIP
+                  <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white border-0 shadow-sm px-2.5 py-0.5 text-xs font-semibold">
+                    <Star className="h-3 w-3 mr-1 fill-current" /> VIP
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="mb-2">{t('account.free_member')}</Badge>
-                )}
-
-                {isAdmin && (
-                  <Link href="/admin" className="w-full mt-4">
-                    <Button
-                      variant="outline"
-                      className="w-full bg-accent/50 border-primary/30 text-primary"
-                    >
-                      <Shield className="h-4 w-4 mr-2" />
-                      Panneau Admin
-                    </Button>
-                  </Link>
-                )}
-
-                {(appUser?.email === LIVE_ADMIN_EMAIL || isAdmin) && (
-                  <Link href="/admin-live" className="w-full mt-2">
-                    <Button
-                      variant="outline"
-                      className="w-full bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20"
-                    >
-                      <Radio className="h-4 w-4 mr-2" />
-                      Studio Diffusion Live
-                    </Button>
-                  </Link>
+                  <Badge variant="secondary" className="text-xs">{t('account.free_member')}</Badge>
                 )}
               </div>
-            </CardContent>
-            <CardFooter className="border-t border-border pt-4 flex justify-center">
-              <Button variant="ghost" onClick={handleLogout} className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full">
-                <LogOut className="h-4 w-4 mr-2" />{t('nav.logout')}</Button>
-            </CardFooter>
-          </Card>
 
-          <PwaInstallButton variant="card" />
-        </div>
+              <p className="text-sm text-muted-foreground">{appUser?.email}</p>
 
-        {/* Main Content Tabs */}
-        <div className="md:col-span-2">
-          <Tabs defaultValue="subscription" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="subscription"><Star className="h-4 w-4 mr-1 hidden sm:inline" />{t('account.subscription')}</TabsTrigger>
-              <TabsTrigger value="history"><History className="h-4 w-4 mr-1 hidden sm:inline" />{t('account.history')}</TabsTrigger>
-              <TabsTrigger value="settings"><SettingsIcon className="h-4 w-4 mr-1 hidden sm:inline" />{t('account.settings')}</TabsTrigger>
-              <TabsTrigger value="support"><Ticket className="h-4 w-4 mr-1 hidden sm:inline" />{t('account.support')}</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="subscription" className="space-y-6">
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Star className="h-5 w-5 text-primary" /> Statut VIP
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {appUser?.plan === "vip" ? (
-                    <div className="space-y-4">
-                      <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl text-primary font-medium flex justify-between items-center">
-                        <span>{t('account.active_sub')}</span>
-                        <Badge className="bg-primary text-white">{t('common.vip')}</Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 bg-background rounded-lg border border-border">
-                          <div className="text-sm text-muted-foreground mb-1">{t('account.plan')}</div>
-                          <div className="font-semibold">{t('common.vip')}</div>
-                        </div>
-                        <div className="p-4 bg-background rounded-lg border border-border">
-                          <div className="text-sm text-muted-foreground mb-1">{t('account.expires_at')}</div>
-                          <div className="font-semibold">
-                            {appUser?.subscriptionEndsAt ? format(new Date(appUser.subscriptionEndsAt), "dd MMMM yyyy", { locale: fr }) : "À vie"}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6">
-                      <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Star className="h-8 w-8 text-muted-foreground" />
-                      </div>
-                      <h3 className="text-lg font-semibold mb-2">{t('account.free_plan_msg')}</h3>
-                      <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                        Passez au VIP pour profiter des vidéos sans publicités et des téléchargements illimités.
-                      </p>
-                      <Link href="/plans">
-                        <Button className="bg-primary text-white">{t('account.become_vip_now')}</Button>
-                      </Link>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Download className="h-5 w-5 text-primary" />{t('common.downloads')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between p-4 bg-background rounded-lg border border-border">
-                    <div>
-                      <div className="font-semibold">{t('account.quota_remaining')}</div>
-                      <div className="text-sm text-muted-foreground">{t('account.free_downloads_limit')}</div>
-                    </div>
-                    <div className="text-2xl font-bold font-mono">
-                      {appUser?.plan === "vip" ? "∞" : (3 - (appUser?.freeDownloadsUsed || 0))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {isFree && (
-                <Card className="border-primary/30 bg-card shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Share2 className="h-5 w-5 text-primary" /> Parrainez le site
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Pas encore VIP ? Partagez Haïtien Nud Média avec vos amis et la diaspora.
-                    </p>
-                    <div className="flex gap-2">
-                      <Input value={referralLink} readOnly className="font-mono text-xs bg-background" />
-                      <Button variant="outline" size="icon" onClick={copyReferral} title="Copier">
-                        {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+              {/* Raccourcis Administrateur */}
+              {(isAdmin || appUser?.email === LIVE_ADMIN_EMAIL) && (
+                <div className="flex flex-wrap items-center gap-2 pt-2 justify-center sm:justify-start">
+                  {isAdmin && (
+                    <Link href="/admin">
+                      <Button size="sm" variant="outline" className="h-7 text-xs bg-primary/5 border-primary/30 text-primary">
+                        <Shield className="h-3.5 w-3.5 mr-1" /> Admin
                       </Button>
-                    </div>
-                    <Button onClick={shareReferral} className="w-full bg-primary text-primary-foreground">
-                      <Share2 className="h-4 w-4 mr-2" /> Partager le lien
-                    </Button>
-                  </CardContent>
-                </Card>
+                    </Link>
+                  )}
+                  {(appUser?.email === LIVE_ADMIN_EMAIL || isAdmin) && (
+                    <Link href="/admin-live">
+                      <Button size="sm" variant="outline" className="h-7 text-xs bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20">
+                        <Radio className="h-3.5 w-3.5 mr-1 animate-pulse" /> Studio Live
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               )}
-            </TabsContent>
+            </div>
+          </div>
 
-            <TabsContent value="history" className="space-y-6">
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <History className="h-5 w-5 text-primary" /> Vidéos vues récemment
-                  </CardTitle>
-                  {history.length > 0 && (
-                    <Button variant="ghost" size="sm" onClick={() => { clearWatchHistory(); setHistory([]); }} className="text-destructive">
-                      <Trash2 className="h-4 w-4 mr-1" /> Vider
-                    </Button>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  {history.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-lg">
-                      Aucune vidéo dans l'historique pour le moment.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {history.map((h) => (
-                        <Link key={h.id} href={`/watch/${h.id}`} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:border-primary/40 transition-colors">
-                          <img src={h.thumbnailUrl} alt="" className="w-24 h-14 object-cover rounded shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="font-medium line-clamp-1">{h.title}</div>
-                            <div className="text-xs text-muted-foreground">
-                              Vu {format(new Date(h.watchedAt), "dd MMM yyyy à HH:mm", { locale: fr })}
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="settings" className="space-y-6">
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle>{t('account.profile')}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="display-name">{t('account.display_name')}</Label>
-                    <div className="flex gap-2">
-                      <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Votre nom" className="bg-background" />
-                      <Button onClick={saveDisplayName} disabled={savingName || !displayName.trim()}>{t('common.save')}</Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('account.email')}</Label>
-                    <Input value={appUser?.email ?? ""} readOnly disabled className="bg-background" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* 🌐 AJOUTÉ : Bloc de Configuration de la Langue */}
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Globe className="h-5 w-5 text-primary" /> Langue de l'application
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Sélectionnez votre langue préférée. L'ensemble du catalogue et de l'interface s'adaptera automatiquement.
-                  </p>
-                  <LanguageSwitcher />
-                </CardContent>
-              </Card>
-
-              <PushNotificationCard userId={isAdmin ? "admin" : appUser?.id} />
-
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Smartphone className="h-5 w-5 text-primary" /> Application mobile
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PwaInstallButton variant="card" />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="support" className="space-y-6">
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle>{t('account.contact_support')}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSupportSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="subject">{t('common.subject')}</Label>
-                      <Input id="subject" placeholder="Ex: Problème d'abonnement" value={subject} onChange={e => setSubject(e.target.value)} className="bg-background" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="message">{t('common.message')}</Label>
-                      <Textarea id="message" placeholder="Décrivez votre problem en détail..." rows={4} value={message} onChange={e => setMessage(e.target.value)} className="bg-background resize-none" />
-                    </div>
-                    <Button type="submit" disabled={ticketPending || !subject || !message}>
-                      {ticketPending ? "Envoi..." : "Envoyer la demande"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-
-              <Card className="border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Ticket className="h-5 w-5 text-primary" /> Mes Demandes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {isLoadingTickets ? (
-                      <div className="text-center py-4 text-muted-foreground">{t('common.loading')}</div>
-                    ) : tickets && tickets.length > 0 ? (
-                      tickets.map((ticket) => (
-                        <div key={ticket.id} className="p-4 border border-border rounded-lg bg-background">
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-semibold">{ticket.subject}</h4>
-                            <Badge variant={ticket.status === 'open' ? 'secondary' : ticket.status === 'answered' ? 'default' : 'outline'}>
-                              {ticket.status === 'open' ? 'Ouvert' : ticket.status === 'answered' ? 'Répondu' : 'Fermé'}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{ticket.message}</p>
-                          {ticket.reply && (
-                            <div className="mt-3 p-3 bg-accent/50 rounded text-sm border border-border/50">
-                              <span className="font-semibold text-primary block mb-1">Réponse du support:</span>
-                              {ticket.reply}
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground mt-2">
-                            {format(new Date(ticket.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
-                        Aucune demande de support pour le moment.
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleLogout} 
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 self-end md:self-start"
+          >
+            <LogOut className="h-4 w-4 mr-2" />{t('nav.logout')}
+          </Button>
         </div>
       </div>
+
+      {/* Tabs Navigation */}
+      <Tabs defaultValue="subscription" className="w-full">
+        <div className="overflow-x-auto no-scrollbar border-b border-border mb-6">
+          <TabsList className="bg-transparent h-auto p-0 gap-6 justify-start">
+            <TabsTrigger 
+              value="subscription" 
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2"
+            >
+              <Star className="h-4 w-4" />
+              {t('account.subscription')}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="history" 
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2"
+            >
+              <History className="h-4 w-4" />
+              {t('account.history')}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="settings" 
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2"
+            >
+              <SettingsIcon className="h-4 w-4" />
+              {t('account.settings')}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="support" 
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2"
+            >
+              <Ticket className="h-4 w-4" />
+              {t('account.support')}
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* TAB 1: Subscription */}
+        <TabsContent value="subscription" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Statut Offre */}
+            <Card className="border-border bg-card shadow-xs flex flex-col justify-between">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Star className="h-4 w-4 text-primary" /> Statut Abonnement
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {appUser?.plan === "vip" ? (
+                  <div className="space-y-3">
+                    <div className="p-3.5 bg-primary/10 border border-primary/20 rounded-xl text-primary font-medium flex justify-between items-center text-sm">
+                      <span>{t('account.active_sub')}</span>
+                      <Badge className="bg-primary text-white text-[11px]">{t('common.vip')}</Badge>
+                    </div>
+                    <div className="p-3 bg-muted/40 rounded-lg border border-border/60 text-xs flex justify-between items-center">
+                      <span className="text-muted-foreground">{t('account.expires_at')}</span>
+                      <span className="font-semibold">
+                        {appUser?.subscriptionEndsAt ? format(new Date(appUser.subscriptionEndsAt), "dd MMMM yyyy", { locale: fr }) : "À vie"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-3 text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">{t('account.free_plan_msg')}</p>
+                    <Link href="/plans" className="block">
+                      <Button className="w-full bg-primary text-white shadow-sm h-9 text-xs font-semibold">
+                        {t('account.become_vip_now')}
+                      </Button>
+                    </Link>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Téléchargements */}
+            <Card className="border-border bg-card shadow-xs flex flex-col justify-between">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Download className="h-4 w-4 text-primary" /> Quota de Téléchargements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between p-4 bg-muted/40 rounded-xl border border-border/60">
+                  <div className="space-y-0.5">
+                    <div className="text-sm font-semibold">{t('account.quota_remaining')}</div>
+                    <div className="text-xs text-muted-foreground">{t('account.free_downloads_limit')}</div>
+                  </div>
+                  <div className="text-3xl font-bold font-mono text-primary">
+                    {appUser?.plan === "vip" ? "∞" : (3 - (appUser?.freeDownloadsUsed || 0))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+
+          {/* Parrainage */}
+          {isFree && (
+            <Card className="border-primary/20 bg-card shadow-xs">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Share2 className="h-4 w-4 text-primary" /> Parrainez vos proches
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Partagez Haïtien Nud Média avec vos amis pour leur faire découvrir la plateforme.
+                </p>
+                <div className="flex gap-2">
+                  <Input value={referralLink} readOnly className="font-mono text-xs bg-muted/30 h-9" />
+                  <Button variant="outline" size="sm" onClick={copyReferral} className="h-9 shrink-0">
+                    {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <Button onClick={shareReferral} variant="secondary" className="w-full h-9 text-xs font-medium">
+                  <Share2 className="h-3.5 w-3.5 mr-2" /> Partager le lien
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* TAB 2: History */}
+        <TabsContent value="history">
+          <Card className="border-border bg-card shadow-xs">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <History className="h-4 w-4 text-primary" /> Historique de lecture
+              </CardTitle>
+              {history.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => { clearWatchHistory(); setHistory([]); }} className="text-destructive h-8 text-xs">
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Vider
+                </Button>
+              )}
+            </CardHeader>
+            <CardContent>
+              {history.length === 0 ? (
+                <div className="text-center py-12 text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                  Aucune vidéo consultée récemment.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {history.map((h) => (
+                    <Link key={h.id} href={`/watch/${h.id}`} className="flex items-center gap-3 p-2.5 rounded-xl border border-border/60 bg-muted/20 hover:border-primary/40 transition-colors">
+                      <img src={h.thumbnailUrl} alt="" className="w-20 h-12 object-cover rounded-md shrink-0 bg-muted" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-xs line-clamp-1">{h.title}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          {format(new Date(h.watchedAt), "dd MMM yyyy à HH:mm", { locale: fr })}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* TAB 3: Settings */}
+        <TabsContent value="settings" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Profil */}
+            <Card className="border-border bg-card shadow-xs">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" /> Profil
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="display-name" className="text-xs">{t('account.display_name')}</Label>
+                  <div className="flex gap-2">
+                    <Input id="display-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="h-9 text-xs bg-muted/20" />
+                    <Button size="sm" onClick={saveDisplayName} disabled={savingName || !displayName.trim()} className="h-9 text-xs px-3 shrink-0">
+                      {t('common.save')}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{t('account.email')}</Label>
+                  <Input value={appUser?.email ?? ""} readOnly disabled className="h-9 text-xs bg-muted/40 text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Langues */}
+            <Card className="border-border bg-card shadow-xs">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-primary" /> Langue d'affichage
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Choisissez la langue de l'interface pour personnaliser votre navigation.
+                </p>
+                <LanguageSwitcher />
+              </CardContent>
+            </Card>
+
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <PushNotificationCard userId={isAdmin ? "admin" : appUser?.id} />
+
+            <Card className="border-border bg-card shadow-xs flex flex-col justify-between">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 text-primary" /> Application Mobile
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Installez l'application sur votre écran d'accueil pour un accès plus rapide.
+                </p>
+                <PwaInstallButton variant="card" />
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* TAB 4: Support */}
+        <TabsContent value="support" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Formulaire */}
+            <Card className="border-border bg-card shadow-xs">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Send className="h-4 w-4 text-primary" /> {t('account.contact_support')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSupportSubmit} className="space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="subject" className="text-xs">{t('common.subject')}</Label>
+                    <Input id="subject" placeholder="Sujet..." value={subject} onChange={e => setSubject(e.target.value)} className="h-9 text-xs bg-muted/20" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="message" className="text-xs">{t('common.message')}</Label>
+                    <Textarea id="message" placeholder="Votre message..." rows={4} value={message} onChange={e => setMessage(e.target.value)} className="text-xs bg-muted/20 resize-none" />
+                  </div>
+                  <Button type="submit" disabled={ticketPending || !subject || !message} className="w-full h-9 text-xs font-semibold">
+                    {ticketPending ? "Envoi..." : "Envoyer"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Demandes existantes */}
+            <Card className="border-border bg-card shadow-xs">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Ticket className="h-4 w-4 text-primary" /> Mes Demandes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                  {isLoadingTickets ? (
+                    <div className="text-center py-6 text-xs text-muted-foreground">{t('common.loading')}</div>
+                  ) : tickets && tickets.length > 0 ? (
+                    tickets.map((ticket) => (
+                      <div key={ticket.id} className="p-3 border border-border/60 rounded-xl bg-muted/20 space-y-2">
+                        <div className="flex justify-between items-start gap-2">
+                          <h4 className="font-semibold text-xs">{ticket.subject}</h4>
+                          <Badge variant={ticket.status === 'open' ? 'secondary' : ticket.status === 'answered' ? 'default' : 'outline'} className="text-[10px] px-1.5 py-0">
+                            {ticket.status === 'open' ? 'Ouvert' : ticket.status === 'answered' ? 'Répondu' : 'Fermé'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{ticket.message}</p>
+                        {ticket.reply && (
+                          <div className="p-2 bg-accent/40 rounded-lg text-xs border border-border/40">
+                            <span className="font-medium text-primary block mb-0.5">Support :</span>
+                            {ticket.reply}
+                          </div>
+                        )}
+                        <div className="text-[10px] text-muted-foreground">
+                          {format(new Date(ticket.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                      Aucune demande envoyée.
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+          </div>
+        </TabsContent>
+      </Tabs>
+
     </div>
   );
 }
 
 function PushNotificationCard({ userId }: { userId?: string }) {
+  const { t } = useTranslation();
   const [permission, setPermission] = useState<PushPermission>("default");
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -484,42 +533,40 @@ function PushNotificationCard({ userId }: { userId?: string }) {
 
   if (!supported) {
     return (
-      <Card className="border-border bg-card shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-primary" /> Notifications Push
+      <Card className="border-border bg-card shadow-xs">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bell className="h-4 w-4 text-primary" /> Notifications Push
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">{t('account.push_not_supported')}</p>
+          <p className="text-xs text-muted-foreground">{t('account.push_not_supported')}</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="border-border bg-card shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bell className="h-5 w-5 text-primary" /> Notifications Push
+    <Card className="border-border bg-card shadow-xs">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Bell className="h-4 w-4 text-primary" /> Notifications Push
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-border bg-background">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
             {subscribed ? (
-              <BellRing className="h-5 w-5 text-primary shrink-0" />
+              <BellRing className="h-4 w-4 text-primary shrink-0" />
             ) : (
-              <BellOff className="h-5 w-5 text-muted-foreground shrink-0" />
+              <BellOff className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
             <div>
-              <div className="font-medium">
-                {subscribed ? "Abonné aux notifications" : "Notifications désactivées"}
+              <div className="font-medium text-xs">
+                {subscribed ? "Activées" : "Désactivées"}
               </div>
-              <div className="text-xs text-muted-foreground">
-                {subscribed
-                  ? "Vous recevrez des alertes pour les nouvelles vidéos."
-                  : "Activez pour ne rien manquer."}
+              <div className="text-[11px] text-muted-foreground line-clamp-1">
+                {subscribed ? "Alertes nouveautés" : "Activer pour recevoir les alertes"}
               </div>
             </div>
           </div>
@@ -530,8 +577,8 @@ function PushNotificationCard({ userId }: { userId?: string }) {
           />
         </div>
         {permission === "denied" && (
-          <p className="text-xs text-destructive bg-destructive/10 p-3 rounded-lg">
-            Les notifications sont bloquées dans votre navigateur. Allez dans les paramètres de votre navigateur pour les autoriser.
+          <p className="text-[11px] text-destructive bg-destructive/10 p-2.5 rounded-lg">
+            Autorisez les notifications dans les réglages de votre navigateur.
           </p>
         )}
       </CardContent>
