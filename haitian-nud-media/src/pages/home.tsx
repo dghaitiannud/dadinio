@@ -202,11 +202,12 @@ export function Home() {
         </div>
       </section>
 
-      {/* Primary tabs & Sort Bar (Sticky Header) */}
-      <section className="border-b border-border bg-background/80 backdrop-blur-md sticky top-16 z-40">
-        <div className="container mx-auto px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3">
+      {/* Primary tabs & Sort Bar (Sticky Header Mobile & Desktop) */}
+      <section className="border-b border-border bg-background/95 backdrop-blur-md sticky top-16 z-40">
+        <div className="container mx-auto px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
+          
           {/* Onglets principaux */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar snap-x">
+          <div className="flex items-center gap-1.5 shrink-0">
             {TABS.map(tab => {
               const Icon = tab.icon;
               const active = tab.id === activeTab;
@@ -214,41 +215,53 @@ export function Home() {
                 <Button
                   key={tab.id}
                   type="button"
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-full whitespace-nowrap snap-start gap-2 ${active ? "bg-primary text-primary-foreground hover:bg-primary" : "bg-accent hover:bg-accent/80"}`}
+                  className={`rounded-full px-3.5 h-8 text-xs font-medium transition-all gap-1.5 ${
+                    active 
+                      ? "bg-primary text-white shadow-sm hover:bg-primary/90" 
+                      : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5" />
                   {tab.label}
                 </Button>
               );
             })}
           </div>
 
-          {/* Bouton de Tri placé sous les onglets */}
-          <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border self-start sm:self-auto shrink-0">
-            <span className="text-xs text-muted-foreground px-2 flex items-center gap-1 font-medium">
-              <ArrowUpDown className="h-3 w-3" />
-              {isPhotoTab ? "Tri photos:" : "Tri vidéos:"}
-            </span>
+          {/* Séparateur discret */}
+          <div className="h-4 w-[1px] bg-border shrink-0 sm:hidden" />
+
+          {/* Commutateur de Tri ultra-compact */}
+          <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-full border border-border/50 shrink-0">
             <Button
               size="sm"
-              variant={sortBy === "recent" ? "default" : "ghost"}
+              variant="ghost"
               onClick={() => setSortBy("recent")}
-              className="text-xs h-7 px-2.5 rounded-md"
+              className={`h-7 px-2.5 text-[11px] rounded-full font-medium transition-all ${
+                sortBy === "recent" 
+                  ? "bg-background text-foreground shadow-xs" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
-              Plus récentes
+              Récentes
             </Button>
             <Button
               size="sm"
-              variant={sortBy === "views" ? "default" : "ghost"}
+              variant="ghost"
               onClick={() => setSortBy("views")}
-              className="text-xs h-7 px-2.5 rounded-md"
+              className={`h-7 px-2.5 text-[11px] rounded-full font-medium transition-all ${
+                sortBy === "views" 
+                  ? "bg-background text-foreground shadow-xs" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Plus vues
             </Button>
           </div>
+
         </div>
       </section>
 
