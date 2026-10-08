@@ -98,32 +98,34 @@ export interface VipRequest {
 // ====================================================
 
 function toPublicVideo(v: any): Video {
+  const viewsValue = v.views ?? v.views_count ?? v.viewsCount ?? 0;
   return {
     id: v.id,
-    title: v.title,
-    description: v.description,
-    thumbnailUrl: v.thumbnail_url,
-    videoUrl: v.video_url,
-    category: v.category,
-    durationSec: v.duration_sec,
-    views: v.views || 0,
-    isVip: v.is_vip,
-    published: v.published,
-    createdAt: v.created_at,
+    title: v.title || '',
+    description: v.description || '',
+    thumbnailUrl: v.thumbnail_url || v.thumbnailUrl || '',
+    videoUrl: v.video_url || v.videoUrl || '',
+    category: v.category || 'Général',
+    durationSec: v.duration_sec || v.durationSec || 0,
+    views: typeof viewsValue === 'string' ? parseInt(viewsValue, 10) || 0 : viewsValue,
+    isVip: v.is_vip ?? v.isVip ?? false,
+    published: v.published ?? true,
+    createdAt: v.created_at || v.createdAt || new Date().toISOString(),
   };
 }
 
 function toPublicPhoto(p: any): Photo {
+  const viewsValue = p.views ?? p.views_count ?? p.viewsCount ?? 0;
   return {
     id: p.id,
-    title: p.title,
-    description: p.description,
-    imageUrl: p.image_url,
-    category: p.category,
-    views: p.views || 0,
-    isVip: p.is_vip,
-    published: p.published,
-    createdAt: p.created_at,
+    title: p.title || '',
+    description: p.description || '',
+    imageUrl: p.image_url || p.imageUrl || '',
+    category: p.category || 'Général',
+    views: typeof viewsValue === 'string' ? parseInt(viewsValue, 10) || 0 : viewsValue,
+    isVip: p.is_vip ?? p.isVip ?? false,
+    published: p.published ?? true,
+    createdAt: p.created_at || p.createdAt || new Date().toISOString(),
   };
 }
 
@@ -168,13 +170,17 @@ export async function registerView(videoId: string) {
   try {
     const { error } = await supabase.rpc('increment_video_views', { video_id: videoId });
     if (error) {
-      const { data: vid } = await supabase.from('videos').select('views').eq('id', videoId).single();
+      const { data: vid } = await supabase.from('videos').select('views, views_count').eq('id', videoId).single();
       if (vid) {
-        await supabase.from('videos').update({ views: (vid.views || 0) + 1 }).eq('id', videoId);
+        const currentViews = vid.views ?? vid.views_count ?? 0;
+        await supabase
+          .from('videos')
+          .update({ views: currentViews + 1 })
+          .eq('id', videoId);
       }
     }
   } catch (err) {
-    console.warn('Failed to register view:', err);
+    console.warn('Failed to register video view:', err);
   }
 }
 
@@ -197,7 +203,7 @@ export async function requestDownload(
   }
   await supabase.from('downloads').insert({ user_id: userId, video_id: videoId });
   const remaining = isVip ? -1 : FREE_DOWNLOAD_LIMIT - (freeDownloadsUsed + 1);
-  return { url: video.video_url, remaining };
+  return { url: video.video_url || video.videoUrl, remaining };
 }
 
 // ====================================================
@@ -212,6 +218,24 @@ export async function getPhotos(options?: { category?: string }): Promise<Photo[
   const { data, error } = await query;
   if (error) throw error;
   return (data || []).map(toPublicPhoto);
+}
+
+export async function registerPhotoView(photoId: string): Promise<void> {
+  try {
+    const { error } = await supabase.rpc('increment_photo_views', { photo_id: photoId });
+    if (error) {
+      const { data: photo } = await supabase.from('photos').select('views, views_count').eq('id', photoId).single();
+      if (photo) {
+        const currentViews = photo.views ?? photo.views_count ?? 0;
+        await supabase
+          .from('photos')
+          .update({ views: currentViews + 1 })
+          .eq('id', photoId);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to register photo view:', err);
+  }
 }
 
 // ====================================================
@@ -304,14 +328,14 @@ export async function getAdminStats(): Promise<AdminStats> {
     const { count: videoCount } = await supabase.from('videos').select('*', { count: 'exact', head: true });
     const { count: photoCount } = await supabase.from('photos').select('*', { count: 'exact', head: true });
     
-    const { data: videoViews } = await supabase.from('videos').select('views');
-    const { data: photoViews } = await supabase.from('photos').select('views');
+    const { data: videoViews } = await supabase.from('videos').select('views, views_count');
+    const { data: photoViews } = await supabase.from('photos').select('views, views_count');
     
     const { count: downloadCount } = await supabase.from('downloads').select('*', { count: 'exact', head: true });
     const { count: ticketCount } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
 
-    const totalVideoViews = (videoViews || []).reduce((sum: number, v: any) => sum + (v.views || 0), 0);
-    const totalPhotoViews = (photoViews || []).reduce((sum: number, p: any) => sum + (p.views || 0), 0);
+    const totalVideoViews = (videoViews || []).reduce((sum: number, v: any) => sum + (v.views ?? v.views_count ?? 0), 0);
+    const totalPhotoViews = (photoViews || []).reduce((sum: number, p: any) => sum + (p.views ?? p.views_count ?? 0), 0);
 
     return {
       totalUsers: userCount ?? 0,

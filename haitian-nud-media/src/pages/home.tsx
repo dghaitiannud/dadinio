@@ -16,6 +16,14 @@ const TABS = [
   { id: "downloads", label: "Téléchargement", icon: Download },
 ] as const;
 
+// Helper universel pour extraire le nombre de vues peu importe la structure transmise par Supabase
+function extractViews(item: any): number {
+  if (!item) return 0;
+  const val = item.views ?? item.views_count ?? item.viewsCount ?? item.count ?? 0;
+  const parsed = parseInt(val, 10);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 export function Home() {
   const { t } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
@@ -27,10 +35,7 @@ export function Home() {
   const [isLoadingVideos, setIsLoadingVideos] = useState(true);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
 
-  // Filtre de tri pour la section principale ("recent" par défaut)
   const [sortBy, setSortBy] = useState<"recent" | "views">("recent");
-
-  // State pour la modal d'affichage plein écran des photos
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
   const FULL_TEXT = "HAITIAN NUD";
@@ -50,6 +55,7 @@ export function Home() {
     });
 
     getPhotos().then(p => {
+      console.log("Photos reçues depuis Supabase :", p); // Permet de vérifier les clés dans la console F12
       setPhotos(p);
       setIsLoadingPhotos(false);
     });
@@ -64,7 +70,6 @@ export function Home() {
     }
   }, [currentText]);
 
-  // 1. Les plus récentes vidéos
   const newestVideos = useMemo(() => {
     if (!allVideos) return [];
     return [...allVideos].sort((a, b) => {
@@ -74,14 +79,12 @@ export function Home() {
     });
   }, [allVideos]);
 
-  // 2. Tri dynamique pour le catalogue principal du bas
   const visibleVideos = useMemo(() => {
     if (!allVideos) return [];
-    
     let list = [...allVideos];
 
     if (activeTab === "popular" || sortBy === "views") {
-      return list.sort((a, b) => ((b as any).views || (b as any).views_count || 0) - ((a as any).views || (a as any).views_count || 0));
+      return list.sort((a, b) => extractViews(b) - extractViews(a));
     }
 
     return list.sort((a, b) => {
@@ -91,7 +94,6 @@ export function Home() {
     });
   }, [allVideos, activeTab, sortBy]);
 
-  // 3. Galerie photo
   const sortedPhotos = useMemo(() => {
     if (!photos) return [];
     return [...photos].sort((a, b) => {
@@ -109,24 +111,23 @@ export function Home() {
       return;
     }
 
-    // Affiche la photo
     setSelectedPhoto(photo);
 
-    // Incrémente le compteur de vues dans Supabase si la fonction existe
-    try {
-      if (typeof registerPhotoView === "function") {
-        await registerPhotoView(photo.id);
-      }
-    } catch (err) {
-      console.warn("Impossible d'enregistrer la vue de la photo :", err);
+    // Enregistrement de la vue dans la base de données
+    if (typeof registerPhotoView === "function") {
+      registerPhotoView(photo.id);
     }
 
-    // Met à jour localement le nombre de vues de la photo pour affichage direct
+    // Mise à jour instantanée du compteur à l'écran
     setPhotos((prev) =>
       prev.map((p) => {
         if (p.id === photo.id) {
-          const currentViews = p.views ?? (p as any).views_count ?? 0;
-          return { ...p, views: currentViews + 1, views_count: currentViews + 1 };
+          const current = extractViews(p);
+          return {
+            ...p,
+            views: current + 1,
+            views_count: current + 1
+          };
         }
         return p;
       })
@@ -282,7 +283,7 @@ export function Home() {
           </section>
         )}
 
-        {/* Section Principale : Vidéos ou Galerie Photos */}
+        {/* Section Galerie Photos ou Vidéos */}
         <section className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <h2 className="text-2xl font-serif font-bold">
@@ -293,7 +294,6 @@ export function Home() {
               {activeTab === "downloads" && "Disponibles en téléchargement"}
             </h2>
 
-            {/* Boutons de Filtre pour les Vidéos */}
             {!isPhotoTab && (
               <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border self-start sm:self-auto">
                 <span className="text-xs text-muted-foreground px-2 flex items-center gap-1">
@@ -319,7 +319,7 @@ export function Home() {
             )}
           </div>
 
-          {/* RENDU ONGLET PHOTO */}
+          {/* GALERIE PHOTO AVEC EXTRACTION DU NOMBRE DE VUES */}
           {isPhotoTab ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {isLoadingPhotos ? (
@@ -332,8 +332,7 @@ export function Home() {
               ) : sortedPhotos && sortedPhotos.length > 0 ? (
                 sortedPhotos.map((photo, i) => {
                   const isLocked = photo.isVip && !isUserVip;
-                  // Extraction sécurisée du nombre de vues (gère photo.views, photo.views_count, ou photo.viewsCount)
-                  const viewCount = photo.views ?? (photo as any).views_count ?? (photo as any).viewsCount ?? 0;
+                  const viewsCount = extractViews(photo);
 
                   return (
                     <div
@@ -342,17 +341,15 @@ export function Home() {
                       className="group relative rounded-xl overflow-hidden border border-border bg-card cursor-pointer animate-in fade-in zoom-in-95 duration-500"
                       style={{ animationDelay: `${(i % 3) * 100}ms`, animationFillMode: 'both' }}
                     >
-                      {/* Format 16:9 strict */}
                       <div className="aspect-video w-full bg-muted relative overflow-hidden">
                         <img
-                          src={photo.imageUrl}
+                          src={photo.imageUrl || (photo as any).image_url}
                           alt={photo.title}
                           className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
                             isLocked ? "blur-md scale-110 select-none" : ""
                           }`}
                         />
 
-                        {/* Overlay cadenas pour VIP */}
                         {isLocked && (
                           <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4 text-center z-10 transition-opacity group-hover:bg-black/70">
                             <Lock className="h-6 w-6 text-yellow-400 mb-1 animate-bounce" />
@@ -378,8 +375,8 @@ export function Home() {
                           <span className="bg-accent px-1.5 py-0.5 rounded text-[11px] font-medium">
                             {photo.category}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" /> {viewCount.toLocaleString()} {viewCount > 1 ? "vues" : "vue"}
+                          <span className="flex items-center gap-1 font-medium text-foreground/80">
+                            <Eye className="h-3.5 w-3.5 text-primary" /> {viewsCount.toLocaleString()} {viewsCount > 1 ? 'vues' : 'vue'}
                           </span>
                         </div>
                       </div>
@@ -393,7 +390,6 @@ export function Home() {
               )}
             </div>
           ) : (
-            /* RENDU CATALOGUE VIDÉOS */
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 gap-y-10">
               {isLoadingVideos ? (
                 Array.from({ length: 8 }).map((_, i) => (
@@ -419,7 +415,7 @@ export function Home() {
         </section>
       </div>
 
-      {/* Modal d'affichage de photo grand écran */}
+      {/* Modal plein écran photo */}
       {selectedPhoto && (
         <div
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200"
@@ -433,7 +429,7 @@ export function Home() {
               <X className="h-6 w-6" /> Fermer
             </button>
             <img
-              src={selectedPhoto.imageUrl}
+              src={selectedPhoto.imageUrl || (selectedPhoto as any).image_url}
               alt={selectedPhoto.title}
               className="max-w-full max-h-[80vh] object-contain rounded-lg border border-border shadow-2xl"
             />
@@ -442,8 +438,8 @@ export function Home() {
               <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-2">
                 <span>{selectedPhoto.category}</span>
                 <span>•</span>
-                <span className="flex items-center gap-1">
-                  <Eye className="h-3 w-3" /> {(selectedPhoto.views ?? (selectedPhoto as any).views_count ?? 0).toLocaleString()} vues
+                <span className="flex items-center gap-1 text-white">
+                  <Eye className="h-3.5 w-3.5 text-primary" /> {extractViews(selectedPhoto).toLocaleString()} vues
                 </span>
               </p>
             </div>
