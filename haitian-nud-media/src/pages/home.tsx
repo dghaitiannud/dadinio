@@ -8,14 +8,14 @@ import { Play, Sparkles, Star, ChevronRight, Home as HomeIcon, Video as VideoIco
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 
-// Réduction aux 3 onglets principaux uniquement
+// 3 onglets principaux
 const TABS = [
   { id: "all", label: "Accueil", icon: HomeIcon },
   { id: "video", label: "Vidéo", icon: VideoIcon },
   { id: "photo", label: "Photo", icon: ImageIcon },
 ] as const;
 
-// Helper universel pour extraire le nombre de vues peu importe la structure transmise par Supabase
+// Helper universel pour extraire le nombre de vues
 function extractViews(item: any): number {
   if (!item) return 0;
   const val = item.views ?? item.views_count ?? item.viewsCount ?? item.count ?? 0;
@@ -68,7 +68,7 @@ export function Home() {
     }
   }, [currentText]);
 
-  // Tri des vidéos selon le mode de tri sélectionné
+  // Tri des vidéos
   const sortedVideos = useMemo(() => {
     if (!allVideos) return [];
     let list = [...allVideos];
@@ -84,7 +84,7 @@ export function Home() {
     });
   }, [allVideos, sortBy]);
 
-  // Tri des photos selon le mode de tri sélectionné
+  // Tri des photos
   const sortedPhotos = useMemo(() => {
     if (!photos) return [];
     let list = [...photos];
@@ -100,7 +100,7 @@ export function Home() {
     });
   }, [photos, sortBy]);
 
-  // Nouveautés vidéo (pour le rail)
+  // Nouveautés vidéo (uniquement pour l'accueil)
   const newestVideos = useMemo(() => {
     if (!allVideos) return [];
     return [...allVideos].sort((a, b) => {
@@ -226,7 +226,7 @@ export function Home() {
             })}
           </div>
 
-          {/* Bouton de Tri placé juste en dessous des onglets (adapte son texte/action) */}
+          {/* Bouton de Tri placé sous les onglets */}
           <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border self-start sm:self-auto shrink-0">
             <span className="text-xs text-muted-foreground px-2 flex items-center gap-1 font-medium">
               <ArrowUpDown className="h-3 w-3" />
@@ -253,8 +253,8 @@ export function Home() {
       </section>
 
       <div className="container mx-auto px-4 py-8 flex flex-col gap-12">
-        {/* Rail supérieur : Nouvelles Vidéos (Affiche uniquement sur Accueil et Vidéo) */}
-        {!isPhotoTab && (
+        {/* Rail supérieur : Nouvelles Vidéos (Affiché uniquement dans l'onglet Accueil) */}
+        {activeTab === "all" && (
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
@@ -317,7 +317,7 @@ export function Home() {
         <section className="mb-8">
           <div className="mb-6">
             <h2 className="text-2xl font-serif font-bold">
-              {activeTab === "all" && "Contenu récents & populaires (Vidéos & Photos)"}
+              {activeTab === "all" && "Contenus récents & populaires"}
               {activeTab === "video" && "Galerie vidéo"}
               {activeTab === "photo" && "Galerie photo"}
             </h2>
