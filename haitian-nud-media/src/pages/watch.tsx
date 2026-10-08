@@ -18,6 +18,15 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
 
+// URL de base de votre serveur API Proxy sur Render
+const API_BASE_URL = "https://api-6rzs.onrender.com";
+
+// Helper pour générer l'URL proxifiée d'une vidéo
+const getProxyVideoUrl = (rawUrl: string | undefined | null): string => {
+  if (!rawUrl) return "";
+  return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}`;
+};
+
 // 🌐 Récupération de la fonction t globale définie dans App.tsx
 const t = (key: string, options?: any) => (window as any).t ? (window as any).t(key, options) : key;
 
@@ -201,7 +210,7 @@ export function Watch() {
     }
   };
 
-  // 🌟 CORRECTION PROBLÈME 2 : Téléchargement direct dans le stockage de l'appareil
+  // Téléchargement direct avec passage par le proxy
   const handleDownload = async () => {
     if (!id || !appUser) return;
     if (!isSignedIn) {
@@ -217,14 +226,17 @@ export function Watch() {
 
     try {
       const res = await requestDownload(id, appUser.id, isUserVip, appUser.freeDownloadsUsed);
-      const downloadUrl = res.url || video?.videoUrl;
+      const rawDownloadUrl = res.url || video?.videoUrl;
 
-      if (!downloadUrl) {
+      if (!rawDownloadUrl) {
         throw new Error("Lien de téléchargement introuvable.");
       }
 
-      // Forcer le téléchargement physique du fichier MP4 via Blob
-      const fileResponse = await fetch(downloadUrl, { mode: "cors" });
+      // Route l'URL à travers le serveur proxy
+      const proxiedDownloadUrl = getProxyVideoUrl(rawDownloadUrl);
+
+      // Téléchargement du fichier via Blob avec gestion CORS via Proxy
+      const fileResponse = await fetch(proxiedDownloadUrl);
       if (!fileResponse.ok) {
         throw new Error(`Erreur réseau (${fileResponse.status})`);
       }
@@ -253,9 +265,8 @@ export function Watch() {
       } else if (e.message === 'quota_exceeded') {
         toast.error("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité.", { id: toastId });
       } else {
-        // En cas de restriction CORS serveur, redirection de fallback
         if (video?.videoUrl) {
-          window.open(video.videoUrl, "_blank");
+          window.open(getProxyVideoUrl(video.videoUrl), "_blank");
           toast.success("Téléchargement démarré.", { id: toastId });
         } else {
           toast.error(e?.message || "Erreur de téléchargement", { id: toastId });
@@ -266,7 +277,7 @@ export function Watch() {
     }
   };
 
-  // 🌟 CORRECTION PROBLÈME 1 : Gestion robuste pour éviter l'erreur 503 Offline
+  // Téléchargement offline avec passage par le proxy
   const handleOfflineDownload = async () => {
     if (!video || !video.videoUrl) return;
     if (!isSignedIn) {
@@ -277,9 +288,11 @@ export function Watch() {
     const toastId = toast.loading("Démarrage de la sauvegarde offline...");
 
     try {
+      const proxiedVideoUrl = getProxyVideoUrl(video.videoUrl);
+
       await downloadAndSaveVideo(
         video.id,
-        video.videoUrl,
+        proxiedVideoUrl,
         video.title,
         video.description,
         video.thumbnailUrl,
@@ -397,7 +410,7 @@ export function Watch() {
               <VipGate />
             ) : video.videoUrl ? (
               <video
-                src={video.videoUrl}
+                src={getProxyVideoUrl(video.videoUrl)}
                 poster={video.thumbnailUrl || '/logo.jpg'}
                 controls
                 className="w-full h-full object-contain"
