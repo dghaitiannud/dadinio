@@ -98,7 +98,7 @@ export interface VipRequest {
 // ====================================================
 
 function toPublicVideo(v: any): Video {
-  const viewsValue = v.views ?? v.views_count ?? v.viewsCount ?? 0;
+  const viewsValue = v.views ?? 0;
   return {
     id: v.id,
     title: v.title || '',
@@ -115,7 +115,7 @@ function toPublicVideo(v: any): Video {
 }
 
 function toPublicPhoto(p: any): Photo {
-  const viewsValue = p.views ?? p.views_count ?? p.viewsCount ?? 0;
+  const viewsValue = p.views ?? 0;
   return {
     id: p.id,
     title: p.title || '',
@@ -170,9 +170,9 @@ export async function registerView(videoId: string) {
   try {
     const { error } = await supabase.rpc('increment_video_views', { video_id: videoId });
     if (error) {
-      const { data: vid } = await supabase.from('videos').select('views, views_count').eq('id', videoId).single();
+      const { data: vid } = await supabase.from('videos').select('views').eq('id', videoId).single();
       if (vid) {
-        const currentViews = vid.views ?? vid.views_count ?? 0;
+        const currentViews = vid.views ?? 0;
         await supabase
           .from('videos')
           .update({ views: currentViews + 1 })
@@ -224,9 +224,9 @@ export async function registerPhotoView(photoId: string): Promise<void> {
   try {
     const { error } = await supabase.rpc('increment_photo_views', { photo_id: photoId });
     if (error) {
-      const { data: photo } = await supabase.from('photos').select('views, views_count').eq('id', photoId).single();
+      const { data: photo } = await supabase.from('photos').select('views').eq('id', photoId).single();
       if (photo) {
-        const currentViews = photo.views ?? photo.views_count ?? 0;
+        const currentViews = photo.views ?? 0;
         await supabase
           .from('photos')
           .update({ views: currentViews + 1 })
@@ -328,21 +328,18 @@ export async function getAdminStats(): Promise<AdminStats> {
     const { count: videoCount } = await supabase.from('videos').select('*', { count: 'exact', head: true });
     const { count: photoCount } = await supabase.from('photos').select('*', { count: 'exact', head: true });
     
-    const { data: videoViews } = await supabase.from('videos').select('views, views_count');
-    const { data: photoViews } = await supabase.from('photos').select('views, views_count');
+    // Récupération globale du total des vues via la fonction SQL RPC
+    const { data: totalViewsData } = await supabase.rpc('get_total_views');
     
     const { count: downloadCount } = await supabase.from('downloads').select('*', { count: 'exact', head: true });
     const { count: ticketCount } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
-
-    const totalVideoViews = (videoViews || []).reduce((sum: number, v: any) => sum + (v.views ?? v.views_count ?? 0), 0);
-    const totalPhotoViews = (photoViews || []).reduce((sum: number, p: any) => sum + (p.views ?? p.views_count ?? 0), 0);
 
     return {
       totalUsers: userCount ?? 0,
       activeVip: vipCount ?? 0,
       totalVideos: videoCount ?? 0,
       totalPhotos: photoCount ?? 0,
-      totalViews: totalVideoViews + totalPhotoViews,
+      totalViews: Number(totalViewsData || 0),
       totalDownloads: downloadCount ?? 0,
       openTickets: ticketCount ?? 0,
     };
