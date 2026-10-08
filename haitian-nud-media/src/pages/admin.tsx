@@ -54,17 +54,33 @@ export function Admin() {
       </h1>
       <AdminStatsCards />
       <Tabs defaultValue="videos" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-7 mb-6 overflow-x-auto">
-          <TabsTrigger value="videos">Vidéos</TabsTrigger>
-          <TabsTrigger value="photos">Photos</TabsTrigger>
-          <TabsTrigger value="vip" className="text-yellow-500 font-semibold gap-1">
-            <Crown className="h-3.5 w-3.5 fill-yellow-500" /> Demandes VIP
-          </TabsTrigger>
-          <TabsTrigger value="users">Utilisateurs</TabsTrigger>
-          <TabsTrigger value="tickets">Messages</TabsTrigger>
-          <TabsTrigger value="alerts">Alertes</TabsTrigger>
-          <TabsTrigger value="banner" className="text-primary font-semibold">Bannière</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2 scrollbar-none">
+          <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 bg-muted p-1 rounded-xl">
+            <TabsTrigger value="videos" className="px-3 py-1.5 text-xs sm:text-sm font-medium">
+              Vidéos
+            </TabsTrigger>
+            <TabsTrigger value="photos" className="px-3 py-1.5 text-xs sm:text-sm font-medium">
+              Photos
+            </TabsTrigger>
+            <TabsTrigger value="vip" className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-yellow-500 gap-1.5">
+              <Crown className="h-3.5 w-3.5 fill-yellow-500 shrink-0" />
+              <span>Demandes VIP</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="px-3 py-1.5 text-xs sm:text-sm font-medium">
+              Utilisateurs
+            </TabsTrigger>
+            <TabsTrigger value="tickets" className="px-3 py-1.5 text-xs sm:text-sm font-medium">
+              Messages
+            </TabsTrigger>
+            <TabsTrigger value="alerts" className="px-3 py-1.5 text-xs sm:text-sm font-medium">
+              Alertes
+            </TabsTrigger>
+            <TabsTrigger value="banner" className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-primary">
+              Bannière
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
         <TabsContent value="videos"><VideosTab /></TabsContent>
         <TabsContent value="photos"><PhotosTab /></TabsContent>
         <TabsContent value="vip"><VipRequestsTab /></TabsContent>
