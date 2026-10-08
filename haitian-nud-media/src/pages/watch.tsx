@@ -21,10 +21,17 @@ import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
 // URL de base de votre serveur API Proxy sur Render
 const API_BASE_URL = "https://api-6rzs.onrender.com";
 
-// Helper pour générer l'URL proxifiée d'une vidéo
+// Helper pour générer l'URL proxifiée d'une vidéo (mode streaming)
 const getProxyVideoUrl = (rawUrl: string | undefined | null): string => {
   if (!rawUrl) return "";
   return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}`;
+};
+
+// Helper pour générer l'URL de téléchargement direct avec headers attachment
+const getProxyDownloadUrl = (rawUrl: string | undefined | null, title?: string): string => {
+  if (!rawUrl) return "";
+  const safeFilename = (title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_") + ".mp4";
+  return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}&download=true&filename=${encodeURIComponent(safeFilename)}`;
 };
 
 // 🌐 Récupération de la fonction t globale
@@ -226,7 +233,7 @@ export function Watch() {
     }
   };
 
-  // TÉLÉCHARGEMENT AMÉLIORÉ SANS BLOCAGE PAR FETCH / BLOB
+  // TÉLÉCHARGEMENT DIRECT VIA ATTACHMENT PROXY
   const handleDownload = async () => {
     if (!id || !appUser) return;
     if (!isSignedIn) {
@@ -249,14 +256,14 @@ export function Watch() {
         throw new Error("Lien de téléchargement introuvable.");
       }
 
-      const downloadTargetUrl = getProxyVideoUrl(rawDownloadUrl);
+      // Génération du lien proxy avec &download=true et le nom du fichier
+      const downloadTargetUrl = getProxyDownloadUrl(rawDownloadUrl, video?.title);
 
-      // Création d'un élément d'ancrage déclenchant directement le téléchargement natif du navigateur
+      // Création d'un élément d'ancrage déclenchant directement le téléchargement
       const a = document.createElement("a");
       a.href = downloadTargetUrl;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.setAttribute("download", `${(video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_")}.mp4`);
+      const filename = `${(video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_")}.mp4`;
+      a.setAttribute("download", filename);
       
       document.body.appendChild(a);
       a.click();
@@ -273,7 +280,8 @@ export function Watch() {
         toast.error("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité.", { id: toastId });
       } else {
         if (video?.videoUrl) {
-          window.open(getProxyVideoUrl(video.videoUrl), "_blank");
+          const fallbackUrl = getProxyDownloadUrl(video.videoUrl, video?.title);
+          window.location.href = fallbackUrl;
           toast.success("Téléchargement démarré.", { id: toastId });
         } else {
           toast.error(e?.message || "Erreur lors du lancement du téléchargement", { id: toastId });
