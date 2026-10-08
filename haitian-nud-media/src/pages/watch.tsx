@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, ThumbsUp, Share2, Star, MessageSquare, AlertCircle, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight } from "lucide-react";
+import { Download, Heart, Share2, Star, MessageSquare, AlertCircle, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
@@ -121,6 +121,11 @@ export function Watch() {
   const [offlineDownloading, setOfflineDownloading] = useState(false);
   const [isOfflineAvailable, setIsOfflineAvailable] = useState(false);
 
+  // État du bouton Like
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
   const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
   useEffect(() => {
@@ -134,6 +139,8 @@ export function Watch() {
         setVideo(v);
         
         if (v) {
+          // Simulation initiale du nombre de likes à partir des vues/données
+          setLikesCount((v as any).likes_count || Math.floor(v.views * 0.12) || 0);
           registerView(id);
           if (user?.id) {
             import("@/lib/local-store").then(({ pushWatchHistory }) =>
@@ -192,7 +199,19 @@ export function Watch() {
       toast.error("Ou bezwen konekte pouw ka renmen videyo sa a");
       return;
     }
-    toast.success("Mèsi pou sipò w !");
+
+    // Déclenche l'animation
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 300);
+
+    if (isLiked) {
+      setIsLiked(false);
+      setLikesCount((prev) => Math.max(0, prev - 1));
+    } else {
+      setIsLiked(true);
+      setLikesCount((prev) => prev + 1);
+      toast.success("Mèsi pou sipò w !");
+    }
   };
 
   const handleShare = async () => {
@@ -443,9 +462,24 @@ export function Watch() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="secondary" onClick={handleLike} className="rounded-full bg-accent hover:bg-accent/80">
-                  <ThumbsUp className="h-4 w-4 mr-2" /> J'aime
+                {/* Bouton Like avec icône Cœur et Animation */}
+                <Button 
+                  variant="secondary" 
+                  onClick={handleLike} 
+                  className={`rounded-full bg-accent hover:bg-accent/80 transition-all duration-200 ${
+                    isLiked ? "text-red-500 bg-red-500/10 border-red-500/30" : ""
+                  }`}
+                >
+                  <Heart 
+                    className={`h-4 w-4 mr-2 transition-all duration-300 ${
+                      isAnimating ? "scale-125" : "scale-100"
+                    } ${
+                      isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"
+                    }`} 
+                  />
+                  <span>{likesCount > 0 ? likesCount.toLocaleString() : "J'aime"}</span>
                 </Button>
+
                 <Button variant="secondary" onClick={handleShare} className="rounded-full bg-accent hover:bg-accent/80">
                   <Share2 className="h-4 w-4 mr-2" /> Partager
                 </Button>
