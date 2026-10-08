@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, Ticket, Trash2, Bell, UserCheck, LayoutTemplate, Crown, ExternalLink, Check, X } from "lucide-react";
+import { Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, Ticket, Trash2, Bell, UserCheck, LayoutTemplate, Crown, ExternalLink, Check, X, LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -30,7 +30,7 @@ const YEARS = Array.from({ length: CURRENT_YEAR - 2009 }, (_, i) => String(CURRE
 
 export function Admin() {
   const { t } = useTranslation();
-  const { appUser, isAdmin, isLoading } = useAuth();
+  const { isAdmin, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
   if (isLoading) return <div className="p-8 text-center">{t('common.loading')}</div>;
@@ -82,7 +82,7 @@ function AdminStatsCards() {
   const [stats, setStats] = useState<AdminStats | null>(null);
 
   useEffect(() => {
-    getAdminStats().then(s => setStats(s));
+    getAdminStats().then(s => setStats(s)).catch(err => console.error(err));
   }, []);
 
   return (
@@ -98,8 +98,14 @@ function AdminStatsCards() {
   );
 }
 
-// @ts-expect-error simple component formatting props
-function StatCard({ title, value, icon: Icon, color = "text-primary" }: any) {
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  icon: LucideIcon;
+  color?: string;
+}
+
+function StatCard({ title, value, icon: Icon, color = "text-primary" }: StatCardProps) {
   return (
     <Card className="bg-card">
       <CardContent className="p-4 flex flex-col items-center text-center">
@@ -126,8 +132,13 @@ function VideosTab() {
   useEffect(() => { loadVideos(); }, []);
 
   const loadVideos = async () => {
-    const v = await adminListVideos();
-    setVideos(v);
+    try {
+      const v = await adminListVideos();
+      setVideos(v);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur de chargement des vidéos");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -141,8 +152,9 @@ function VideosTab() {
       setContentType("");
       setYear(String(CURRENT_YEAR));
       await loadVideos();
-    } catch (e: any) {
-      toast.error(e?.message || "Erreur d'ajout");
+    } catch (e: unknown) {
+      const error = e as Error;
+      toast.error(error?.message || "Erreur d'ajout");
     } finally {
       setCreatePending(false);
     }
@@ -155,8 +167,9 @@ function VideosTab() {
       await adminDeleteVideo(id);
       setVideos(prev => prev.filter(v => v.id !== id));
       toast.success("Vidéo supprimée");
-    } catch (e: any) {
-      toast.error(e?.message || "Erreur de suppression");
+    } catch (e: unknown) {
+      const error = e as Error;
+      toast.error(error?.message || "Erreur de suppression");
       await loadVideos();
     } finally {
       setDeletePending(null);
@@ -244,8 +257,13 @@ function PhotosTab() {
   useEffect(() => { loadPhotos(); }, []);
 
   const loadPhotos = async () => {
-    const p = await adminListPhotos();
-    setPhotos(p);
+    try {
+      const p = await adminListPhotos();
+      setPhotos(p);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur de chargement de la galerie");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -259,8 +277,9 @@ function PhotosTab() {
       setContentType("");
       setYear(String(CURRENT_YEAR));
       await loadPhotos();
-    } catch (err: any) {
-      toast.error(err?.message || "Erreur lors de l'ajout");
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast.error(error?.message || "Erreur lors de l'ajout");
     } finally {
       setCreatePending(false);
     }
@@ -273,8 +292,9 @@ function PhotosTab() {
       await adminDeletePhoto(id);
       setPhotos(prev => prev.filter(p => p.id !== id));
       toast.success("Photo archivée");
-    } catch (err: any) {
-      toast.error(err?.message || "Erreur de suppression");
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast.error(error?.message || "Erreur de suppression");
       await loadPhotos();
     } finally {
       setDeletePending(null);
@@ -356,6 +376,7 @@ function VipRequestsTab() {
       const data = await adminListVipRequests();
       setRequests(data);
     } catch (err) {
+      console.error(err);
       toast.error("Impossible de charger les reçus VIP");
     }
   };
@@ -388,8 +409,9 @@ function VipRequestsTab() {
       }
 
       await loadRequests();
-    } catch (err: any) {
-      toast.error(err?.message || "Erreur de traitement");
+    } catch (err: unknown) {
+      const error = err as Error;
+      toast.error(error?.message || "Erreur de traitement");
     } finally {
       setProcessingId(null);
     }
@@ -540,8 +562,13 @@ function UsersTab() {
   useEffect(() => { loadUsers(); }, []);
 
   const loadUsers = async () => {
-    const u = await adminListUsers();
-    setUsers(u);
+    try {
+      const u = await adminListUsers();
+      setUsers(u);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur au chargement des utilisateurs");
+    }
   };
 
   const handleToggleBlock = async (id: string, currentBlocked: boolean) => {
@@ -551,8 +578,9 @@ function UsersTab() {
       await adminBlockUser(appUser.id, id, !currentBlocked);
       toast.success(currentBlocked ? "Utilisateur débloqué" : "Utilisateur bloqué");
       await loadUsers();
-    } catch (e: any) {
-      toast.error(e?.message || "Erreur d'action");
+    } catch (e: unknown) {
+      const error = e as Error;
+      toast.error(error?.message || "Erreur d'action");
     } finally {
       setBlockPending(null);
     }
@@ -594,16 +622,20 @@ function TicketsTab() {
   useEffect(() => { loadTickets(); }, []);
 
   const loadTickets = async () => {
-    const t = await adminListTickets();
-    setTickets(t);
+    try {
+      const t = await adminListTickets();
+      setTickets(t);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur de chargement des tickets");
+    }
   };
 
   const handleReply = async () => {
     if (!selectedTicket || !replyText) return;
 
-    // 🛡️ Récupération sécurisée et flexible de l'ID utilisateur
-    // @ts-expect-error type checking fallback for database variants
-    const userIdToNotify = selectedTicket.user_id || selectedTicket.userId;
+    const ticketRecord = selectedTicket as unknown as Record<string, string>;
+    const userIdToNotify = selectedTicket.userId || ticketRecord.user_id;
 
     if (!userIdToNotify) {
       toast.error("Impossible d'envoyer la push : Identifiant utilisateur manquant.");
@@ -612,11 +644,9 @@ function TicketsTab() {
 
     setReplyPending(true);
     try {
-      // 1. Enregistrement de la réponse sur Supabase
       await adminReplyTicket(selectedTicket.id, replyText);
       toast.success("Réponse envoyée");
 
-      // 2. Envoi de la notification Push ciblée à l'utilisateur concerné
       try {
         await fetch("https://api-6rzs.onrender.com/api/push/send", {
           method: "POST",
@@ -639,8 +669,9 @@ function TicketsTab() {
       setSelectedTicket(null);
       setReplyText("");
       await loadTickets();
-    } catch (e: any) {
-      toast.error(e?.message || "Erreur de réponse");
+    } catch (e: unknown) {
+      const error = e as Error;
+      toast.error(error?.message || "Erreur de réponse");
     } finally {
       setReplyPending(false);
     }
@@ -722,9 +753,10 @@ function AdminAlerts() {
 
       setResult(res);
       toast.success(`${res.sent}/${res.total} notifications envoyées avec succès !`);
-    } catch (e: any) {
-      console.error("Erreur push détaillée:", e);
-      toast.error(e?.message || "Erreur d'envoi de la notification");
+    } catch (e: unknown) {
+      const error = e as Error;
+      console.error("Erreur push détaillée:", error);
+      toast.error(error?.message || "Erreur d'envoi de la notification");
     } finally {
       setSending(false);
     }
@@ -795,7 +827,11 @@ function AdminBannerTab() {
   const [url, setUrl] = useState("");
   const [pending, setPending] = useState(false);
 
-  useEffect(() => { getBannerVideo().then(res => setUrl(res)); }, []);
+  useEffect(() => { 
+    getBannerVideo()
+      .then(res => setUrl(res))
+      .catch(err => console.error(err)); 
+  }, []);
 
   const handleSave = async () => {
     setPending(true);
@@ -803,6 +839,7 @@ function AdminBannerTab() {
       await updateBannerVideo(url);
       toast.success("Vidéo de fond d'accueil mise à jour avec succès !");
     } catch (e) {
+      console.error(e);
       toast.error("Erreur lors de l'enregistrement");
     } finally {
       setPending(false);
@@ -817,6 +854,7 @@ function AdminBannerTab() {
       setUrl("");
       toast.success("Bannière réinitialisée");
     } catch (e) {
+      console.error(e);
       toast.error("Erreur lors de la suppression");
     } finally {
       setPending(false);
