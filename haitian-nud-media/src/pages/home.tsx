@@ -4,18 +4,16 @@ import { getVideos, getBannerVideo, getPhotos, registerPhotoView, type Video, ty
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
-import { Play, Sparkles, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Eye, Lock, ArrowUpDown, X } from "lucide-react";
+import { Play, Sparkles, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Eye, Lock, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 
-// 3 onglets principaux
 const TABS = [
   { id: "all", label: "Accueil", icon: HomeIcon },
   { id: "video", label: "Vidéo", icon: VideoIcon },
   { id: "photo", label: "Photo", icon: ImageIcon },
 ] as const;
 
-// Helper universel pour extraire le nombre de vues
 function extractViews(item: any): number {
   if (!item) return 0;
   const val = item.views ?? item.views_count ?? item.viewsCount ?? item.count ?? 0;
@@ -37,8 +35,10 @@ export function Home() {
   const [sortBy, setSortBy] = useState<"recent" | "views">("recent");
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
 
+  // --- Animation de titre dynamique & cyclique ---
   const FULL_TEXT = "HAITIAN NUD";
-  const [currentText, setCurrentText] = useState("");
+  const [displayText, setDisplayText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
@@ -59,14 +59,29 @@ export function Home() {
     });
   }, []);
 
+  // Effet de frappe en boucle (Typing / Deleting effect)
   useEffect(() => {
-    if (currentText.length < FULL_TEXT.length) {
-      const timeout = setTimeout(() => {
-        setCurrentText(FULL_TEXT.substring(0, currentText.length + 1));
-      }, 150);
-      return () => clearTimeout(timeout);
+    let timer: NodeJS.Timeout;
+
+    if (!isDeleting && displayText.length < FULL_TEXT.length) {
+      timer = setTimeout(() => {
+        setDisplayText(FULL_TEXT.substring(0, displayText.length + 1));
+      }, 120);
+    } else if (!isDeleting && displayText.length === FULL_TEXT.length) {
+      // Pause une fois le texte complété
+      timer = setTimeout(() => {
+        setIsDeleting(true);
+      }, 3500);
+    } else if (isDeleting && displayText.length > 0) {
+      timer = setTimeout(() => {
+        setDisplayText(FULL_TEXT.substring(0, displayText.length - 1));
+      }, 60);
+    } else if (isDeleting && displayText.length === 0) {
+      setIsDeleting(false);
     }
-  }, [currentText]);
+
+    return () => clearTimeout(timer);
+  }, [displayText, isDeleting]);
 
   // Tri des vidéos
   const sortedVideos = useMemo(() => {
@@ -100,7 +115,7 @@ export function Home() {
     });
   }, [photos, sortBy]);
 
-  // Nouveautés vidéo (uniquement pour l'accueil)
+  // Nouveautés vidéo
   const newestVideos = useMemo(() => {
     if (!allVideos) return [];
     return [...allVideos].sort((a, b) => {
@@ -121,12 +136,10 @@ export function Home() {
 
     setSelectedPhoto(updatedPhoto);
 
-    // Mise à jour de l'état local pour un affichage instantané
     setPhotos((prev) =>
       prev.map((p) => (p.id === photo.id ? updatedPhoto : p))
     );
 
-    // Enregistrement en arrière-plan via Supabase RPC
     try {
       await registerPhotoView(photo.id);
     } catch (err) {
@@ -134,16 +147,15 @@ export function Home() {
     }
   };
 
-  const haitianPart = currentText.substring(0, 8);
-  const nudPart = currentText.substring(8);
-  const isTyping = currentText.length < FULL_TEXT.length;
+  const haitianPart = displayText.substring(0, 8);
+  const nudPart = displayText.substring(8);
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
-      <section className="relative w-full aspect-[4/3] md:aspect-[21/9] max-h-[70vh] bg-black overflow-hidden border-b border-border">
+      {/* ================= HERO BANNER REPENSOUE ================= */}
+      <section className="relative w-full aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9] max-h-[75vh] bg-black overflow-hidden border-b border-border/50">
         {bannerVideoUrl ? (
-          <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 z-0 scale-105 transform">
             <video
               src={bannerVideoUrl}
               autoPlay
@@ -151,34 +163,53 @@ export function Home() {
               loop
               playsInline
               controls={false}
-              className="w-full h-full object-cover pointer-events-none"
+              className="w-full h-full object-cover pointer-events-none filter brightness-90"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-black/30" />
-            <div className="absolute inset-0 bg-black/20" />
+            {/* Superposition de dégradés cinématiques */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/30 to-transparent" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)]" />
           </div>
         ) : (
           <div className="absolute inset-0">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-background" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(30,94,255,0.25),transparent_60%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(30,94,255,0.35),transparent_70%)]" />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
           </div>
         )}
         
-        <div className="absolute inset-0 flex flex-col justify-end p-6 md:p-12 lg:p-24 container mx-auto z-10">
-          <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <Badge className="mb-4 bg-primary/20 text-primary hover:bg-primary/30 border-primary/30 backdrop-blur-sm">{t('home.new_on_platform')}</Badge>
+        {/* Contenu de la bannière */}
+        <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 md:p-16 lg:p-24 container mx-auto z-10">
+          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-6 duration-700">
             
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-8 leading-tight min-h-[50px] md:min-h-[80px]">
-              <span>{haitianPart}</span>
-              <span className="text-primary">{nudPart}</span>
-              {isTyping && <span className="animate-pulse ml-1 border-r-4 border-primary"></span>}
+            {/* Badge Nouveauté Pro */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 backdrop-blur-md mb-4 text-xs font-semibold text-primary-foreground shadow-lg">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              <span>{t('home.new_on_platform')}</span>
+            </div>
+            
+            {/* Titre avec effet typographique moderne */}
+            <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white mb-6 leading-none min-h-[50px] sm:min-h-[70px] flex items-center">
+              <span className="drop-shadow-md">{haitianPart}</span>
+              <span className="bg-gradient-to-r from-blue-400 via-primary to-indigo-500 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(30,94,255,0.8)] ml-2">
+                {nudPart}
+              </span>
+              <span className="animate-pulse ml-1.5 inline-block w-1 h-8 sm:h-12 bg-primary rounded-full" />
             </h1>
 
-            <div className="flex flex-wrap gap-4">
+            <p className="text-muted-foreground text-sm sm:text-base max-w-lg mb-8 line-clamp-2 hidden sm:block">
+              Découvrez les contenus les plus exclusifs et récents de la plateforme en haute définition.
+            </p>
+
+            {/* Boutons d'action */}
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <Button 
                 size="lg" 
                 onClick={() => setLocation("/vip-catalog")}
-                className="bg-primary hover:bg-primary/90 text-white font-bold px-8 shadow-[0_0_20px_rgba(30,94,255,0.4)] w-full sm:w-auto"
+                className="bg-primary hover:bg-primary/90 text-white font-bold px-8 h-12 rounded-xl shadow-[0_0_30px_rgba(30,94,255,0.5)] transition-all hover:scale-105 w-full sm:w-auto"
               >
                 <Play className="mr-2 h-5 w-5 fill-current" /> Regarder maintenant
               </Button>
@@ -188,16 +219,19 @@ export function Home() {
                   size="lg" 
                   variant="outline" 
                   onClick={() => setLocation("/plans")}
-                  className="bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm w-full sm:w-auto"
+                  className="bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 backdrop-blur-md h-12 rounded-xl font-semibold transition-all hover:scale-105 w-full sm:w-auto"
                 >
-                  <Star className="mr-2 h-5 w-5 text-yellow-400" />{t('nav.become_vip')}</Button>
+                  <Star className="mr-2 h-5 w-5 text-yellow-400 fill-yellow-400/20 animate-pulse" />
+                  {t('nav.become_vip')}
+                </Button>
               )}
             </div>
+
           </div>
         </div>
       </section>
 
-      {/* Primary tabs & Sort Bar */}
+      {/* Barre de navigation par onglets & tri */}
       <section className="border-b border-border bg-background/95 backdrop-blur-md sticky top-16 z-40">
         <div className="container mx-auto px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
           
@@ -520,14 +554,6 @@ export function Home() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Badge({ children, className }: any) {
-  return (
-    <div className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className}`}>
-      {children}
     </div>
   );
 }
