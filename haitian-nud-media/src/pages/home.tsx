@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useState, useEffect, useMemo } from "react";
-import { getVideos, getBannerVideo, getPhotos, type Video, type Photo } from "@/lib/supabase-db";
+import { getVideos, getBannerVideo, getPhotos, registerPhotoView, type Video, type Photo } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
@@ -64,7 +64,7 @@ export function Home() {
     }
   }, [currentText]);
 
-  // 1. Les plus récentes vidéos (pour le rail du haut "Nouvelles vidéos")
+  // 1. Les plus récentes vidéos
   const newestVideos = useMemo(() => {
     if (!allVideos) return [];
     return [...allVideos].sort((a, b) => {
@@ -81,10 +81,9 @@ export function Home() {
     let list = [...allVideos];
 
     if (activeTab === "popular" || sortBy === "views") {
-      return list.sort((a, b) => (b.views || 0) - (a.views || 0));
+      return list.sort((a, b) => ((b as any).views || (b as any).views_count || 0) - ((a as any).views || (a as any).views_count || 0));
     }
 
-    // Tri par date / nouveautés par défaut
     return list.sort((a, b) => {
       const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
       const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
@@ -104,12 +103,34 @@ export function Home() {
 
   const isPhotoTab = activeTab === "photo";
 
-  const handlePhotoClick = (photo: Photo) => {
+  const handlePhotoClick = async (photo: Photo) => {
     if (photo.isVip && !isUserVip) {
       setLocation("/plans");
       return;
     }
+
+    // Affiche la photo
     setSelectedPhoto(photo);
+
+    // Incrémente le compteur de vues dans Supabase si la fonction existe
+    try {
+      if (typeof registerPhotoView === "function") {
+        await registerPhotoView(photo.id);
+      }
+    } catch (err) {
+      console.warn("Impossible d'enregistrer la vue de la photo :", err);
+    }
+
+    // Met à jour localement le nombre de vues de la photo pour affichage direct
+    setPhotos((prev) =>
+      prev.map((p) => {
+        if (p.id === photo.id) {
+          const currentViews = p.views ?? (p as any).views_count ?? 0;
+          return { ...p, views: currentViews + 1, views_count: currentViews + 1 };
+        }
+        return p;
+      })
+    );
   };
 
   const haitianPart = currentText.substring(0, 8);
@@ -201,7 +222,7 @@ export function Home() {
       </section>
 
       <div className="container mx-auto px-4 py-8 flex flex-col gap-12">
-        {/* Rail supérieur : Nouvelles Vidéos (remplace Tendances) */}
+        {/* Rail supérieur : Nouvelles Vidéos */}
         {!isPhotoTab && (
           <section>
             <div className="flex items-center justify-between mb-6">
@@ -298,7 +319,7 @@ export function Home() {
             )}
           </div>
 
-          {/* RENDU ONGLET PHOTO (3 photos par ligne, 16:9, flou VIP) */}
+          {/* RENDU ONGLET PHOTO */}
           {isPhotoTab ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {isLoadingPhotos ? (
@@ -311,6 +332,8 @@ export function Home() {
               ) : sortedPhotos && sortedPhotos.length > 0 ? (
                 sortedPhotos.map((photo, i) => {
                   const isLocked = photo.isVip && !isUserVip;
+                  // Extraction sécurisée du nombre de vues (gère photo.views, photo.views_count, ou photo.viewsCount)
+                  const viewCount = photo.views ?? (photo as any).views_count ?? (photo as any).viewsCount ?? 0;
 
                   return (
                     <div
@@ -329,7 +352,7 @@ export function Home() {
                           }`}
                         />
 
-                        {/* Overlay cadenas pour VIP Gratuit */}
+                        {/* Overlay cadenas pour VIP */}
                         {isLocked && (
                           <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4 text-center z-10 transition-opacity group-hover:bg-black/70">
                             <Lock className="h-6 w-6 text-yellow-400 mb-1 animate-bounce" />
@@ -356,7 +379,7 @@ export function Home() {
                             {photo.category}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" /> {photo.views}
+                            <Eye className="h-3 w-3" /> {viewCount.toLocaleString()} {viewCount > 1 ? "vues" : "vue"}
                           </span>
                         </div>
                       </div>
@@ -416,7 +439,13 @@ export function Home() {
             />
             <div className="mt-4 text-center text-white">
               <h3 className="text-lg font-bold">{selectedPhoto.title}</h3>
-              <p className="text-xs text-muted-foreground mt-1">{selectedPhoto.category}</p>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-2">
+                <span>{selectedPhoto.category}</span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Eye className="h-3 w-3" /> {(selectedPhoto.views ?? (selectedPhoto as any).views_count ?? 0).toLocaleString()} vues
+                </span>
+              </p>
             </div>
           </div>
         </div>
