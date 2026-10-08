@@ -110,33 +110,28 @@ export function Home() {
     });
   }, [allVideos]);
 
-  const isPhotoTab = activeTab === "photo";
-
   const handlePhotoClick = async (photo: Photo) => {
     if (photo.isVip && !isUserVip) {
       setLocation("/plans");
       return;
     }
 
-    setSelectedPhoto(photo);
+    const updatedViews = extractViews(photo) + 1;
+    const updatedPhoto = { ...photo, views: updatedViews };
 
-    if (typeof registerPhotoView === "function") {
-      registerPhotoView(photo.id);
-    }
+    setSelectedPhoto(updatedPhoto);
 
+    // Mise à jour de l'état local pour un affichage instantané
     setPhotos((prev) =>
-      prev.map((p) => {
-        if (p.id === photo.id) {
-          const current = extractViews(p);
-          return {
-            ...p,
-            views: current + 1,
-            views_count: current + 1
-          };
-        }
-        return p;
-      })
+      prev.map((p) => (p.id === photo.id ? updatedPhoto : p))
     );
+
+    // Enregistrement en arrière-plan via Supabase RPC
+    try {
+      await registerPhotoView(photo.id);
+    } catch (err) {
+      console.error("Erreur lors de l'enregistrement de la vue photo:", err);
+    }
   };
 
   const haitianPart = currentText.substring(0, 8);
@@ -202,11 +197,10 @@ export function Home() {
         </div>
       </section>
 
-      {/* Primary tabs & Sort Bar (Sticky Header Mobile & Desktop) */}
+      {/* Primary tabs & Sort Bar */}
       <section className="border-b border-border bg-background/95 backdrop-blur-md sticky top-16 z-40">
         <div className="container mx-auto px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
           
-          {/* Onglets principaux */}
           <div className="flex items-center gap-1.5 shrink-0">
             {TABS.map(tab => {
               const Icon = tab.icon;
@@ -231,10 +225,8 @@ export function Home() {
             })}
           </div>
 
-          {/* Séparateur discret */}
           <div className="h-4 w-[1px] bg-border shrink-0 sm:hidden" />
 
-          {/* Commutateur de Tri ultra-compact */}
           <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-full border border-border/50 shrink-0">
             <Button
               size="sm"
@@ -266,7 +258,7 @@ export function Home() {
       </section>
 
       <div className="container mx-auto px-4 py-8 flex flex-col gap-12">
-        {/* Rail supérieur : Nouvelles Vidéos (Affiché uniquement dans l'onglet Accueil) */}
+        {/* Rail supérieur : Nouvelles Vidéos */}
         {activeTab === "all" && (
           <section>
             <div className="flex items-center justify-between mb-6">
@@ -433,7 +425,7 @@ export function Home() {
             </div>
           )}
 
-          {/* ONGLET ACCUEIL (Mélange de vidéos et photos) */}
+          {/* ONGLET ACCUEIL */}
           {activeTab === "all" && (
             <div className="space-y-10">
               {/* Section Vidéos */}
