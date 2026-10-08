@@ -4,16 +4,15 @@ import { getVideos, getBannerVideo, getPhotos, registerPhotoView, type Video, ty
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
-import { Play, Sparkles, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Flame, Download, Eye, Lock, ArrowUpDown, X } from "lucide-react";
+import { Play, Sparkles, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Eye, Lock, ArrowUpDown, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
 
+// Réduction aux 3 onglets principaux uniquement
 const TABS = [
   { id: "all", label: "Accueil", icon: HomeIcon },
   { id: "video", label: "Vidéo", icon: VideoIcon },
   { id: "photo", label: "Photo", icon: ImageIcon },
-  { id: "popular", label: "Populaire", icon: Flame },
-  { id: "downloads", label: "Téléchargement", icon: Download },
 ] as const;
 
 // Helper universel pour extraire le nombre de vues peu importe la structure transmise par Supabase
@@ -55,7 +54,6 @@ export function Home() {
     });
 
     getPhotos().then(p => {
-      console.log("Photos reçues depuis Supabase :", p); // Permet de vérifier les clés dans la console F12
       setPhotos(p);
       setIsLoadingPhotos(false);
     });
@@ -70,20 +68,12 @@ export function Home() {
     }
   }, [currentText]);
 
-  const newestVideos = useMemo(() => {
-    if (!allVideos) return [];
-    return [...allVideos].sort((a, b) => {
-      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
-      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
-      return dateB - dateA;
-    });
-  }, [allVideos]);
-
-  const visibleVideos = useMemo(() => {
+  // Tri des vidéos selon le mode de tri sélectionné
+  const sortedVideos = useMemo(() => {
     if (!allVideos) return [];
     let list = [...allVideos];
 
-    if (activeTab === "popular" || sortBy === "views") {
+    if (sortBy === "views") {
       return list.sort((a, b) => extractViews(b) - extractViews(a));
     }
 
@@ -92,16 +82,33 @@ export function Home() {
       const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [allVideos, activeTab, sortBy]);
+  }, [allVideos, sortBy]);
 
+  // Tri des photos selon le mode de tri sélectionné
   const sortedPhotos = useMemo(() => {
     if (!photos) return [];
-    return [...photos].sort((a, b) => {
+    let list = [...photos];
+
+    if (sortBy === "views") {
+      return list.sort((a, b) => extractViews(b) - extractViews(a));
+    }
+
+    return list.sort((a, b) => {
       const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
       const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [photos]);
+  }, [photos, sortBy]);
+
+  // Nouveautés vidéo (pour le rail)
+  const newestVideos = useMemo(() => {
+    if (!allVideos) return [];
+    return [...allVideos].sort((a, b) => {
+      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
+      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [allVideos]);
 
   const isPhotoTab = activeTab === "photo";
 
@@ -113,12 +120,10 @@ export function Home() {
 
     setSelectedPhoto(photo);
 
-    // Enregistrement de la vue dans la base de données
     if (typeof registerPhotoView === "function") {
       registerPhotoView(photo.id);
     }
 
-    // Mise à jour instantanée du compteur à l'écran
     setPhotos((prev) =>
       prev.map((p) => {
         if (p.id === photo.id) {
@@ -197,10 +202,11 @@ export function Home() {
         </div>
       </section>
 
-      {/* Primary tabs */}
-      <section className="border-b border-border bg-background/50 backdrop-blur-md sticky top-16 z-40">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-2 overflow-x-auto py-3 no-scrollbar snap-x">
+      {/* Primary tabs & Sort Bar (Sticky Header) */}
+      <section className="border-b border-border bg-background/80 backdrop-blur-md sticky top-16 z-40">
+        <div className="container mx-auto px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3">
+          {/* Onglets principaux */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar snap-x">
             {TABS.map(tab => {
               const Icon = tab.icon;
               const active = tab.id === activeTab;
@@ -219,11 +225,35 @@ export function Home() {
               );
             })}
           </div>
+
+          {/* Bouton de Tri placé juste en dessous des onglets (adapte son texte/action) */}
+          <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border self-start sm:self-auto shrink-0">
+            <span className="text-xs text-muted-foreground px-2 flex items-center gap-1 font-medium">
+              <ArrowUpDown className="h-3 w-3" />
+              {isPhotoTab ? "Tri photos:" : "Tri vidéos:"}
+            </span>
+            <Button
+              size="sm"
+              variant={sortBy === "recent" ? "default" : "ghost"}
+              onClick={() => setSortBy("recent")}
+              className="text-xs h-7 px-2.5 rounded-md"
+            >
+              Plus récentes
+            </Button>
+            <Button
+              size="sm"
+              variant={sortBy === "views" ? "default" : "ghost"}
+              onClick={() => setSortBy("views")}
+              className="text-xs h-7 px-2.5 rounded-md"
+            >
+              Plus vues
+            </Button>
+          </div>
         </div>
       </section>
 
       <div className="container mx-auto px-4 py-8 flex flex-col gap-12">
-        {/* Rail supérieur : Nouvelles Vidéos */}
+        {/* Rail supérieur : Nouvelles Vidéos (Affiche uniquement sur Accueil et Vidéo) */}
         {!isPhotoTab && (
           <section>
             <div className="flex items-center justify-between mb-6">
@@ -283,44 +313,18 @@ export function Home() {
           </section>
         )}
 
-        {/* Section Galerie Photos ou Vidéos */}
+        {/* Dynamic Main Gallery Content */}
         <section className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="mb-6">
             <h2 className="text-2xl font-serif font-bold">
-              {activeTab === "all" && "Toutes les vidéos"}
-              {activeTab === "video" && "Toutes les vidéos"}
-              {activeTab === "photo" && "Galerie photo (Nouveautés)"}
-              {activeTab === "popular" && "Le plus populaire"}
-              {activeTab === "downloads" && "Disponibles en téléchargement"}
+              {activeTab === "all" && "Contenu récents & populaires (Vidéos & Photos)"}
+              {activeTab === "video" && "Galerie vidéo"}
+              {activeTab === "photo" && "Galerie photo"}
             </h2>
-
-            {!isPhotoTab && (
-              <div className="flex items-center gap-2 bg-card p-1 rounded-lg border border-border self-start sm:self-auto">
-                <span className="text-xs text-muted-foreground px-2 flex items-center gap-1">
-                  <ArrowUpDown className="h-3 w-3" /> Trier:
-                </span>
-                <Button
-                  size="sm"
-                  variant={sortBy === "recent" ? "default" : "ghost"}
-                  onClick={() => setSortBy("recent")}
-                  className="text-xs h-7 px-2.5 rounded-md"
-                >
-                  Plus récentes
-                </Button>
-                <Button
-                  size="sm"
-                  variant={sortBy === "views" ? "default" : "ghost"}
-                  onClick={() => setSortBy("views")}
-                  className="text-xs h-7 px-2.5 rounded-md"
-                >
-                  Plus de vues
-                </Button>
-              </div>
-            )}
           </div>
 
-          {/* GALERIE PHOTO AVEC EXTRACTION DU NOMBRE DE VUES */}
-          {isPhotoTab ? (
+          {/* ONGLET PHOTO */}
+          {activeTab === "photo" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {isLoadingPhotos ? (
                 Array.from({ length: 6 }).map((_, i) => (
@@ -389,7 +393,10 @@ export function Home() {
                 </div>
               )}
             </div>
-          ) : (
+          )}
+
+          {/* ONGLET VIDÉO */}
+          {activeTab === "video" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 gap-y-10">
               {isLoadingVideos ? (
                 Array.from({ length: 8 }).map((_, i) => (
@@ -399,8 +406,8 @@ export function Home() {
                     <Skeleton className="h-3 w-1/2" />
                   </div>
                 ))
-              ) : visibleVideos && visibleVideos.length > 0 ? (
-                visibleVideos.map((video, i) => (
+              ) : sortedVideos && sortedVideos.length > 0 ? (
+                sortedVideos.map((video, i) => (
                   <div key={video.id} className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: `${(i % 4) * 100}ms`, animationFillMode: 'both' }}>
                     <VideoCard video={video} />
                   </div>
@@ -410,6 +417,68 @@ export function Home() {
                   Aucune vidéo disponible.
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ONGLET ACCUEIL (Mélange de vidéos et photos) */}
+          {activeTab === "all" && (
+            <div className="space-y-10">
+              {/* Section Vidéos */}
+              <div>
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  <VideoIcon className="h-5 w-5 text-primary" /> Vidéos
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {isLoadingVideos ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <Skeleton key={i} className="aspect-video w-full rounded-xl" />
+                    ))
+                  ) : sortedVideos.slice(0, 8).map((video) => (
+                    <VideoCard key={video.id} video={video} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Section Photos */}
+              <div>
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                  <ImageIcon className="h-5 w-5 text-primary" /> Photos
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {isLoadingPhotos ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <Skeleton key={i} className="aspect-video w-full rounded-xl" />
+                    ))
+                  ) : sortedPhotos.slice(0, 6).map((photo) => {
+                    const isLocked = photo.isVip && !isUserVip;
+                    return (
+                      <div
+                        key={photo.id}
+                        onClick={() => handlePhotoClick(photo)}
+                        className="group relative rounded-xl overflow-hidden border border-border bg-card cursor-pointer"
+                      >
+                        <div className="aspect-video w-full bg-muted relative overflow-hidden">
+                          <img
+                            src={photo.imageUrl || (photo as any).image_url}
+                            alt={photo.title}
+                            className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+                              isLocked ? "blur-md scale-110 select-none" : ""
+                            }`}
+                          />
+                          {isLocked && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
+                              <Lock className="h-6 w-6 text-yellow-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <h4 className="font-semibold text-sm line-clamp-1">{photo.title}</h4>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </section>
