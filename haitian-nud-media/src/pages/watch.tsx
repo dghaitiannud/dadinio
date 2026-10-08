@@ -27,7 +27,7 @@ const getProxyVideoUrl = (rawUrl: string | undefined | null): string => {
   return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}`;
 };
 
-// 🌐 Récupération de la fonction t globale définie dans App.tsx
+// 🌐 Récupération de la fonction t globale
 const t = (key: string, options?: any) => (window as any).t ? (window as any).t(key, options) : key;
 
 function VipGate() {
@@ -121,7 +121,6 @@ export function Watch() {
   const [offlineDownloading, setOfflineDownloading] = useState(false);
   const [isOfflineAvailable, setIsOfflineAvailable] = useState(false);
 
-  // État du bouton Like
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -139,7 +138,6 @@ export function Watch() {
         setVideo(v);
         
         if (v) {
-          // Simulation initiale du nombre de likes à partir des vues/données
           setLikesCount((v as any).likes_count || Math.floor(v.views * 0.12) || 0);
           registerView(id);
           if (user?.id) {
@@ -200,7 +198,6 @@ export function Watch() {
       return;
     }
 
-    // Déclenche l'animation
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 300);
 
@@ -229,7 +226,7 @@ export function Watch() {
     }
   };
 
-  // Téléchargement direct avec passage par le proxy
+  // TÉLÉCHARGEMENT AMÉLIORÉ SANS BLOCAGE PAR FETCH / BLOB
   const handleDownload = async () => {
     if (!id || !appUser) return;
     if (!isSignedIn) {
@@ -240,8 +237,9 @@ export function Watch() {
       toast.error("Vidéo VIP — Abonnez-vous pour accéder au téléchargement.");
       return;
     }
+
     setDownloadPending(true);
-    const toastId = toast.loading("Préparation du téléchargement...");
+    const toastId = toast.loading("Démarrage du téléchargement...");
 
     try {
       const res = await requestDownload(id, appUser.id, isUserVip, appUser.freeDownloadsUsed);
@@ -251,31 +249,21 @@ export function Watch() {
         throw new Error("Lien de téléchargement introuvable.");
       }
 
-      // Route l'URL à travers le serveur proxy
-      const proxiedDownloadUrl = getProxyVideoUrl(rawDownloadUrl);
+      const downloadTargetUrl = getProxyVideoUrl(rawDownloadUrl);
 
-      // Téléchargement du fichier via Blob avec gestion CORS via Proxy
-      const fileResponse = await fetch(proxiedDownloadUrl);
-      if (!fileResponse.ok) {
-        throw new Error(`Erreur réseau (${fileResponse.status})`);
-      }
-
-      const blob = await fileResponse.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      const safeTitle = (video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_");
-      link.download = `${safeTitle}.mp4`;
+      // Création d'un élément d'ancrage déclenchant directement le téléchargement natif du navigateur
+      const a = document.createElement("a");
+      a.href = downloadTargetUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.setAttribute("download", `${(video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_")}.mp4`);
       
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      window.URL.revokeObjectURL(blobUrl);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
       toast.success(
-        isUserVip ? "Téléchargement enregistré sur l'appareil !" : `Téléchargement réussi. ${res.remaining} restants.`,
+        isUserVip ? "Téléchargement lancé dans le navigateur !" : `Téléchargement lancé. ${res.remaining} restant(s).`,
         { id: toastId }
       );
     } catch (e: any) {
@@ -288,7 +276,7 @@ export function Watch() {
           window.open(getProxyVideoUrl(video.videoUrl), "_blank");
           toast.success("Téléchargement démarré.", { id: toastId });
         } else {
-          toast.error(e?.message || "Erreur de téléchargement", { id: toastId });
+          toast.error(e?.message || "Erreur lors du lancement du téléchargement", { id: toastId });
         }
       }
     } finally {
@@ -296,7 +284,7 @@ export function Watch() {
     }
   };
 
-  // Téléchargement offline avec passage par le proxy
+  // Téléchargement Offline
   const handleOfflineDownload = async () => {
     if (!video || !video.videoUrl) return;
     if (!isSignedIn) {
@@ -327,10 +315,10 @@ export function Watch() {
       toast.success("Vidéo disponible offline !", { id: toastId });
       setIsOfflineAvailable(true);
     } catch (e: any) {
-      console.error("Erreur Offline 503/Network:", e);
+      console.error("Erreur Offline :", e);
       let msg = e?.message || "Erreur de téléchargement offline";
       if (msg.includes("503") || msg.includes("Failed to fetch")) {
-        msg = "Serveur indisponible (503). Vérifiez votre connexion internet ou réessayez dans quelques instants.";
+        msg = "Connexion lente ou interrompue. Réessayez dans quelques instants.";
       }
       toast.error(msg, { id: toastId });
     } finally {
@@ -432,6 +420,7 @@ export function Watch() {
                 src={getProxyVideoUrl(video.videoUrl)}
                 poster={video.thumbnailUrl || '/logo.jpg'}
                 controls
+                preload="metadata"
                 className="w-full h-full object-contain"
                 playsInline
               />
@@ -462,7 +451,6 @@ export function Watch() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                {/* Bouton Like avec icône Cœur et Animation */}
                 <Button 
                   variant="secondary" 
                   onClick={handleLike} 
