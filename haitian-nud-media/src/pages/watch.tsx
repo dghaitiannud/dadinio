@@ -18,20 +18,20 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
 
-// URL de base de votre serveur API Proxy sur Render
+// URL de base de votre serveur API Proxy sur Render (utilisé uniquement pour le téléchargement)
 const API_BASE_URL = "https://api-6rzs.onrender.com";
-
-// Helper pour générer l'URL proxifiée d'une vidéo (mode streaming)
-const getProxyVideoUrl = (rawUrl: string | undefined | null): string => {
-  if (!rawUrl) return "";
-  return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}`;
-};
 
 // Helper pour générer l'URL de téléchargement direct avec headers attachment
 const getProxyDownloadUrl = (rawUrl: string | undefined | null, title?: string): string => {
   if (!rawUrl) return "";
   const safeFilename = (title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_") + ".mp4";
   return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}&download=true&filename=${encodeURIComponent(safeFilename)}`;
+};
+
+// Helper pour le mode offline (via proxy)
+const getProxyVideoUrl = (rawUrl: string | undefined | null): string => {
+  if (!rawUrl) return "";
+  return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}`;
 };
 
 // 🌐 Récupération de la fonction t globale
@@ -233,7 +233,7 @@ export function Watch() {
     }
   };
 
-  // TÉLÉCHARGEMENT DIRECT VIA ATTACHMENT PROXY
+  // Téléchargement via l'API Proxy
   const handleDownload = async () => {
     if (!id || !appUser) return;
     if (!isSignedIn) {
@@ -256,10 +256,8 @@ export function Watch() {
         throw new Error("Lien de téléchargement introuvable.");
       }
 
-      // Génération du lien proxy avec &download=true et le nom du fichier
       const downloadTargetUrl = getProxyDownloadUrl(rawDownloadUrl, video?.title);
 
-      // Création d'un élément d'ancrage déclenchant directement le téléchargement
       const a = document.createElement("a");
       a.href = downloadTargetUrl;
       const filename = `${(video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_")}.mp4`;
@@ -280,8 +278,7 @@ export function Watch() {
         toast.error("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité.", { id: toastId });
       } else {
         if (video?.videoUrl) {
-          const fallbackUrl = getProxyDownloadUrl(video.videoUrl, video?.title);
-          window.location.href = fallbackUrl;
+          window.location.href = getProxyDownloadUrl(video.videoUrl, video?.title);
           toast.success("Téléchargement démarré.", { id: toastId });
         } else {
           toast.error(e?.message || "Erreur lors du lancement du téléchargement", { id: toastId });
@@ -292,7 +289,7 @@ export function Watch() {
     }
   };
 
-  // Téléchargement Offline
+  // Téléchargement Offline via Proxy
   const handleOfflineDownload = async () => {
     if (!video || !video.videoUrl) return;
     if (!isSignedIn) {
@@ -403,6 +400,7 @@ export function Watch() {
             </div>
           )}
 
+          {/* LECTEUR DE STREAMING : Pointe directement sur le lien d'hébergement original de la vidéo */}
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-4 group">
             {!isSignedIn ? (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center">
@@ -425,7 +423,7 @@ export function Watch() {
               <VipGate />
             ) : video.videoUrl ? (
               <video
-                src={getProxyVideoUrl(video.videoUrl)}
+                src={video.videoUrl}
                 poster={video.thumbnailUrl || '/logo.jpg'}
                 controls
                 preload="metadata"
