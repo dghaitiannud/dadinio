@@ -14,12 +14,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, Heart, Share2, Star, MessageSquare, AlertCircle, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight, RotateCcw, AlertTriangle } from "lucide-react";
+import {
+  Download, Heart, Share2, Star, MessageSquare, AlertCircle,
+  Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight, RotateCcw,
+  AlertTriangle, Settings, Check
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
 
-// URL de base de votre serveur API Proxy sur Render (utilisé uniquement pour le téléchargement)
+// URL de base de votre serveur API Proxy sur Render (utilisé pour les téléchargements)
 const API_BASE_URL = "https://api-6rzs.onrender.com";
 
 // Helper pour générer l'URL de téléchargement direct avec headers attachment
@@ -114,9 +118,9 @@ function NetworkStatusIcon() {
 }
 
 /**
- * Détection du type de flux vidéo
- * a) Type MP4 : fichier progressif (.mp4, .webm, standard)
- * b) Type HLS : playlist master ou manifest adaptatif (.m3u8, type HLS)
+ * Détection du type de flux vidéo :
+ * - Type MP4 : fichier progressif (.mp4, .webm, progressif standard)
+ * - Type HLS : playlist master ou manifest adaptatif (.m3u8, type HLS)
  */
 type StreamType = "mp4" | "hls";
 
@@ -220,12 +224,21 @@ function BufferingLoader({ progressPct }: BufferingLoaderProps) {
   );
 }
 
+export interface QualityLevel {
+  id: number;
+  label: string;
+  height: number;
+  bitrate?: number;
+}
+
 /**
- * Lecteur vidéo hybride avec fallback fluide et indicateur de buffer :
- * - Gère automatiquement la détection MP4 / HLS (.m3u8)
- * - Tente une récupération intelligente HLS
- * - Fallback transparent vers MP4 si HLS indisponible
- * - Gestion du chargement avec indicateur de pourcentage
+ * Lecteur vidéo hybride avec support MP4 optimisé et HLS adaptatif :
+ * - Détecte automatiquement l'URL .mp4 ou .m3u8
+ * - Prise en charge native HLS sous Safari / iOS et hls.js sous Chrome/Firefox/Edge/Android
+ * - Sélecteur de qualité dynamique (HLS multi-renditions ou Auto)
+ * - Contrôle de la vitesse de lecture (0.75x à 2x)
+ * - Fallback transparent HLS -> MP4 en cas d'erreur réseau / décodage
+ * - Reprise automatique en cas de reconnexion réseau
  */
 interface HybridVideoPlayerProps {
   src: string;
@@ -248,10 +261,18 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
   const [isFallbackActive, setIsFallbackActive] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
+  // Gestion des qualités et vitesse
+  const [levels, setLevels] = useState<QualityLevel[]>([]);
+  const [currentQualityIndex, setCurrentQualityIndex] = useState<number>(-1); // -1 = Auto
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+
   // Synchronise lorsque l'URL source parent change
   useEffect(() => {
     setActiveSrc(src);
     setIsFallbackActive(false);
+    setCurrentQualityIndex(-1);
+    setLevels([]);
   }, [src]);
 
   const streamType = useMemo(() => detectStreamType(activeSrc), [activeSrc]);
@@ -323,17 +344,17 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
 
     if (streamType === "hls") {
       // -----------------------------------------------------------------
-      // Traitement HLS .m3u8 (avec fallback transparent si échec)
+      // Traitement HLS .m3u8 (avec hls.js pour adaptation dynamique du débit)
       // -----------------------------------------------------------------
       if (Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
-          backBufferLength: 90,
+          backBufferLength: 60,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
           maxBufferSize: 60 * 1000 * 1000,
-          abrEwmaDefaultEstimate: 2000000,
+          abrEwmaDefaultEstimate: 2500000,
           abrBandWidthFactor: 0.9,
           abrBandWidthUpFactor: 0.7,
           manifestLoadingTimeOut: 12000,
@@ -353,6 +374,13 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
         hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
           setIsBuffering(false);
           if (data.levels && data.levels.length > 0) {
+            const parsedLevels: QualityLevel[] = data.levels.map((lvl, index) => ({
+              id: index,
+              label: lvl.height ? `${lvl.height}p` : `${Math.round(lvl.bitrate / 1000)}k`,
+              height: lvl.height || 0,
+              bitrate: lvl.bitrate
+            }));
+            setLevels(parsedLevels);
             const first = data.levels[0];
             if (first.height) {
               setCurrentLevelResolution(`${first.height}p`);
@@ -387,7 +415,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
                   hls.startLoad();
                 }, 1000 * networkRecoveryAttempts.current);
               } else {
-                triggerMp4Fallback("Impossible de joindre le flux vidéo. Vérifiez votre réseau.", true);
+                triggerMp4Fallback("Impossible de joindre le flux streaming HLS. Basculement MP4.", true);
               }
               break;
 
@@ -397,18 +425,18 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
               if (mediaRecoveryAttempts.current <= 2) {
                 hls.recoverMediaError();
               } else {
-                triggerMp4Fallback("Erreur de décodage du flux streaming.", false);
+                triggerMp4Fallback("Erreur de décodage du flux streaming. Basculement MP4.", false);
               }
               break;
 
             default:
               console.error("[HLS] Erreur fatale non récupérable:", data);
-              triggerMp4Fallback("Lecture du flux interrompue.", false);
+              triggerMp4Fallback("Lecture du flux HLS interrompue.", false);
               break;
           }
         });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        // Support natif HLS (Safari iOS/macOS)
+        // Support natif HLS (Safari iOS & macOS)
         video.src = activeSrc;
         video.load();
         if (lastPlaybackPosition.current > 0) {
@@ -419,7 +447,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
       }
     } else {
       // -----------------------------------------------------------------
-      // Traitement MP4 standard ou basculé
+      // Traitement MP4 standard compressé existant
       // -----------------------------------------------------------------
       video.removeAttribute("src");
       video.load();
@@ -494,8 +522,31 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
     setRetryKey((prev) => prev + 1);
   };
 
+  const changeQuality = (levelIndex: number) => {
+    setCurrentQualityIndex(levelIndex);
+    setShowSettingsMenu(false);
+    if (hlsRef.current) {
+      hlsRef.current.currentLevel = levelIndex;
+      if (levelIndex === -1) {
+        toast.info("Qualité définie sur : Automatique");
+      } else {
+        const selected = levels[levelIndex];
+        toast.info(`Qualité définie sur : ${selected?.label || 'Manuel'}`);
+      }
+    }
+  };
+
+  const changeSpeed = (speed: number) => {
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+    setShowSettingsMenu(false);
+    toast.info(`Vitesse : ${speed}x`);
+  };
+
   return (
-    <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
+    <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden group select-none">
       <video
         ref={videoRef}
         poster={poster}
@@ -507,7 +558,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
         {streamType === "mp4" && <source src={activeSrc} type="video/mp4" />}
       </video>
 
-      {/* Badge indicateur du format source & résolution */}
+      {/* Badges d'information sur la source & résolution */}
       <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
         <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-zinc-300 border border-white/10">
           {isFallbackActive
@@ -520,6 +571,75 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/80 backdrop-blur-sm text-white">
             {currentLevelResolution}
           </span>
+        )}
+      </div>
+
+      {/* Bouton de configuration de lecture (Qualités + Vitesse) */}
+      <div className="absolute top-3 right-3 z-20">
+        <button
+          type="button"
+          onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+          aria-label="Paramètres de lecture"
+          className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm text-white/80 hover:text-white border border-white/10 transition-all shadow-md"
+        >
+          <Settings className="h-4 w-4" />
+        </button>
+
+        {showSettingsMenu && (
+          <div className="absolute right-0 mt-2 w-48 rounded-xl bg-zinc-900/95 backdrop-blur-md border border-white/15 p-2 shadow-2xl z-30 text-xs text-white">
+            {/* Menu Qualité si HLS */}
+            {streamType === "hls" && levels.length > 0 && (
+              <div className="mb-2">
+                <div className="font-semibold text-zinc-400 uppercase text-[10px] px-2 py-1">
+                  Résolution
+                </div>
+                <button
+                  type="button"
+                  onClick={() => changeQuality(-1)}
+                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between hover:bg-white/10 ${
+                    currentQualityIndex === -1 ? "text-primary font-bold" : "text-zinc-200"
+                  }`}
+                >
+                  <span>Auto (Adaptatif)</span>
+                  {currentQualityIndex === -1 && <Check className="h-3 w-3" />}
+                </button>
+                {levels.map((lvl) => (
+                  <button
+                    key={lvl.id}
+                    type="button"
+                    onClick={() => changeQuality(lvl.id)}
+                    className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between hover:bg-white/10 ${
+                      currentQualityIndex === lvl.id ? "text-primary font-bold" : "text-zinc-200"
+                    }`}
+                  >
+                    <span>{lvl.label}</span>
+                    {currentQualityIndex === lvl.id && <Check className="h-3 w-3" />}
+                  </button>
+                ))}
+                <div className="my-1 border-t border-white/10" />
+              </div>
+            )}
+
+            {/* Menu Vitesse de lecture */}
+            <div>
+              <div className="font-semibold text-zinc-400 uppercase text-[10px] px-2 py-1">
+                Vitesse
+              </div>
+              {[0.75, 1, 1.25, 1.5, 2].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => changeSpeed(s)}
+                  className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between hover:bg-white/10 ${
+                    playbackSpeed === s ? "text-primary font-bold" : "text-zinc-200"
+                  }`}
+                >
+                  <span>{s === 1 ? "Normal (1x)" : `${s}x`}</span>
+                  {playbackSpeed === s && <Check className="h-3 w-3" />}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
