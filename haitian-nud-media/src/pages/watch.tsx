@@ -115,10 +115,10 @@ function NetworkStatusIcon() {
 
 /**
  * Détermine le type de flux vidéo
- * Type 1 : HLS Adaptatif (.m3u8)
- * Type 2 : Fichier progressif (MP4 / WebM standard)
+ * Type a) URL standard MP4 (.mp4 ou flux vidéo progressif existant)
+ * Type b) Flux HLS adaptatif (.m3u8)
  */
-type StreamType = "hls" | "mp4";
+type StreamType = "mp4" | "hls";
 
 function detectStreamType(url: string): StreamType {
   const cleanUrl = url.split("?")[0].toLowerCase();
@@ -130,8 +130,8 @@ function detectStreamType(url: string): StreamType {
 
 /**
  * Lecteur vidéo hybride :
- * 1. Support HLS adaptatif (.m3u8) : ABR, gestion des micro-coupures, recovery automatique
- * 2. Support MP4 compressé : chargement HTML5 progressif direct et rapide
+ * - Type a) URLs standards .mp4 (vidéos existantes) : lecture progressive HTML5 haute performance
+ * - Type b) URLs HLS .m3u8 : streaming adaptatif multi-débit
  */
 interface HybridVideoPlayerProps {
   src: string;
@@ -154,14 +154,26 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
     setPlaybackError(null);
     setIsBuffering(false);
 
-    // Nettoyage préalable de toute instance hls existante
+    // Nettoyage de l'instance HLS si elle était précédemment active
     if (hlsRef.current) {
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
 
-    if (streamType === "hls") {
-      // Type 1 : HLS Stream (.m3u8)
+    if (streamType === "mp4") {
+      // -------------------------------------------------------------
+      // a) Traitement optimisé pour les URLs standards .mp4 existantes
+      // -------------------------------------------------------------
+      video.removeAttribute("src");
+      video.load(); // Réinitialise les tampons internes du lecteur
+
+      // Assignation de la source MP4 directe
+      video.src = src;
+      video.load();
+    } else {
+      // -------------------------------------------------------------
+      // b) Traitement HLS adaptatif (.m3u8)
+      // -------------------------------------------------------------
       if (Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: true,
@@ -169,7 +181,7 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
           backBufferLength: 90,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
-          startLevel: -1, // Auto adaptation du débit
+          startLevel: -1,
         });
 
         hlsRef.current = hls;
@@ -180,15 +192,15 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                console.warn("[HLS] Network error, tentative de reprise...");
+                console.warn("[HLS] Network error, reprise...");
                 hls.startLoad();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
-                console.warn("[HLS] Media error, tentative de récupération...");
+                console.warn("[HLS] Media error, récupération...");
                 hls.recoverMediaError();
                 break;
               default:
-                console.error("[HLS] Erreur fatale non récupérable:", data);
+                console.error("[HLS] Erreur fatale:", data);
                 setPlaybackError("Erreur de flux streaming HLS.");
                 hls.destroy();
                 hlsRef.current = null;
@@ -197,37 +209,39 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
           }
         });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        // HLS natif pour Safari iOS / macOS
         video.src = src;
       } else {
-        setPlaybackError("Votre navigateur ne supporte pas le streaming HLS.");
+        setPlaybackError("Format HLS non supporté sur ce navigateur.");
       }
-    } else {
-      // Type 2 : MP4 compressé progressif
-      video.src = src;
-      video.load();
     }
 
+    // Gestion des événements de cycle de lecture et mise en mémoire tampon
     const handleWaiting = () => setIsBuffering(true);
+    const handleStalled = () => {
+      if (video.paused) return;
+      setIsBuffering(true);
+    };
     const handlePlaying = () => {
       setIsBuffering(false);
       setPlaybackError(null);
     };
     const handleCanPlay = () => setIsBuffering(false);
     const handleError = () => {
-      if (!hlsRef.current) {
-        setPlaybackError("Impossible de lire ce fichier MP4.");
+      if (streamType === "mp4") {
+        setPlaybackError("Impossible de charger le fichier vidéo MP4.");
       }
       setIsBuffering(false);
     };
 
     video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("stalled", handleStalled);
     video.addEventListener("playing", handlePlaying);
     video.addEventListener("canplay", handleCanPlay);
     video.addEventListener("error", handleError);
 
     return () => {
       video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("stalled", handleStalled);
       video.removeEventListener("playing", handlePlaying);
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("error", handleError);
@@ -250,25 +264,27 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
         poster={poster}
         controls
         preload="metadata"
-        className="w-full h-full object-contain"
         playsInline
-      />
+        className="w-full h-full object-contain"
+      >
+        {streamType === "mp4" && <source src={src} type="video/mp4" />}
+      </video>
 
-      {/* Badge du mode streaming */}
+      {/* Badge indicateur du format source */}
       <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
         <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-zinc-300 border border-white/10">
-          {streamType === "hls" ? "HLS Stream" : "MP4 HD"}
+          {streamType === "mp4" ? "MP4 Standard" : "HLS Adaptatif"}
         </span>
       </div>
 
-      {/* Indicateur de chargement / buffering */}
+      {/* Spinner de buffering */}
       {isBuffering && !playbackError && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-[1px] transition-opacity">
           <Loader2 className="h-10 w-10 animate-spin text-white/90" />
         </div>
       )}
 
-      {/* Message d'erreur de lecture */}
+      {/* Panneau d'erreur avec bouton réessai */}
       {playbackError && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/85 text-center p-4">
           <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
