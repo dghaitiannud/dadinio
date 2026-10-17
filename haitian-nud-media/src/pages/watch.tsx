@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, Link } from "wouter";
+import Hls from "hls.js";
 import { useAuth } from "@/lib/auth-context";
 import {
   getVideo, getVideos, registerView, requestDownload,
@@ -108,6 +109,105 @@ function NetworkStatusIcon() {
           }`} />
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Lecteur vidéo hybride :
+ * - Supporte les vidéos progressives MP4 actuelles (preload metadata, fluidité maximale)
+ * - Supporte automatiquement les streams adaptatifs HLS (.m3u8) via Hls.js ou natif Safari
+ */
+interface HybridVideoPlayerProps {
+  src: string;
+  poster?: string;
+}
+
+function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isBuffering, setIsBuffering] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
+
+    let hlsInstance: Hls | null = null;
+    const isHls = src.includes(".m3u8");
+
+    if (isHls) {
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 90,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+        });
+
+        hlsInstance.loadSource(src);
+        hlsInstance.attachMedia(video);
+
+        hlsInstance.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.warn("HLS network error, tentation de récupération...");
+                hlsInstance?.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.warn("HLS media error, tentation de récupération...");
+                hlsInstance?.recoverMediaError();
+                break;
+              default:
+                console.error("Erreur HLS fatale:", data);
+                hlsInstance?.destroy();
+                break;
+            }
+          }
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Support HLS natif pour Safari iOS / macOS
+        video.src = src;
+      }
+    } else {
+      // Lecture MP4 compressé classique
+      video.src = src;
+    }
+
+    const handleWaiting = () => setIsBuffering(true);
+    const handlePlaying = () => setIsBuffering(false);
+    const handleCanPlay = () => setIsBuffering(false);
+
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("canplay", handleCanPlay);
+
+    return () => {
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("canplay", handleCanPlay);
+
+      if (hlsInstance) {
+        hlsInstance.destroy();
+      }
+    };
+  }, [src]);
+
+  return (
+    <div className="relative w-full h-full">
+      <video
+        ref={videoRef}
+        poster={poster}
+        controls
+        preload="metadata"
+        className="w-full h-full object-contain"
+        playsInline
+      />
+      {isBuffering && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] transition-opacity">
+          <Loader2 className="h-10 w-10 animate-spin text-white/90" />
+        </div>
+      )}
     </div>
   );
 }
@@ -400,7 +500,7 @@ export function Watch() {
             </div>
           )}
 
-          {/* LECTEUR DE STREAMING : Pointe directement sur le lien d'hébergement original de la vidéo */}
+          {/* LECTEUR DE STREAMING HYBRIDE (MP4 compressé + HLS .m3u8) */}
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-4 group">
             {!isSignedIn ? (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center">
@@ -422,13 +522,9 @@ export function Watch() {
             ) : video.isVip && !isUserVip ? (
               <VipGate />
             ) : video.videoUrl ? (
-              <video
+              <HybridVideoPlayer
                 src={video.videoUrl}
                 poster={video.thumbnailUrl || '/logo.jpg'}
-                controls
-                preload="metadata"
-                className="w-full h-full object-contain"
-                playsInline
               />
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
