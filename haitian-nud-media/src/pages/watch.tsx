@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useParams, Link } from "wouter";
 import Hls from "hls.js";
 import { useAuth } from "@/lib/auth-context";
@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, Heart, Share2, Star, MessageSquare, AlertCircle, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight } from "lucide-react";
+import { Download, Heart, Share2, Star, MessageSquare, AlertCircle, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
@@ -114,9 +114,24 @@ function NetworkStatusIcon() {
 }
 
 /**
+ * Détermine le type de flux vidéo
+ * Type 1 : HLS Adaptatif (.m3u8)
+ * Type 2 : Fichier progressif (MP4 / WebM standard)
+ */
+type StreamType = "hls" | "mp4";
+
+function detectStreamType(url: string): StreamType {
+  const cleanUrl = url.split("?")[0].toLowerCase();
+  if (cleanUrl.endsWith(".m3u8") || url.includes(".m3u8")) {
+    return "hls";
+  }
+  return "mp4";
+}
+
+/**
  * Lecteur vidéo hybride :
- * - Supporte les vidéos progressives MP4 actuelles (preload metadata, fluidité maximale)
- * - Supporte automatiquement les streams adaptatifs HLS (.m3u8) via Hls.js ou natif Safari
+ * 1. Support HLS adaptatif (.m3u8) : ABR, gestion des micro-coupures, recovery automatique
+ * 2. Support MP4 compressé : chargement HTML5 progressif direct et rapide
  */
 interface HybridVideoPlayerProps {
   src: string;
@@ -125,76 +140,111 @@ interface HybridVideoPlayerProps {
 
 function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const streamType = useMemo(() => detectStreamType(src), [src]);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !src) return;
 
-    let hlsInstance: Hls | null = null;
-    const isHls = src.includes(".m3u8");
+    setPlaybackError(null);
+    setIsBuffering(false);
 
-    if (isHls) {
+    // Nettoyage préalable de toute instance hls existante
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    if (streamType === "hls") {
+      // Type 1 : HLS Stream (.m3u8)
       if (Hls.isSupported()) {
-        hlsInstance = new Hls({
+        const hls = new Hls({
           enableWorker: true,
           lowLatencyMode: true,
           backBufferLength: 90,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
+          startLevel: -1, // Auto adaptation du débit
         });
 
-        hlsInstance.loadSource(src);
-        hlsInstance.attachMedia(video);
+        hlsRef.current = hls;
+        hls.loadSource(src);
+        hls.attachMedia(video);
 
-        hlsInstance.on(Hls.Events.ERROR, (_event, data) => {
+        hls.on(Hls.Events.ERROR, (_event, data) => {
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
-                console.warn("HLS network error, tentation de récupération...");
-                hlsInstance?.startLoad();
+                console.warn("[HLS] Network error, tentative de reprise...");
+                hls.startLoad();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
-                console.warn("HLS media error, tentation de récupération...");
-                hlsInstance?.recoverMediaError();
+                console.warn("[HLS] Media error, tentative de récupération...");
+                hls.recoverMediaError();
                 break;
               default:
-                console.error("Erreur HLS fatale:", data);
-                hlsInstance?.destroy();
+                console.error("[HLS] Erreur fatale non récupérable:", data);
+                setPlaybackError("Erreur de flux streaming HLS.");
+                hls.destroy();
+                hlsRef.current = null;
                 break;
             }
           }
         });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        // Support HLS natif pour Safari iOS / macOS
+        // HLS natif pour Safari iOS / macOS
         video.src = src;
+      } else {
+        setPlaybackError("Votre navigateur ne supporte pas le streaming HLS.");
       }
     } else {
-      // Lecture MP4 compressé classique
+      // Type 2 : MP4 compressé progressif
       video.src = src;
+      video.load();
     }
 
     const handleWaiting = () => setIsBuffering(true);
-    const handlePlaying = () => setIsBuffering(false);
+    const handlePlaying = () => {
+      setIsBuffering(false);
+      setPlaybackError(null);
+    };
     const handleCanPlay = () => setIsBuffering(false);
+    const handleError = () => {
+      if (!hlsRef.current) {
+        setPlaybackError("Impossible de lire ce fichier MP4.");
+      }
+      setIsBuffering(false);
+    };
 
     video.addEventListener("waiting", handleWaiting);
     video.addEventListener("playing", handlePlaying);
     video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("error", handleError);
 
     return () => {
       video.removeEventListener("waiting", handleWaiting);
       video.removeEventListener("playing", handlePlaying);
       video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("error", handleError);
 
-      if (hlsInstance) {
-        hlsInstance.destroy();
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
       }
     };
-  }, [src]);
+  }, [src, streamType, retryKey]);
+
+  const handleRetry = () => {
+    setRetryKey((prev) => prev + 1);
+  };
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full bg-black flex items-center justify-center">
       <video
         ref={videoRef}
         poster={poster}
@@ -203,9 +253,29 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
         className="w-full h-full object-contain"
         playsInline
       />
-      {isBuffering && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] transition-opacity">
+
+      {/* Badge du mode streaming */}
+      <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
+        <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-zinc-300 border border-white/10">
+          {streamType === "hls" ? "HLS Stream" : "MP4 HD"}
+        </span>
+      </div>
+
+      {/* Indicateur de chargement / buffering */}
+      {isBuffering && !playbackError && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-[1px] transition-opacity">
           <Loader2 className="h-10 w-10 animate-spin text-white/90" />
+        </div>
+      )}
+
+      {/* Message d'erreur de lecture */}
+      {playbackError && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/85 text-center p-4">
+          <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
+          <p className="text-sm text-zinc-200 mb-3">{playbackError}</p>
+          <Button size="sm" variant="outline" onClick={handleRetry} className="gap-2 text-xs">
+            <RotateCcw className="h-3.5 w-3.5" /> Réessayer
+          </Button>
         </div>
       )}
     </div>
