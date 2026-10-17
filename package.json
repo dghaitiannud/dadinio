@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "compress:video": "node scripts/compress-video.js"
+  },
   "dependencies": {
     "@mux/mux-player-react": "^3.13.0",
     "canvas-confetti": "^1.9.4",
