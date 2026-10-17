@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Download, Heart, Share2, Star, MessageSquare, AlertCircle, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight, RotateCcw } from "lucide-react";
+import { Download, Heart, Share2, Star, MessageSquare, AlertCircle, Lock, Copy, Wifi, WifiOff, Loader2, ArrowRight, RotateCcw, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
@@ -142,7 +142,6 @@ function detectStreamType(url: string): StreamType {
  */
 function deriveMp4Fallback(hlsUrl: string): string | null {
   if (!hlsUrl) return null;
-  // Cas où l'extension est simplement .m3u8 (ex: /master.m3u8 -> /video.mp4 ou /index.mp4)
   if (hlsUrl.includes(".m3u8")) {
     return hlsUrl.replace(/\.m3u8(\?.*)?$/i, ".mp4$1");
   }
@@ -150,11 +149,83 @@ function deriveMp4Fallback(hlsUrl: string): string | null {
 }
 
 /**
- * Lecteur vidéo hybride avec fallback fluide :
+ * Composant d'erreur élégant avec reprise réseau
+ */
+interface VideoErrorOverlayProps {
+  message: string;
+  isNetworkError: boolean;
+  onRetry: () => void;
+}
+
+function VideoErrorOverlay({ message, isNetworkError, onRetry }: VideoErrorOverlayProps) {
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md px-6 text-center animate-in fade-in duration-300">
+      <div className="relative mb-4">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-lg shadow-red-500/10">
+          {isNetworkError ? <WifiOff className="h-8 w-8" /> : <AlertTriangle className="h-8 w-8" />}
+        </div>
+      </div>
+      <h3 className="text-lg font-semibold text-white mb-1.5">
+        {isNetworkError ? "Connexion interrompue" : "Problème de lecture"}
+      </h3>
+      <p className="text-sm text-zinc-400 max-w-sm mb-6 leading-relaxed">
+        {message}
+      </p>
+      <div className="flex items-center gap-3">
+        <Button
+          size="sm"
+          onClick={onRetry}
+          className="bg-primary hover:bg-primary/90 text-white font-medium rounded-xl px-5 py-2.5 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105"
+        >
+          <RotateCcw className="h-4 w-4" /> Réessayer la lecture
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Indicateur de chargement / buffering avec progression
+ */
+interface BufferingLoaderProps {
+  progressPct: number | null;
+}
+
+function BufferingLoader({ progressPct }: BufferingLoaderProps) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200">
+      <div className="relative flex items-center justify-center">
+        <div className="absolute h-16 w-16 rounded-full border-2 border-primary/20 animate-ping" />
+        <div className="h-14 w-14 rounded-full bg-black/60 border border-white/10 flex items-center justify-center shadow-2xl backdrop-blur-md">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
+      </div>
+      <div className="mt-3.5 flex flex-col items-center">
+        <span className="text-xs font-medium tracking-wide text-white/90 drop-shadow">
+          Chargement du flux...
+        </span>
+        {progressPct !== null && progressPct > 0 && progressPct <= 100 && (
+          <div className="mt-1 flex items-center gap-1.5">
+            <div className="w-20 h-1 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-300"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-mono text-zinc-300">{progressPct}%</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Lecteur vidéo hybride avec fallback fluide et indicateur de buffer :
  * - Gère automatiquement la détection MP4 / HLS (.m3u8)
  * - Tente une récupération intelligente HLS
- * - Si le HLS échoue totalement, bascule de manière fluide vers le MP4 de secours
- *   en conservant la position temporelle de lecture.
+ * - Fallback transparent vers MP4 si HLS indisponible
+ * - Gestion du chargement avec indicateur de pourcentage
  */
 interface HybridVideoPlayerProps {
   src: string;
@@ -171,7 +242,8 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
 
   const [activeSrc, setActiveSrc] = useState<string>(src);
   const [isBuffering, setIsBuffering] = useState(false);
-  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [bufferProgress, setBufferProgress] = useState<number | null>(null);
+  const [playbackError, setPlaybackError] = useState<{ message: string; isNetwork: boolean } | null>(null);
   const [currentLevelResolution, setCurrentLevelResolution] = useState<string | null>(null);
   const [isFallbackActive, setIsFallbackActive] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -194,7 +266,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
   }, []);
 
   // Déclenchement fluide du fallback MP4
-  const triggerMp4Fallback = useCallback((reason: string) => {
+  const triggerMp4Fallback = useCallback((reason: string, isNetwork = false) => {
     const video = videoRef.current;
     if (video) {
       lastPlaybackPosition.current = video.currentTime || 0;
@@ -208,17 +280,41 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
       setActiveSrc(targetMp4);
       setPlaybackError(null);
     } else {
-      setPlaybackError(reason);
+      setPlaybackError({
+        message: !navigator.onLine
+          ? "Vous semblez hors ligne. Vérifiez votre connexion internet."
+          : reason,
+        isNetwork: isNetwork || !navigator.onLine,
+      });
       cleanupHls();
     }
   }, [fallbackSrc, src, activeSrc, cleanupHls]);
+
+  // Calcul du pourcentage de mise en mémoire tampon de la balise vidéo
+  const updateProgressFromVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.duration || Number.isNaN(video.duration)) {
+      return;
+    }
+    const current = video.currentTime;
+    const buffered = video.buffered;
+    for (let i = 0; i < buffered.length; i++) {
+      if (buffered.start(i) <= current && current <= buffered.end(i)) {
+        const bufferedEnd = buffered.end(i);
+        const pct = Math.min(100, Math.round((bufferedEnd / video.duration) * 100));
+        setBufferProgress(pct);
+        return;
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !activeSrc) return;
 
     setPlaybackError(null);
-    setIsBuffering(false);
+    setIsBuffering(true);
+    setBufferProgress(null);
     setCurrentLevelResolution(null);
     mediaRecoveryAttempts.current = 0;
     networkRecoveryAttempts.current = 0;
@@ -255,6 +351,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+          setIsBuffering(false);
           if (data.levels && data.levels.length > 0) {
             const first = data.levels[0];
             if (first.height) {
@@ -274,6 +371,10 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
           }
         });
 
+        hls.on(Hls.Events.BUFFER_APPENDED, () => {
+          updateProgressFromVideo();
+        });
+
         hls.on(Hls.Events.ERROR, (_event, data) => {
           if (!data.fatal) return;
 
@@ -281,12 +382,12 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
             case Hls.ErrorTypes.NETWORK_ERROR:
               networkRecoveryAttempts.current += 1;
               console.warn(`[HLS] Erreur réseau (${networkRecoveryAttempts.current}/3)...`);
-              if (networkRecoveryAttempts.current <= 3) {
+              if (networkRecoveryAttempts.current <= 3 && navigator.onLine) {
                 setTimeout(() => {
                   hls.startLoad();
                 }, 1000 * networkRecoveryAttempts.current);
               } else {
-                triggerMp4Fallback("Flux HLS injoignable, bascule vers MP4");
+                triggerMp4Fallback("Impossible de joindre le flux vidéo. Vérifiez votre réseau.", true);
               }
               break;
 
@@ -296,13 +397,13 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
               if (mediaRecoveryAttempts.current <= 2) {
                 hls.recoverMediaError();
               } else {
-                triggerMp4Fallback("Décodage HLS échoué, bascule vers MP4");
+                triggerMp4Fallback("Erreur de décodage du flux streaming.", false);
               }
               break;
 
             default:
               console.error("[HLS] Erreur fatale non récupérable:", data);
-              triggerMp4Fallback("Erreur HLS non supportée, bascule vers MP4");
+              triggerMp4Fallback("Lecture du flux interrompue.", false);
               break;
           }
         });
@@ -314,8 +415,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
           video.currentTime = lastPlaybackPosition.current;
         }
       } else {
-        // Fallback immédiat si le navigateur n'a aucun support HLS
-        triggerMp4Fallback("HLS non pris en charge par ce navigateur");
+        triggerMp4Fallback("Format HLS non supporté sur ce navigateur.", false);
       }
     } else {
       // -----------------------------------------------------------------
@@ -342,39 +442,60 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
       setPlaybackError(null);
     };
     const handleCanPlay = () => setIsBuffering(false);
+    const handleProgress = () => updateProgressFromVideo();
     const handleError = () => {
+      const isOffline = !navigator.onLine;
       if (streamType === "hls") {
-        triggerMp4Fallback("Erreur de source HLS");
+        triggerMp4Fallback("Erreur lors du chargement de la vidéo.", isOffline);
       } else {
-        setPlaybackError("Impossible de lire ce fichier vidéo.");
+        setPlaybackError({
+          message: isOffline
+            ? "Vous êtes actuellement hors ligne. Reconnectez-vous à Internet."
+            : "Impossible de lire ce fichier vidéo. Veuillez réessayer.",
+          isNetwork: isOffline,
+        });
       }
       setIsBuffering(false);
+    };
+
+    // Auto-reconnexion lors du retour du réseau
+    const handleOnline = () => {
+      if (playbackError?.isNetwork) {
+        toast.info("Connexion rétablie, reprise de la lecture...");
+        setRetryKey((prev) => prev + 1);
+      }
     };
 
     video.addEventListener("waiting", handleWaiting);
     video.addEventListener("stalled", handleStalled);
     video.addEventListener("playing", handlePlaying);
     video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("progress", handleProgress);
     video.addEventListener("error", handleError);
+    window.addEventListener("online", handleOnline);
 
     return () => {
       video.removeEventListener("waiting", handleWaiting);
       video.removeEventListener("stalled", handleStalled);
       video.removeEventListener("playing", handlePlaying);
       video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("progress", handleProgress);
       video.removeEventListener("error", handleError);
+      window.removeEventListener("online", handleOnline);
       cleanupHls();
     };
-  }, [activeSrc, streamType, retryKey, cleanupHls, triggerMp4Fallback]);
+  }, [activeSrc, streamType, retryKey, cleanupHls, triggerMp4Fallback, updateProgressFromVideo]);
 
   const handleRetry = () => {
     setActiveSrc(src);
     setIsFallbackActive(false);
+    setPlaybackError(null);
+    setIsBuffering(true);
     setRetryKey((prev) => prev + 1);
   };
 
   return (
-    <div className="relative w-full h-full bg-black flex items-center justify-center">
+    <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
       <video
         ref={videoRef}
         poster={poster}
@@ -402,22 +523,18 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
         )}
       </div>
 
-      {/* Spinner de buffering */}
+      {/* Loader de buffering avec progression */}
       {isBuffering && !playbackError && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-[1px] transition-opacity">
-          <Loader2 className="h-10 w-10 animate-spin text-white/90" />
-        </div>
+        <BufferingLoader progressPct={bufferProgress} />
       )}
 
-      {/* Panneau d'erreur avec bouton réessai */}
+      {/* Composant d'erreur élégant en cas de perte réseau ou d'échec de lecture */}
       {playbackError && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/85 text-center p-4">
-          <AlertCircle className="h-10 w-10 text-red-500 mb-2" />
-          <p className="text-sm text-zinc-200 mb-3">{playbackError}</p>
-          <Button size="sm" variant="outline" onClick={handleRetry} className="gap-2 text-xs">
-            <RotateCcw className="h-3.5 w-3.5" /> Réessayer
-          </Button>
-        </div>
+        <VideoErrorOverlay
+          message={playbackError.message}
+          isNetworkError={playbackError.isNetwork}
+          onRetry={handleRetry}
+        />
       )}
     </div>
   );
