@@ -138,27 +138,51 @@ function detectStreamType(url: string): StreamType {
 }
 
 /**
- * Lecteur vidéo hybride :
- * - a) URLs standards .mp4 (vidéos existantes) : lecture progressive HTML5 avec mise en cache métadonnées
- * - b) Playlists HLS .m3u8 (futures vidéos streaming) : flux adaptatif ABR avec hls.js + reprise d'erreur automatique
+ * Déduit l'URL de secours MP4 si un flux HLS échoue
+ */
+function deriveMp4Fallback(hlsUrl: string): string | null {
+  if (!hlsUrl) return null;
+  // Cas où l'extension est simplement .m3u8 (ex: /master.m3u8 -> /video.mp4 ou /index.mp4)
+  if (hlsUrl.includes(".m3u8")) {
+    return hlsUrl.replace(/\.m3u8(\?.*)?$/i, ".mp4$1");
+  }
+  return null;
+}
+
+/**
+ * Lecteur vidéo hybride avec fallback fluide :
+ * - Gère automatiquement la détection MP4 / HLS (.m3u8)
+ * - Tente une récupération intelligente HLS
+ * - Si le HLS échoue totalement, bascule de manière fluide vers le MP4 de secours
+ *   en conservant la position temporelle de lecture.
  */
 interface HybridVideoPlayerProps {
   src: string;
   poster?: string;
+  fallbackSrc?: string;
 }
 
-function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
+function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const mediaRecoveryAttempts = useRef<number>(0);
   const networkRecoveryAttempts = useRef<number>(0);
+  const lastPlaybackPosition = useRef<number>(0);
 
+  const [activeSrc, setActiveSrc] = useState<string>(src);
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [currentLevelResolution, setCurrentLevelResolution] = useState<string | null>(null);
+  const [isFallbackActive, setIsFallbackActive] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
-  const streamType = useMemo(() => detectStreamType(src), [src]);
+  // Synchronise lorsque l'URL source parent change
+  useEffect(() => {
+    setActiveSrc(src);
+    setIsFallbackActive(false);
+  }, [src]);
+
+  const streamType = useMemo(() => detectStreamType(activeSrc), [activeSrc]);
 
   const cleanupHls = useCallback(() => {
     if (hlsRef.current) {
@@ -169,9 +193,29 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
     }
   }, []);
 
+  // Déclenchement fluide du fallback MP4
+  const triggerMp4Fallback = useCallback((reason: string) => {
+    const video = videoRef.current;
+    if (video) {
+      lastPlaybackPosition.current = video.currentTime || 0;
+    }
+
+    const targetMp4 = fallbackSrc || deriveMp4Fallback(src);
+    if (targetMp4 && targetMp4 !== activeSrc) {
+      console.warn(`[Video Player] Fallback HLS -> MP4 déclenché (${reason}):`, targetMp4);
+      cleanupHls();
+      setIsFallbackActive(true);
+      setActiveSrc(targetMp4);
+      setPlaybackError(null);
+    } else {
+      setPlaybackError(reason);
+      cleanupHls();
+    }
+  }, [fallbackSrc, src, activeSrc, cleanupHls]);
+
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !src) return;
+    if (!video || !activeSrc) return;
 
     setPlaybackError(null);
     setIsBuffering(false);
@@ -183,7 +227,7 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
 
     if (streamType === "hls") {
       // -----------------------------------------------------------------
-      // b) Traitement HLS .m3u8 (Futures vidéos de streaming adaptatif)
+      // Traitement HLS .m3u8 (avec fallback transparent si échec)
       // -----------------------------------------------------------------
       if (Hls.isSupported()) {
         const hls = new Hls({
@@ -192,22 +236,22 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
           backBufferLength: 90,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
-          maxBufferSize: 60 * 1000 * 1000, // 60 Mo max de buffer
-          abrEwmaDefaultEstimate: 2000000,  // Démarrage à 2 Mbps
-          abrBandWidthFactor: 0.9,          // Marge de sécurité 10%
+          maxBufferSize: 60 * 1000 * 1000,
+          abrEwmaDefaultEstimate: 2000000,
+          abrBandWidthFactor: 0.9,
           abrBandWidthUpFactor: 0.7,
-          manifestLoadingTimeOut: 15000,
-          manifestLoadingMaxRetry: 4,
-          levelLoadingTimeOut: 15000,
-          levelLoadingMaxRetry: 4,
-          fragLoadingTimeOut: 20000,
-          fragLoadingMaxRetry: 6,
-          startLevel: -1,                   // Auto-sélection adaptative
+          manifestLoadingTimeOut: 12000,
+          manifestLoadingMaxRetry: 3,
+          levelLoadingTimeOut: 12000,
+          levelLoadingMaxRetry: 3,
+          fragLoadingTimeOut: 18000,
+          fragLoadingMaxRetry: 4,
+          startLevel: -1,
         });
 
         hlsRef.current = hls;
 
-        hls.loadSource(src);
+        hls.loadSource(activeSrc);
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
@@ -216,6 +260,10 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
             if (first.height) {
               setCurrentLevelResolution(`${first.height}p`);
             }
+          }
+          if (lastPlaybackPosition.current > 0) {
+            video.currentTime = lastPlaybackPosition.current;
+            video.play().catch(() => {});
           }
         });
 
@@ -232,54 +280,56 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               networkRecoveryAttempts.current += 1;
-              console.warn(`[HLS] Network error (tentative ${networkRecoveryAttempts.current}/4)...`, data);
-              if (networkRecoveryAttempts.current <= 4) {
+              console.warn(`[HLS] Erreur réseau (${networkRecoveryAttempts.current}/3)...`);
+              if (networkRecoveryAttempts.current <= 3) {
                 setTimeout(() => {
                   hls.startLoad();
                 }, 1000 * networkRecoveryAttempts.current);
               } else {
-                setPlaybackError("Connexion au flux vidéo HLS interrompue. Vérifiez votre réseau.");
-                cleanupHls();
+                triggerMp4Fallback("Flux HLS injoignable, bascule vers MP4");
               }
               break;
 
             case Hls.ErrorTypes.MEDIA_ERROR:
               mediaRecoveryAttempts.current += 1;
-              console.warn(`[HLS] Media error (tentative ${mediaRecoveryAttempts.current}/3)...`, data);
+              console.warn(`[HLS] Erreur média (${mediaRecoveryAttempts.current}/2)...`);
               if (mediaRecoveryAttempts.current <= 2) {
                 hls.recoverMediaError();
-              } else if (mediaRecoveryAttempts.current === 3) {
-                // Tente de basculer vers un autre niveau de codec/rendition
-                hls.swapAudioCodec();
-                hls.recoverMediaError();
               } else {
-                setPlaybackError("Erreur de décodage du flux HLS.");
-                cleanupHls();
+                triggerMp4Fallback("Décodage HLS échoué, bascule vers MP4");
               }
               break;
 
             default:
               console.error("[HLS] Erreur fatale non récupérable:", data);
-              setPlaybackError("Lecture du flux streaming impossible.");
-              cleanupHls();
+              triggerMp4Fallback("Erreur HLS non supportée, bascule vers MP4");
               break;
           }
         });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        // Support natif HLS (Safari macOS & iOS)
-        video.src = src;
+        // Support natif HLS (Safari iOS/macOS)
+        video.src = activeSrc;
         video.load();
+        if (lastPlaybackPosition.current > 0) {
+          video.currentTime = lastPlaybackPosition.current;
+        }
       } else {
-        setPlaybackError("Votre navigateur ne prend pas en charge la lecture HLS adaptative.");
+        // Fallback immédiat si le navigateur n'a aucun support HLS
+        triggerMp4Fallback("HLS non pris en charge par ce navigateur");
       }
     } else {
       // -----------------------------------------------------------------
-      // a) Traitement MP4 standard (.mp4 compressé existant)
+      // Traitement MP4 standard ou basculé
       // -----------------------------------------------------------------
       video.removeAttribute("src");
       video.load();
-      video.src = src;
+      video.src = activeSrc;
       video.load();
+
+      if (lastPlaybackPosition.current > 0) {
+        video.currentTime = lastPlaybackPosition.current;
+        video.play().catch(() => {});
+      }
     }
 
     const handleWaiting = () => setIsBuffering(true);
@@ -293,8 +343,10 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
     };
     const handleCanPlay = () => setIsBuffering(false);
     const handleError = () => {
-      if (streamType === "mp4") {
-        setPlaybackError("Impossible de charger le fichier vidéo MP4.");
+      if (streamType === "hls") {
+        triggerMp4Fallback("Erreur de source HLS");
+      } else {
+        setPlaybackError("Impossible de lire ce fichier vidéo.");
       }
       setIsBuffering(false);
     };
@@ -313,9 +365,11 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
       video.removeEventListener("error", handleError);
       cleanupHls();
     };
-  }, [src, streamType, retryKey, cleanupHls]);
+  }, [activeSrc, streamType, retryKey, cleanupHls, triggerMp4Fallback]);
 
   const handleRetry = () => {
+    setActiveSrc(src);
+    setIsFallbackActive(false);
     setRetryKey((prev) => prev + 1);
   };
 
@@ -329,13 +383,17 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
         playsInline
         className="w-full h-full object-contain"
       >
-        {streamType === "mp4" && <source src={src} type="video/mp4" />}
+        {streamType === "mp4" && <source src={activeSrc} type="video/mp4" />}
       </video>
 
-      {/* Badge indicateur du format source & résolution HLS */}
+      {/* Badge indicateur du format source & résolution */}
       <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
         <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-zinc-300 border border-white/10">
-          {streamType === "mp4" ? "MP4 Standard" : "HLS Adaptatif"}
+          {isFallbackActive
+            ? "MP4 (Secours)"
+            : streamType === "mp4"
+            ? "MP4 Standard"
+            : "HLS Adaptatif"}
         </span>
         {streamType === "hls" && currentLevelResolution && (
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/80 backdrop-blur-sm text-white">
@@ -653,7 +711,7 @@ export function Watch() {
             </div>
           )}
 
-          {/* LECTEUR DE STREAMING HYBRIDE (MP4 compressé + HLS .m3u8) */}
+          {/* LECTEUR DE STREAMING HYBRIDE AVEC FALLBACK FLUIDE (.m3u8 <-> .mp4) */}
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl mb-4 group">
             {!isSignedIn ? (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center">
