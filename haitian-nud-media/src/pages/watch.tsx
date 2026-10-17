@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { useParams, Link } from "wouter";
 import Hls from "hls.js";
 import { useAuth } from "@/lib/auth-context";
@@ -114,15 +114,24 @@ function NetworkStatusIcon() {
 }
 
 /**
- * Détermine le type de flux vidéo
- * Type a) URL standard MP4 (.mp4 ou flux vidéo progressif existant)
- * Type b) Flux HLS adaptatif (.m3u8)
+ * Détection du type de flux vidéo
+ * a) Type MP4 : fichier progressif (.mp4, .webm, standard)
+ * b) Type HLS : playlist master ou manifest adaptatif (.m3u8, type HLS)
  */
 type StreamType = "mp4" | "hls";
 
 function detectStreamType(url: string): StreamType {
+  if (!url) return "mp4";
   const cleanUrl = url.split("?")[0].toLowerCase();
-  if (cleanUrl.endsWith(".m3u8") || url.includes(".m3u8")) {
+  const searchParams = url.toLowerCase();
+
+  if (
+    cleanUrl.endsWith(".m3u8") ||
+    cleanUrl.includes(".m3u8") ||
+    searchParams.includes("format=m3u8") ||
+    searchParams.includes("manifest=m3u8") ||
+    searchParams.includes("type=hls")
+  ) {
     return "hls";
   }
   return "mp4";
@@ -130,8 +139,8 @@ function detectStreamType(url: string): StreamType {
 
 /**
  * Lecteur vidéo hybride :
- * - Type a) URLs standards .mp4 (vidéos existantes) : lecture progressive HTML5 haute performance
- * - Type b) URLs HLS .m3u8 : streaming adaptatif multi-débit
+ * - a) URLs standards .mp4 (vidéos existantes) : lecture progressive HTML5 avec mise en cache métadonnées
+ * - b) Playlists HLS .m3u8 (futures vidéos streaming) : flux adaptatif ABR avec hls.js + reprise d'erreur automatique
  */
 interface HybridVideoPlayerProps {
   src: string;
@@ -141,11 +150,24 @@ interface HybridVideoPlayerProps {
 function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
+  const mediaRecoveryAttempts = useRef<number>(0);
+  const networkRecoveryAttempts = useRef<number>(0);
+
   const [isBuffering, setIsBuffering] = useState(false);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [currentLevelResolution, setCurrentLevelResolution] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
 
   const streamType = useMemo(() => detectStreamType(src), [src]);
+
+  const cleanupHls = useCallback(() => {
+    if (hlsRef.current) {
+      hlsRef.current.stopLoad();
+      hlsRef.current.detachMedia();
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -153,27 +175,16 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
 
     setPlaybackError(null);
     setIsBuffering(false);
+    setCurrentLevelResolution(null);
+    mediaRecoveryAttempts.current = 0;
+    networkRecoveryAttempts.current = 0;
 
-    // Nettoyage de l'instance HLS si elle était précédemment active
-    if (hlsRef.current) {
-      hlsRef.current.destroy();
-      hlsRef.current = null;
-    }
+    cleanupHls();
 
-    if (streamType === "mp4") {
-      // -------------------------------------------------------------
-      // a) Traitement optimisé pour les URLs standards .mp4 existantes
-      // -------------------------------------------------------------
-      video.removeAttribute("src");
-      video.load(); // Réinitialise les tampons internes du lecteur
-
-      // Assignation de la source MP4 directe
-      video.src = src;
-      video.load();
-    } else {
-      // -------------------------------------------------------------
-      // b) Traitement HLS adaptatif (.m3u8)
-      // -------------------------------------------------------------
+    if (streamType === "hls") {
+      // -----------------------------------------------------------------
+      // b) Traitement HLS .m3u8 (Futures vidéos de streaming adaptatif)
+      // -----------------------------------------------------------------
       if (Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: true,
@@ -181,41 +192,96 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
           backBufferLength: 90,
           maxBufferLength: 30,
           maxMaxBufferLength: 60,
-          startLevel: -1,
+          maxBufferSize: 60 * 1000 * 1000, // 60 Mo max de buffer
+          abrEwmaDefaultEstimate: 2000000,  // Démarrage à 2 Mbps
+          abrBandWidthFactor: 0.9,          // Marge de sécurité 10%
+          abrBandWidthUpFactor: 0.7,
+          manifestLoadingTimeOut: 15000,
+          manifestLoadingMaxRetry: 4,
+          levelLoadingTimeOut: 15000,
+          levelLoadingMaxRetry: 4,
+          fragLoadingTimeOut: 20000,
+          fragLoadingMaxRetry: 6,
+          startLevel: -1,                   // Auto-sélection adaptative
         });
 
         hlsRef.current = hls;
+
         hls.loadSource(src);
         hls.attachMedia(video);
 
-        hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) {
-            switch (data.type) {
-              case Hls.ErrorTypes.NETWORK_ERROR:
-                console.warn("[HLS] Network error, reprise...");
-                hls.startLoad();
-                break;
-              case Hls.ErrorTypes.MEDIA_ERROR:
-                console.warn("[HLS] Media error, récupération...");
-                hls.recoverMediaError();
-                break;
-              default:
-                console.error("[HLS] Erreur fatale:", data);
-                setPlaybackError("Erreur de flux streaming HLS.");
-                hls.destroy();
-                hlsRef.current = null;
-                break;
+        hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+          if (data.levels && data.levels.length > 0) {
+            const first = data.levels[0];
+            if (first.height) {
+              setCurrentLevelResolution(`${first.height}p`);
             }
           }
         });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+          const currentLevel = hls.levels[data.level];
+          if (currentLevel?.height) {
+            setCurrentLevelResolution(`${currentLevel.height}p`);
+          }
+        });
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) return;
+
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              networkRecoveryAttempts.current += 1;
+              console.warn(`[HLS] Network error (tentative ${networkRecoveryAttempts.current}/4)...`, data);
+              if (networkRecoveryAttempts.current <= 4) {
+                setTimeout(() => {
+                  hls.startLoad();
+                }, 1000 * networkRecoveryAttempts.current);
+              } else {
+                setPlaybackError("Connexion au flux vidéo HLS interrompue. Vérifiez votre réseau.");
+                cleanupHls();
+              }
+              break;
+
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              mediaRecoveryAttempts.current += 1;
+              console.warn(`[HLS] Media error (tentative ${mediaRecoveryAttempts.current}/3)...`, data);
+              if (mediaRecoveryAttempts.current <= 2) {
+                hls.recoverMediaError();
+              } else if (mediaRecoveryAttempts.current === 3) {
+                // Tente de basculer vers un autre niveau de codec/rendition
+                hls.swapAudioCodec();
+                hls.recoverMediaError();
+              } else {
+                setPlaybackError("Erreur de décodage du flux HLS.");
+                cleanupHls();
+              }
+              break;
+
+            default:
+              console.error("[HLS] Erreur fatale non récupérable:", data);
+              setPlaybackError("Lecture du flux streaming impossible.");
+              cleanupHls();
+              break;
+          }
+        });
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Support natif HLS (Safari macOS & iOS)
         video.src = src;
+        video.load();
       } else {
-        setPlaybackError("Format HLS non supporté sur ce navigateur.");
+        setPlaybackError("Votre navigateur ne prend pas en charge la lecture HLS adaptative.");
       }
+    } else {
+      // -----------------------------------------------------------------
+      // a) Traitement MP4 standard (.mp4 compressé existant)
+      // -----------------------------------------------------------------
+      video.removeAttribute("src");
+      video.load();
+      video.src = src;
+      video.load();
     }
 
-    // Gestion des événements de cycle de lecture et mise en mémoire tampon
     const handleWaiting = () => setIsBuffering(true);
     const handleStalled = () => {
       if (video.paused) return;
@@ -245,13 +311,9 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
       video.removeEventListener("playing", handlePlaying);
       video.removeEventListener("canplay", handleCanPlay);
       video.removeEventListener("error", handleError);
-
-      if (hlsRef.current) {
-        hlsRef.current.destroy();
-        hlsRef.current = null;
-      }
+      cleanupHls();
     };
-  }, [src, streamType, retryKey]);
+  }, [src, streamType, retryKey, cleanupHls]);
 
   const handleRetry = () => {
     setRetryKey((prev) => prev + 1);
@@ -270,11 +332,16 @@ function HybridVideoPlayer({ src, poster }: HybridVideoPlayerProps) {
         {streamType === "mp4" && <source src={src} type="video/mp4" />}
       </video>
 
-      {/* Badge indicateur du format source */}
-      <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity">
+      {/* Badge indicateur du format source & résolution HLS */}
+      <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
         <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-zinc-300 border border-white/10">
           {streamType === "mp4" ? "MP4 Standard" : "HLS Adaptatif"}
         </span>
+        {streamType === "hls" && currentLevelResolution && (
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/80 backdrop-blur-sm text-white">
+            {currentLevelResolution}
+          </span>
+        )}
       </div>
 
       {/* Spinner de buffering */}
