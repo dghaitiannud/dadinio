@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Script de conversion et compression vidéo Node.js / FFmpeg (Solution A)
- * Bitrate cible : entre 400 kbps et 700 kbps
+ * Script de conversion et compression vidéo Node.js / FFmpeg (Solution A - 240p Ultra Bas Débit)
+ * Bitrate cible : ~250 kbps (parfait pour les connexions très lentes)
  *
  * Utilisation :
  *   node scripts/compress-video.js <input.mp4> [output.mp4]
@@ -18,14 +18,14 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 Usage:
   node scripts/compress-video.js <source_file> [output_file]
 
-Paramètres appliqués (Solution A):
-  - Codec vidéo       : libx264 (H.264, profil main / 3.1)
-  - Bitrate moyen     : 500 kbps (cible entre 400 kbps et 700 kbps)
-  - Bitrate max       : 700 kbps (plafond maxrate)
-  - Buffer VBV        : 1000 kbps
-  - Qualité CRF       : 26
-  - Résolution        : Max 720p (scale='min(1280,iw)':-2)
-  - Codec audio       : AAC stéréo à 96 kbps
+Paramètres appliqués (Ultra Bas Débit 240p):
+  - Codec vidéo       : libx264 (H.264, profil baseline / 3.0)
+  - Bitrate moyen     : 250 kbps
+  - Bitrate max       : 350 kbps (plafond maxrate)
+  - Buffer VBV        : 500 kbps
+  - Qualité CRF       : 28
+  - Résolution        : Max 240p (scale=-2:240)
+  - Codec audio       : AAC mono/stéréo à 64 kbps
   - Optimisation web  : -movflags +faststart (chargement instantané)
   `);
   process.exit(args.length === 0 ? 1 : 0);
@@ -41,14 +41,14 @@ if (!fs.existsSync(inputPath)) {
 const parsedInput = path.parse(inputPath);
 const outputPath = args[1]
   ? path.resolve(args[1])
-  : path.join(parsedInput.dir, `${parsedInput.name}_compressed.mp4`);
+  : path.join(parsedInput.dir, `${parsedInput.name}_240p.mp4`);
 
 console.log("========================================================");
-console.log(" Conversion & Compression FFmpeg (Solution A)");
+console.log(" Conversion & Compression FFmpeg (240p Ultra Bas Débit)");
 console.log(` Entrée   : ${inputPath}`);
 console.log(` Sortie   : ${outputPath}`);
-console.log(` Bitrate  : Cible ~500 kbps (min 400k - max 700k)`);
-console.log(` Audio    : AAC 96 kbps 44.1kHz stéréo`);
+console.log(` Bitrate  : Cible ~250 kbps (max 350k)`);
+console.log(` Audio    : AAC 64 kbps`);
 console.log(` Options  : +faststart pour streaming web immédiat`);
 console.log("========================================================\n");
 
@@ -56,19 +56,19 @@ const ffmpegArgs = [
   "-y",
   "-i", inputPath,
   "-c:v", "libx264",
-  "-preset", "medium",
-  "-profile:v", "main",
-  "-level", "3.1",
-  "-b:v", "500k",
-  "-maxrate", "700k",
-  "-bufsize", "1000k",
-  "-crf", "26",
-  "-vf", "scale='min(1280,iw)':-2",
+  "-preset", "veryfast",
+  "-profile:v", "baseline",
+  "-level", "3.0",
+  "-b:v", "250k",
+  "-maxrate", "350k",
+  "-bufsize", "500k",
+  "-crf", "28",
+  "-vf", "scale=-2:240",
   "-pix_fmt", "yuv420p",
   "-c:a", "aac",
-  "-b:a", "96k",
-  "-ac", "2",
-  "-ar", "44100",
+  "-b:a", "64k",
+  "-ac", "1",
+  "-ar", "22050",
   "-movflags", "+faststart",
   outputPath,
 ];
@@ -91,7 +91,7 @@ proc.on("close", (code) => {
     const ratio = (100 - (outputSize / inputSize) * 100).toFixed(1);
 
     console.log("\n========================================================");
-    console.log(" Compression réussie !");
+    console.log(" Compression 240p réussie !");
     console.log(` Poids initial : ${inputSize} Mo`);
     console.log(` Poids final   : ${outputSize} Mo (-${ratio}%)`);
     console.log(` Fichier prêt au streaming : ${outputPath}`);
