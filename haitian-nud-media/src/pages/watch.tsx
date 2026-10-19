@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
 
 // URL de base de votre serveur API Proxy sur Render (utilisé pour les téléchargements)
-const API_BASE_URL = "https://api-6rzs.onrender.com";
+const API_BASE_URL = "https://api.haitiannud.com";
 
 // Helper pour générer l'URL de téléchargement direct avec headers attachment
 const getProxyDownloadUrl = (rawUrl: string | undefined | null, title?: string): string => {
