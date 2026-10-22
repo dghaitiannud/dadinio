@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export const FREE_DOWNLOAD_LIMIT = 3;
+export const FREE_DOWNLOAD_LIMIT = 5;
 const ADMIN_ITEMS_PER_PAGE = 5000;
 
 // ====================================================
@@ -195,14 +195,20 @@ export async function requestDownload(
   if (video.is_vip && !isVip) {
     throw new Error('vip_required');
   }
-  if (!isVip && freeDownloadsUsed >= FREE_DOWNLOAD_LIMIT) {
+
+  // Les membres VIP ont des téléchargements illimités : aucun quota, aucun incrément.
+  if (isVip) {
+    await supabase.from('downloads').insert({ user_id: userId, video_id: videoId });
+    return { url: video.video_url || video.videoUrl, remaining: -1 };
+  }
+
+  // Membres free : quota limité à FREE_DOWNLOAD_LIMIT téléchargements.
+  if (freeDownloadsUsed >= FREE_DOWNLOAD_LIMIT) {
     throw new Error('quota_exceeded');
   }
-  if (!isVip) {
-    await supabase.from('users').update({ free_downloads_used: freeDownloadsUsed + 1 }).eq('id', userId);
-  }
+  await supabase.from('users').update({ free_downloads_used: freeDownloadsUsed + 1 }).eq('id', userId);
   await supabase.from('downloads').insert({ user_id: userId, video_id: videoId });
-  const remaining = isVip ? -1 : FREE_DOWNLOAD_LIMIT - (freeDownloadsUsed + 1);
+  const remaining = FREE_DOWNLOAD_LIMIT - (freeDownloadsUsed + 1);
   return { url: video.video_url || video.videoUrl, remaining };
 }
 
