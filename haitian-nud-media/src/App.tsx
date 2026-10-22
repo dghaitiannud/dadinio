@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Switch, Route, useLocation, Router as WouterRouter } from 'wouter';
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -71,13 +71,32 @@ function initIpLocation() {
   }
 }
 
+function dismissPreloader() {
+  const preloader = document.getElementById("app-preloader");
+  if (preloader) {
+    preloader.classList.add("fade-out");
+    setTimeout(() => {
+      preloader.remove();
+    }, 550);
+  }
+}
+
 function App() {
   const [location] = useLocation();
+  const [isReady, setIsReady] = useState(false);
   
-  // 🚀 Initialisation de la détection et injection globale sécurisée de 't'
+  // 🚀 Initialisation de la détection, masquage de l'animation de chargement et injection globale sécurisée de 't'
   useEffect(() => {
     (window as any).t = (key: string, options?: any) => i18n.t(key, options);
     initIpLocation();
+
+    // Laisse une brève transition pour une animation agréable
+    const timer = setTimeout(() => {
+      setIsReady(true);
+      dismissPreloader();
+    }, 450);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -91,7 +110,12 @@ function App() {
             <AnniversaryOverlay />
 
             <Layout>
-              <div key={location} className="animate-page-fade">
+              <div
+                key={location}
+                className={`animate-page-fade transition-opacity duration-300 ${
+                  isReady ? "opacity-100" : "opacity-0"
+                }`}
+              >
                 <Switch>
                   <Route path="/" component={Home} />
                   <Route path="/vip-catalog" component={VipCatalog} />
