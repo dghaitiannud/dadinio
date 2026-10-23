@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export const FREE_DOWNLOAD_LIMIT = 5;
+export const FREE_DOWNLOAD_LIMIT = 3;
 const ADMIN_ITEMS_PER_PAGE = 5000;
 
 // ====================================================
