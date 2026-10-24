@@ -231,6 +231,89 @@ export interface QualityLevel {
   bitrate?: number;
 }
 
+// ---------------------------------------------------------------------------
+// Sélection de qualité pilotée par le débit réseau (seuils fixes)
+// ---------------------------------------------------------------------------
+const QUALITY_THRESHOLDS = [
+  { height: 144, maxMbps: 5 },
+  { height: 240, maxMbps: 10 },
+  { height: 360, maxMbps: 20 },
+  { height: 480, maxMbps: 30 },
+  { height: 720, maxMbps: Infinity },
+] as const;
+
+const QUALITY_OVERRIDE_KEY = "hls-quality-override";
+
+interface NetworkInformationLike extends EventTarget {
+  downlink?: number;
+  effectiveType?: string;
+  addEventListener: (type: "change", listener: () => void) => void;
+  removeEventListener: (type: "change", listener: () => void) => void;
+}
+
+function getConnection(): NetworkInformationLike | null {
+  const nav = navigator as Navigator & {
+    connection?: NetworkInformationLike;
+    mozConnection?: NetworkInformationLike;
+    webkitConnection?: NetworkInformationLike;
+  };
+  return nav.connection || nav.mozConnection || nav.webkitConnection || null;
+}
+
+function getTargetHeightForBandwidth(mbps: number): number {
+  for (const threshold of QUALITY_THRESHOLDS) {
+    if (mbps < threshold.maxMbps) {
+      return threshold.height;
+    }
+  }
+  return QUALITY_THRESHOLDS[QUALITY_THRESHOLDS.length - 1].height;
+}
+
+function readBandwidthMbps(): number | null {
+  const conn = getConnection();
+  if (!conn || typeof conn.downlink !== "number" || !Number.isFinite(conn.downlink) || conn.downlink <= 0) {
+    return null;
+  }
+  return conn.downlink;
+}
+
+function findBestLevelIndex(levels: QualityLevel[], targetHeight: number): number {
+  if (levels.length === 0) return -1;
+  let bestIndex = 0;
+  let bestDelta = Infinity;
+  levels.forEach((lvl, index) => {
+    const delta = Math.abs((lvl.height || 0) - targetHeight);
+    if (delta < bestDelta) {
+      bestDelta = delta;
+      bestIndex = index;
+    }
+  });
+  return bestIndex;
+}
+
+function readQualityOverride(): number | null {
+  try {
+    const raw = localStorage.getItem(QUALITY_OVERRIDE_KEY);
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeQualityOverride(height: number | null): void {
+  try {
+    if (height === null) {
+      localStorage.removeItem(QUALITY_OVERRIDE_KEY);
+    } else {
+      localStorage.setItem(QUALITY_OVERRIDE_KEY, String(height));
+    }
+  } catch {
+    /* localStorage indisponible (mode privé, quota, etc.) */
+  }
+}
+
 /**
  * Lecteur vidéo hybride avec support MP4 optimisé et HLS adaptatif :
  * - Détecte automatiquement l'URL .mp4 ou .m3u8
@@ -266,6 +349,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
   const [currentQualityIndex, setCurrentQualityIndex] = useState<number>(-1); // -1 = Auto
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [autoTargetHeight, setAutoTargetHeight] = useState<number | null>(null);
 
   // Synchronise lorsque l'URL source parent change
   useEffect(() => {
@@ -284,6 +368,32 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
       hlsRef.current.destroy();
       hlsRef.current = null;
     }
+  }, []);
+
+  // Applique la qualité automatique selon le débit réseau courant
+  const applyAutoQuality = useCallback(() => {
+    const hls = hlsRef.current;
+    if (!hls || hls.levels.length === 0) return;
+
+    const mbps = readBandwidthMbps();
+    if (mbps === null) {
+      hls.currentLevel = -1;
+      setCurrentQualityIndex(-1);
+      setAutoTargetHeight(null);
+      return;
+    }
+
+    const targetHeight = getTargetHeightForBandwidth(mbps);
+    const parsedLevels: QualityLevel[] = hls.levels.map((lvl, index) => ({
+      id: index,
+      label: lvl.height ? `${lvl.height}p` : `${Math.round(lvl.bitrate / 1000)}k`,
+      height: lvl.height || 0,
+      bitrate: lvl.bitrate,
+    }));
+    const idx = findBestLevelIndex(parsedLevels, targetHeight);
+    hls.currentLevel = idx;
+    setCurrentQualityIndex(-1);
+    setAutoTargetHeight(targetHeight);
   }, []);
 
   // Déclenchement fluide du fallback MP4
@@ -381,6 +491,28 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
               bitrate: lvl.bitrate
             }));
             setLevels(parsedLevels);
+
+            const overrideHeight = readQualityOverride();
+            if (overrideHeight !== null) {
+              const idx = findBestLevelIndex(parsedLevels, overrideHeight);
+              hls.currentLevel = idx;
+              setCurrentQualityIndex(idx);
+              setAutoTargetHeight(null);
+            } else {
+              const mbps = readBandwidthMbps();
+              if (mbps !== null) {
+                const targetHeight = getTargetHeightForBandwidth(mbps);
+                const idx = findBestLevelIndex(parsedLevels, targetHeight);
+                hls.currentLevel = idx;
+                setCurrentQualityIndex(-1);
+                setAutoTargetHeight(targetHeight);
+              } else {
+                hls.currentLevel = -1;
+                setCurrentQualityIndex(-1);
+                setAutoTargetHeight(null);
+              }
+            }
+
             const first = data.levels[0];
             if (first.height) {
               setCurrentLevelResolution(`${first.height}p`);
@@ -514,6 +646,23 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
     };
   }, [activeSrc, streamType, retryKey, cleanupHls, triggerMp4Fallback, updateProgressFromVideo]);
 
+  // Réagit aux changements de débit réseau (mode Auto uniquement)
+  useEffect(() => {
+    if (streamType !== "hls") return;
+    const conn = getConnection();
+    if (!conn) return;
+
+    const handleConnectionChange = () => {
+      if (readQualityOverride() !== null) return; // mode manuel : ne pas toucher
+      applyAutoQuality();
+    };
+
+    conn.addEventListener("change", handleConnectionChange);
+    return () => {
+      conn.removeEventListener("change", handleConnectionChange);
+    };
+  }, [streamType, applyAutoQuality]);
+
   const handleRetry = () => {
     setActiveSrc(src);
     setIsFallbackActive(false);
@@ -523,17 +672,26 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
   };
 
   const changeQuality = (levelIndex: number) => {
-    setCurrentQualityIndex(levelIndex);
     setShowSettingsMenu(false);
-    if (hlsRef.current) {
-      hlsRef.current.currentLevel = levelIndex;
-      if (levelIndex === -1) {
-        toast.info("Qualité définie sur : Automatique");
-      } else {
-        const selected = levels[levelIndex];
-        toast.info(`Qualité définie sur : ${selected?.label || 'Manuel'}`);
-      }
+    if (!hlsRef.current) return;
+
+    if (levelIndex === -1) {
+      writeQualityOverride(null);
+      hlsRef.current.currentLevel = -1;
+      setCurrentQualityIndex(-1);
+      applyAutoQuality();
+      toast.info("Qualité : Automatique (selon débit)");
+      return;
     }
+
+    const selected = levels[levelIndex];
+    hlsRef.current.currentLevel = levelIndex;
+    setCurrentQualityIndex(levelIndex);
+    setAutoTargetHeight(null);
+    if (selected?.height) {
+      writeQualityOverride(selected.height);
+    }
+    toast.info(`Qualité : ${selected?.label || "Manuel"}`);
   };
 
   const changeSpeed = (speed: number) => {
@@ -600,22 +758,24 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
                     currentQualityIndex === -1 ? "text-primary font-bold" : "text-zinc-200"
                   }`}
                 >
-                  <span>Auto (Adaptatif)</span>
+                  <span>{autoTargetHeight ? `Auto (${autoTargetHeight}p)` : "Auto"}</span>
                   {currentQualityIndex === -1 && <Check className="h-3 w-3" />}
                 </button>
-                {levels.map((lvl) => (
-                  <button
-                    key={lvl.id}
-                    type="button"
-                    onClick={() => changeQuality(lvl.id)}
-                    className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between hover:bg-white/10 ${
-                      currentQualityIndex === lvl.id ? "text-primary font-bold" : "text-zinc-200"
-                    }`}
-                  >
-                    <span>{lvl.label}</span>
-                    {currentQualityIndex === lvl.id && <Check className="h-3 w-3" />}
-                  </button>
-                ))}
+                {[...levels]
+                  .sort((a, b) => a.height - b.height)
+                  .map((lvl) => (
+                    <button
+                      key={lvl.id}
+                      type="button"
+                      onClick={() => changeQuality(lvl.id)}
+                      className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between hover:bg-white/10 ${
+                        currentQualityIndex === lvl.id ? "text-primary font-bold" : "text-zinc-200"
+                      }`}
+                    >
+                      <span>{lvl.label}</span>
+                      {currentQualityIndex === lvl.id && <Check className="h-3 w-3" />}
+                    </button>
+                  ))}
                 <div className="my-1 border-t border-white/10" />
               </div>
             )}

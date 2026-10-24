@@ -67,35 +67,42 @@ if (process.platform !== "win32" && fs.existsSync(scriptBash)) {
   }
 } else {
   // Exécution multi-plateformes Node/FFmpeg pour Windows et environnements sans bash
-  console.log("▶ [1/3] Compression MP4 Web FastStart...");
-  const mp4Out = path.join(outputDir, "video_optimized.mp4");
+  console.log("▶ [1/3] Compression MP4 Web FastStart (144p)...");
+  const mp4Out = path.join(outputDir, "video_optimized_144p.mp4");
   execSync(
-    `ffmpeg -y -i "${inputFile}" -c:v libx264 -preset slow -crf 23 -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart "${mp4Out}"`,
+    `ffmpeg -y -i "${inputFile}" -c:v libx264 -preset veryfast -profile:v baseline -level 3.0 -b:v 100k -maxrate 150k -bufsize 250k -crf 30 -g 48 -keyint_min 48 -sc_threshold 0 -vf "scale=-2:144" -pix_fmt yuv420p -c:a aac -b:a 48k -ac 1 -ar 22050 -movflags +faststart "${mp4Out}"`,
     { stdio: "inherit" }
   );
 
-  console.log("▶ [2/3] Génération HLS Master Playlist & Variantes (360p, 720p)...");
+  console.log("▶ [2/3] Génération HLS Master Playlist & Variantes (144p, 240p, 360p, 480p, 720p)...");
   const hlsDir = path.join(outputDir, "hls");
-  const p720Dir = path.join(hlsDir, "720p");
-  const p360Dir = path.join(hlsDir, "360p");
-  fs.mkdirSync(p720Dir, { recursive: true });
-  fs.mkdirSync(p360Dir, { recursive: true });
 
-  // 360p
-  execSync(
-    `ffmpeg -y -i "${inputFile}" -vf "scale=w=-2:h=360" -c:v libx264 -crf 25 -preset veryfast -b:v 400k -maxrate 500k -bufsize 800k -c:a aac -b:a 64k -hls_time 4 -hls_playlist_type vod -hls_list_size 0 -hls_segment_filename "${path.join(p360Dir, "seg_%03d.ts")}" "${path.join(p360Dir, "index.m3u8")}"`,
-    { stdio: "inherit" }
-  );
+  const renditions = [
+    { name: "144p", h: 144, bv: "100k",  max: "150k",  buf: "250k",  crf: 30, ba: "48k",  ac: 1, profile: "baseline", level: "3.0", width: 256,  bandwidth: 148000 },
+    { name: "240p", h: 240, bv: "250k",  max: "350k",  buf: "500k",  crf: 28, ba: "64k",  ac: 1, profile: "baseline", level: "3.0", width: 426,  bandwidth: 314000 },
+    { name: "360p", h: 360, bv: "400k",  max: "550k",  buf: "800k",  crf: 26, ba: "96k",  ac: 2, profile: "main",     level: "3.0", width: 640,  bandwidth: 496000 },
+    { name: "480p", h: 480, bv: "700k",  max: "900k",  buf: "1400k", crf: 24, ba: "96k",  ac: 2, profile: "main",     level: "3.1", width: 854,  bandwidth: 796000 },
+    { name: "720p", h: 720, bv: "2000k", max: "2500k", buf: "3500k", crf: 23, ba: "128k", ac: 2, profile: "main",     level: "3.1", width: 1280, bandwidth: 2128000 },
+  ];
 
-  // 720p
-  execSync(
-    `ffmpeg -y -i "${inputFile}" -vf "scale=w=-2:h=720" -c:v libx264 -crf 23 -preset veryfast -b:v 1500k -maxrate 2000k -bufsize 3000k -c:a aac -b:a 128k -hls_time 4 -hls_playlist_type vod -hls_list_size 0 -hls_segment_filename "${path.join(p720Dir, "seg_%03d.ts")}" "${path.join(p720Dir, "index.m3u8")}"`,
-    { stdio: "inherit" }
-  );
+  for (const r of renditions) {
+    const dir = path.join(hlsDir, r.name);
+    fs.mkdirSync(dir, { recursive: true });
+    execSync(
+      `ffmpeg -y -i "${inputFile}" -vf "scale=-2:${r.h}" -c:v libx264 -crf ${r.crf} -preset veryfast -profile:v ${r.profile} -level ${r.level} -g 48 -keyint_min 48 -sc_threshold 0 -b:v ${r.bv} -maxrate ${r.max} -bufsize ${r.buf} -c:a aac -b:a ${r.ba} -ac ${r.ac} -hls_time 4 -hls_playlist_type vod -hls_list_size 0 -hls_segment_filename "${path.join(dir, "seg_%03d.ts")}" "${path.join(dir, "index.m3u8")}"`,
+      { stdio: "inherit" }
+    );
+  }
 
   // Master Playlist
-  const masterContent = `#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=464000,RESOLUTION=640x360,NAME="360p"\n360p/index.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1628000,RESOLUTION=1280x720,NAME="720p"\n720p/index.m3u8\n`;
-  fs.writeFileSync(path.join(hlsDir, "master.m3u8"), masterContent);
+  const masterLines = ["#EXTM3U", "#EXT-X-VERSION:3"];
+  for (const r of renditions) {
+    masterLines.push(
+      `#EXT-X-STREAM-INF:BANDWIDTH=${r.bandwidth},RESOLUTION=${r.width}x${r.h},NAME="${r.name}"`,
+      `${r.name}/index.m3u8`
+    );
+  }
+  fs.writeFileSync(path.join(hlsDir, "master.m3u8"), masterLines.join("\n") + "\n");
 
   console.log("▶ [3/3] Création de la miniature poster...");
   const thumbOut = path.join(outputDir, "thumbnail.jpg");
