@@ -7,18 +7,17 @@ import { toast } from "sonner";
 import { createTicket } from "@/lib/supabase-db";
 import { ADMIN_EMAIL } from "@/lib/supabase";
 
-const N8N_WEBHOOK_URL = "https://vmi3439201.contaboserver.net/webhook/36f70815-347b-41b9-9ba0-1e5c459f3d36/chat";
+// ⚠️ SÉCURITÉ : On utilise notre API Node, qui fera le relais vers N8N de manière sécurisée
+const API_CHAT_URL = "https://api.haitiannud.com/api/support/chat";
 
 interface ChatMsg {
   role: 'user' | 'bot';
   content: string;
 }
 
-// Fonction de traduction globale de secours
 const t = (key: string, options?: any) => (window as any).t ? (window as any).t(key, options) : key;
 
 export function FloatingSupport({ currentUser }: { currentUser: any }) {
-  // 1. DÉCLARATION DE TOUS LES HOOKS TOUT EN HAUT (Règle d'or de React)
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'ticket'>('chat');
   const [input, setInput] = useState('');
@@ -36,24 +35,20 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const sessionIdRef = useRef<string>("");
 
-  // Génération sécurisée du Session ID uniquement sur le client
   useEffect(() => {
     if (typeof window !== "undefined") {
       sessionIdRef.current = crypto.randomUUID();
     }
   }, []);
 
-  // Défilement automatique des messages
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // 2. FILTRE DE SÉCURITÉ (Appliqué UNIQUEMENT après la déclaration des hooks)
   if (!currentUser || currentUser.email === ADMIN_EMAIL || currentUser.role === 'admin') {
     return null;
   }
 
-  // 3. FONCTIONS DE GESTION
   async function handleSend() {
     const text = input.trim();
     if (!text || isTyping) return;
@@ -63,9 +58,9 @@ export function FloatingSupport({ currentUser }: { currentUser: any }) {
     setIsTyping(true);
 
     try {
-      const res = await fetch(N8N_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch(API_CHAT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chatInput: text,
           sessionId: sessionIdRef.current,
