@@ -24,7 +24,7 @@ export function ForgotPasswordPage() {
 
     try {
       // 1. Interrogation de ton API privée sur Render pour valider l'existence de l'e-mail
-      const response = await fetch("https://api-6rzs.onrender.com/api/auth/check-user", {
+      const response = await fetch("https://api.haitiannud.com/api/auth/check-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
