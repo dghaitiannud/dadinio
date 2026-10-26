@@ -601,3 +601,48 @@ export async function adminProcessVipRequest(
     if (userError) throw userError;
   }
 }
+// ====================================================
+// PUBLICITÉS
+// ====================================================
+
+export interface VideoAd {
+  id: string;
+  videoId: string | null;
+  title: string;
+  adVideoUrl: string;
+  adType: 'pre-roll' | 'mid-roll';
+  triggerSeconds: number;
+  skipAfter: number;
+  resolution: string;
+  clickUrl: string | null;
+}
+
+export async function getVideoAds(videoId?: string): Promise<VideoAd[]> {
+  try {
+    let query = supabase.from('video_ads').select('*').eq('is_active', true);
+    
+    if (videoId) {
+      query = query.or(`video_id.eq.${videoId},video_id.is.null`);
+    } else {
+      query = query.is('video_id', null);
+    }
+
+    const { data, error } = await query.order('trigger_seconds', { ascending: true });
+    if (error) throw error;
+    
+    return (data || []).map((a: any) => ({
+      id: a.id,
+      videoId: a.video_id,
+      title: a.title,
+      adVideoUrl: a.ad_video_url,
+      adType: a.ad_type,
+      triggerSeconds: a.trigger_seconds,
+      skipAfter: a.skip_after,
+      resolution: a.resolution,
+      clickUrl: a.click_url,
+    }));
+  } catch (err) {
+    console.warn("Erreur chargement pubs:", err);
+    return [];
+  }
+}
