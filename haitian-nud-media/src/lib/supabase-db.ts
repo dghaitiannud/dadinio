@@ -605,19 +605,7 @@ export async function adminProcessVipRequest(
 // PUBLICITÉS
 // ====================================================
 
-export interface VideoAd {
-  id: string;
-  videoId: string | null;
-  title: string;
-  adVideoUrl: string;
-  adType: 'pre-roll' | 'mid-roll';
-  triggerSeconds: number;
-  skipAfter: number;
-  resolution: string;
-  clickUrl: string | null;
-}
-
-export async function getVideoAds(videoId?: string): Promise<VideoAd[]> {
+export async function getVideoAds(videoId: string, lang: string = "fr"): Promise<VideoAd[]> {
   try {
     let query = supabase.from('video_ads').select('*').eq('is_active', true);
     
@@ -630,7 +618,12 @@ export async function getVideoAds(videoId?: string): Promise<VideoAd[]> {
     const { data, error } = await query.order('trigger_seconds', { ascending: true });
     if (error) throw error;
     
-    return (data || []).map((a: any) => ({
+    // Filtrage par langue (on garde celles de la langue OU du français par défaut)
+    const filtered = (data || []).filter((a: any) => 
+      !a.language || a.language === lang || a.language === 'fr'
+    );
+
+    return filtered.map((a: any) => ({
       id: a.id,
       videoId: a.video_id,
       title: a.title,
@@ -640,6 +633,7 @@ export async function getVideoAds(videoId?: string): Promise<VideoAd[]> {
       skipAfter: a.skip_after,
       resolution: a.resolution,
       clickUrl: a.click_url,
+      language: a.language
     }));
   } catch (err) {
     console.warn("Erreur chargement pubs:", err);
