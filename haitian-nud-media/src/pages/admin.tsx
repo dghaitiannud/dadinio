@@ -16,11 +16,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { 
   Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, 
   Ticket, Trash2, Bell, UserCheck, LayoutTemplate, Crown, ExternalLink, 
-  Check, X, LucideIcon, UploadCloud, Loader2, CheckCircle, AlertCircle 
+  Check, X, LucideIcon, UploadCloud, Loader2, CheckCircle, AlertCircle,
+  Megaphone
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { supabase } from "@/lib/supabase";
 import {
   getAdminStats, adminListVideos, adminCreateVideo, adminDeleteVideo,
   adminListPhotos, adminCreatePhoto, adminDeletePhoto,
@@ -35,7 +37,7 @@ const YEARS = Array.from({ length: CURRENT_YEAR - 2009 }, (_, i) => String(CURRE
 
 export function Admin() {
   const { t } = useTranslation();
-  const { isAdmin, isLoading, session } = useAuth(); // Récupération de la session
+  const { isAdmin, isLoading, session } = useAuth();
   const [, setLocation] = useLocation();
 
   if (isLoading) return <div className="p-8 text-center">{t('common.loading')}</div>;
@@ -69,6 +71,9 @@ export function Admin() {
             <TabsTrigger value="photos" className="px-3 py-1.5 text-xs sm:text-sm font-medium">
               Photos
             </TabsTrigger>
+            <TabsTrigger value="ads" className="px-3 py-1.5 text-xs sm:text-sm font-medium">
+              <Megaphone className="h-3.5 w-3.5 mr-1" /> Pubs
+            </TabsTrigger>
             <TabsTrigger value="vip" className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-yellow-500 gap-1.5">
               <Crown className="h-3.5 w-3.5 fill-yellow-500 shrink-0" />
               <span>Demandes VIP</span>
@@ -90,6 +95,7 @@ export function Admin() {
 
         <TabsContent value="videos"><VideosTab token={token} /></TabsContent>
         <TabsContent value="photos"><PhotosTab /></TabsContent>
+        <TabsContent value="ads"><AdsTab token={token} /></TabsContent>
         <TabsContent value="vip"><VipRequestsTab token={token} /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="tickets"><TicketsTab token={token} /></TabsContent>
@@ -140,7 +146,7 @@ function StatCard({ title, value, icon: Icon, color = "text-primary" }: StatCard
   );
 }
 
-// --- COMPOSANT D'UPLOAD (Avec Token JWT) ---
+// --- COMPOSANT D'UPLOAD VIDEO ---
 function VideoUploader({ onUploadSuccess, token }: { onUploadSuccess: (url: string) => void, token: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
@@ -262,7 +268,7 @@ function VideoUploader({ onUploadSuccess, token }: { onUploadSuccess: (url: stri
   );
 }
 
-// --- VIDEOS TAB (Prend le token) ---
+// --- VIDEOS TAB ---
 function VideosTab({ token }: { token: string }) {
   const { t } = useTranslation();
   const [videos, setVideos] = useState<Video[]>([]);
@@ -417,6 +423,181 @@ function VideosTab({ token }: { token: string }) {
   );
 }
 
+// --- ADS TAB (GESTION DES PUBS) ---
+function AdsTab({ token }: { token: string }) {
+  const [ads, setAds] = useState<any[]>([]);
+  const [form, setForm] = useState({ 
+    title: "", type: "pre-roll", trigger: 0, skip: 5, resolution: "720p", clickUrl: "" 
+  });
+  
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "uploading" | "processing">("idle");
+
+  const loadAds = async () => {
+    const { data } = await supabase.from('video_ads').select('*').order('created_at', { ascending: false });
+    setAds(data || []);
+  };
+
+  useEffect(() => { loadAds(); }, []);
+
+  const handleUpload = async () => {
+    if (!file || !form.title) return toast.error("Titre et fichier requis");
+
+    const jobId = crypto.randomUUID();
+    setStatus("uploading");
+    setProgress(0);
+    setMessage("Connexion...");
+
+    const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?token=${token}`);
+    
+    es.addEventListener("progress", (e) => {
+      const data = JSON.parse(e.data);
+      setProgress(data.percent);
+      setMessage(data.message);
+      if (data.step === "transcode" || data.step === "upload") setStatus("processing");
+    });
+
+    es.addEventListener("complete", async (e) => {
+      const data = JSON.parse(e.data);
+      es.close();
+      
+      await supabase.from("video_ads").insert({
+        title: form.title,
+        ad_video_url: data.url,
+        ad_type: form.type,
+        trigger_seconds: form.trigger,
+        skip_after: form.skip,
+        resolution: form.resolution,
+        click_url: form.clickUrl || null,
+      });
+
+      toast.success("Pub ajoutée avec succès !");
+      setStatus("idle");
+      setFile(null);
+      setForm({ title: "", type: "pre-roll", trigger: 0, skip: 5, resolution: "720p", clickUrl: "" });
+      loadAds();
+    });
+
+    es.addEventListener("error", (e: any) => {
+      if (e.data) {
+        toast.error(JSON.parse(e.data).message);
+        setStatus("idle");
+        es.close();
+      }
+    });
+
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("title", form.title);
+    formData.append("resolution", form.resolution);
+    formData.append("jobId", jobId);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://api.haitiannud.com/api/upload-ad");
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) {
+        const pct = Math.round((ev.loaded / ev.total) * 100);
+        setProgress(Math.round(pct * 0.1));
+        setMessage(`Envoi... (${pct}%)`);
+      }
+    };
+    
+    xhr.onload = () => {
+      if (xhr.status !== 200) {
+        toast.error("Erreur lors de l'envoi");
+        setStatus("idle");
+      }
+    };
+    xhr.send(formData);
+  };
+
+  return (
+    <Card className="bg-card">
+      <CardHeader><CardTitle>Gestion des Publicités</CardTitle></CardHeader>
+      <CardContent className="space-y-6">
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Titre de la campagne</Label>
+            <Input placeholder="Promo VIP Février" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
+          </div>
+          <div className="space-y-2">
+            <Label>Résolution</Label>
+            <Select value={form.resolution} onValueChange={v => setForm({...form, resolution: v})}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="720p">720p (Recommandé)</SelectItem>
+                <SelectItem value="1080p">1080p</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Type de pub</Label>
+            <Select value={form.type} onValueChange={v => setForm({...form, type: v})}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pre-roll">Pre-roll (Avant)</SelectItem>
+                <SelectItem value="mid-roll">Mid-roll (Pendant)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Déclencher à (secondes)</Label>
+            <Input type="number" value={form.trigger} onChange={e => setForm({...form, trigger: Number(e.target.value)})} />
+          </div>
+          <div className="space-y-2">
+            <Label>Bouton "Passer" après (secondes)</Label>
+            <Input type="number" value={form.skip} onChange={e => setForm({...form, skip: Number(e.target.value)})} />
+          </div>
+          <div className="space-y-2">
+            <Label>Lien (En savoir plus)</Label>
+            <Input placeholder="https://haitiannud.com/plans" value={form.clickUrl} onChange={e => setForm({...form, clickUrl: e.target.value})} />
+          </div>
+        </div>
+
+        <div className="border-t pt-4">
+          <Label>Fichier vidéo (MP4)</Label>
+          <Input type="file" accept="video/mp4" onChange={e => setFile(e.target.files?.[0] || null)} className="mt-2" disabled={status !== "idle"} />
+          
+          {status !== "idle" && (
+            <div className="mt-3 space-y-2">
+              <p className="text-sm font-medium">{message}</p>
+              <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+                <div className="bg-primary h-full transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+          )}
+
+          <Button onClick={handleUpload} disabled={status !== "idle" || !file} className="w-full mt-4">
+            {status === "idle" ? "Uploader & Convertir la pub" : "Traitement en cours..."}
+          </Button>
+        </div>
+
+        <div className="space-y-2 mt-6">
+          <h3 className="font-bold text-sm">Pubs existantes</h3>
+          {ads.map(ad => (
+            <div key={ad.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
+              <div>
+                <p className="font-bold text-sm">{ad.title}</p>
+                <p className="text-xs text-muted-foreground">{ad.ad_type} - {ad.resolution} - Skip: {ad.skip_after}s</p>
+              </div>
+              <Button variant="destructive" size="sm" onClick={async () => {
+                await supabase.from('video_ads').delete().eq('id', ad.id);
+                loadAds();
+              }}>Suppr</Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// --- PHOTOS TAB ---
 function PhotosTab() {
   const { t } = useTranslation();
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -539,6 +720,7 @@ function PhotosTab() {
   );
 }
 
+// --- VIP REQUESTS TAB ---
 function VipRequestsTab({ token }: { token: string }) {
   const [requests, setRequests] = useState<VipRequest[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -730,6 +912,7 @@ function VipRequestsTab({ token }: { token: string }) {
   );
 }
 
+// --- USERS TAB ---
 function UsersTab() {
   const { t } = useTranslation();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -790,6 +973,7 @@ function UsersTab() {
   );
 }
 
+// --- TICKETS TAB ---
 function TicketsTab({ token }: { token: string }) {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
@@ -893,6 +1077,7 @@ function TicketsTab({ token }: { token: string }) {
   );
 }
 
+// --- ALERTS TAB ---
 function AdminAlerts({ token }: { token: string }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState("Nouvelle vidéo disponible !");
@@ -990,6 +1175,7 @@ function AdminAlerts({ token }: { token: string }) {
   );
 }
 
+// --- BANNER TAB ---
 function AdminBannerTab() {
   const [url, setUrl] = useState("");
   const [pending, setPending] = useState(false);
