@@ -1044,7 +1044,7 @@ export function Watch() {
       setComments(updated);
     } catch {
       toast.error("Erreur lors de l'ajout du commentaire");
-    } fontally {
+    } finally {
       setCommentPending(false);
     }
   };
