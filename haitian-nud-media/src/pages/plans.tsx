@@ -137,7 +137,7 @@ export function Plans() {
       if (dbError) throw dbError;
 
       try {
-        await fetch("https://api-6rzs.onrender.com/api/push/send", {
+        await fetch("https://api.haitiannud.com/api/push/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
