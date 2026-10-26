@@ -33,12 +33,9 @@ import {
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2009 }, (_, i) => String(CURRENT_YEAR - i));
 
-// ⚠️ CORRECTION SÉCURITÉ : Utilisation de la variable d'environnement
-const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || "";
-
 export function Admin() {
   const { t } = useTranslation();
-  const { isAdmin, isLoading } = useAuth();
+  const { isAdmin, isLoading, session } = useAuth(); // Récupération de la session
   const [, setLocation] = useLocation();
 
   if (isLoading) return <div className="p-8 text-center">{t('common.loading')}</div>;
@@ -53,6 +50,8 @@ export function Admin() {
       </div>
     );
   }
+
+  const token = session?.access_token || "";
 
   return (
     <div className="container mx-auto px-4 py-8 min-h-screen">
@@ -89,12 +88,12 @@ export function Admin() {
           </TabsList>
         </div>
 
-        <TabsContent value="videos"><VideosTab /></TabsContent>
+        <TabsContent value="videos"><VideosTab token={token} /></TabsContent>
         <TabsContent value="photos"><PhotosTab /></TabsContent>
-        <TabsContent value="vip"><VipRequestsTab /></TabsContent>
+        <TabsContent value="vip"><VipRequestsTab token={token} /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
-        <TabsContent value="tickets"><TicketsTab /></TabsContent>
-        <TabsContent value="alerts"><AdminAlerts /></TabsContent>
+        <TabsContent value="tickets"><TicketsTab token={token} /></TabsContent>
+        <TabsContent value="alerts"><AdminAlerts token={token} /></TabsContent>
         <TabsContent value="banner"><AdminBannerTab /></TabsContent>
       </Tabs>
     </div>
@@ -141,8 +140,8 @@ function StatCard({ title, value, icon: Icon, color = "text-primary" }: StatCard
   );
 }
 
-// --- COMPOSANT D'UPLOAD ---
-function VideoUploader({ onUploadSuccess, adminSecret }: { onUploadSuccess: (url: string) => void, adminSecret: string }) {
+// --- COMPOSANT D'UPLOAD (Avec Token JWT) ---
+function VideoUploader({ onUploadSuccess, token }: { onUploadSuccess: (url: string) => void, token: string }) {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
@@ -162,8 +161,7 @@ function VideoUploader({ onUploadSuccess, adminSecret }: { onUploadSuccess: (url
     setProgress(0);
     setMessage("Connexion au serveur...");
 
-    // 1. Connexion SSE
-    const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?secret=${adminSecret}`);
+    const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?token=${token}`);
     eventSourceRef.current = es;
 
     es.addEventListener("progress", (e) => {
@@ -188,7 +186,6 @@ function VideoUploader({ onUploadSuccess, adminSecret }: { onUploadSuccess: (url
       }
     });
 
-    // 2. Upload XHR
     const formData = new FormData();
     formData.append("video", file);
     formData.append("filename", file.name.replace(".mp4", ""));
@@ -196,12 +193,12 @@ function VideoUploader({ onUploadSuccess, adminSecret }: { onUploadSuccess: (url
 
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "https://api.haitiannud.com/api/upload-video");
-    xhr.setRequestHeader("x-admin-secret", adminSecret);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) {
         const pct = Math.round((e.loaded / e.total) * 100);
-        setProgress(Math.round(pct * 0.1)); // Upload = 0 à 10% de la barre
+        setProgress(Math.round(pct * 0.1)); 
         setMessage(`Envoi du fichier... (${pct}%)`);
       }
     };
@@ -212,7 +209,7 @@ function VideoUploader({ onUploadSuccess, adminSecret }: { onUploadSuccess: (url
         setMessage("Fichier reçu, transcodage en cours...");
       } else {
         setStatus("error");
-        setMessage("Erreur d'upload (Vérifiez le secret)");
+        setMessage("Erreur d'upload (Session invalide)");
       }
     };
     xhr.send(formData);
@@ -265,8 +262,8 @@ function VideoUploader({ onUploadSuccess, adminSecret }: { onUploadSuccess: (url
   );
 }
 
-// --- VIDEOS TAB MODIFIÉ ---
-function VideosTab() {
+// --- VIDEOS TAB (Prend le token) ---
+function VideosTab({ token }: { token: string }) {
   const { t } = useTranslation();
   const [videos, setVideos] = useState<Video[]>([]);
   const [open, setOpen] = useState(false);
@@ -350,7 +347,7 @@ function VideosTab() {
               <DialogHeader>
                 <DialogTitle>Usine à Vidéo (MP4 → HLS)</DialogTitle>
               </DialogHeader>
-              <VideoUploader onUploadSuccess={handleUploadSuccess} adminSecret={ADMIN_SECRET} />
+              <VideoUploader onUploadSuccess={handleUploadSuccess} token={token} />
             </DialogContent>
           </Dialog>
 
@@ -542,7 +539,7 @@ function PhotosTab() {
   );
 }
 
-function VipRequestsTab() {
+function VipRequestsTab({ token }: { token: string }) {
   const [requests, setRequests] = useState<VipRequest[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<Record<string, string>>({});
@@ -570,7 +567,10 @@ function VipRequestsTab() {
       try {
         await fetch("https://api.haitiannud.com/api/push/send", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify({
             title: action === "approved" ? "👑 Votre accès VIP est Actif !" : "❌ Reçu VIP non validé",
             body: action === "approved" 
@@ -578,8 +578,7 @@ function VipRequestsTab() {
               : "Le reçu envoyé pour l'abonnement VIP a été refusé. Veuillez contacter le support.",
             url: "/vip",
             icon: "/logo.jpg",
-            targetUserId: r.userId,
-            adminSecret: ADMIN_SECRET
+            targetUserId: r.userId
           })
         });
       } catch (pushErr) {
@@ -791,7 +790,7 @@ function UsersTab() {
   );
 }
 
-function TicketsTab() {
+function TicketsTab({ token }: { token: string }) {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -828,7 +827,10 @@ function TicketsTab() {
       try {
         await fetch("https://api.haitiannud.com/api/push/send", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
           body: JSON.stringify({
             title: "📩 Nouvelle réponse à votre ticket",
             body: `Le support a répondu à votre message : "${selectedTicket.subject}"`,
@@ -836,8 +838,7 @@ function TicketsTab() {
             icon: "/logo.jpg",
             targetUserId: userIdToNotify,
             userId: userIdToNotify,
-            user_id: userIdToNotify,
-            adminSecret: ADMIN_SECRET
+            user_id: userIdToNotify
           })
         });
       } catch (pushErr) {
@@ -892,18 +893,16 @@ function TicketsTab() {
   );
 }
 
-function AdminAlerts() {
+function AdminAlerts({ token }: { token: string }) {
   const { t } = useTranslation();
   const [title, setTitle] = useState("Nouvelle vidéo disponible !");
   const [body, setBody] = useState("Une nouvelle vidéo vient d'être publiée sur Haïtien Nud Média. Viens voir !");
   const [url, setUrl] = useState("/");
-  const [secret, setSecret] = useState(ADMIN_SECRET);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ sent: number; total: number; failed: number } | null>(null);
 
   const handleSend = async () => {
     if (!title || !body) { toast.error("Titre et message requis"); return; }
-    if (!secret) { toast.error("Le secret admin est requis"); return; }
     
     setSending(true);
     setResult(null);
@@ -913,20 +912,15 @@ function AdminAlerts() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({
-          title,
-          body,
-          url,
-          icon: "/logo.jpg",
-          adminSecret: secret.trim()
-        })
+        body: JSON.stringify({ title, body, url, icon: "/logo.jpg" })
       });
 
       const res = await response.json();
 
       if (!response.ok) {
-        throw new Error(res.details || res.error || "Erreur de validation serveur");
+        throw new Error(res.error || "Erreur de validation serveur");
       }
 
       setResult(res);
@@ -961,10 +955,6 @@ function AdminAlerts() {
             <Label>Lien (page à ouvrir)</Label>
             <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="/" />
           </div>
-          <div className="space-y-2">
-            <Label>Secret admin (PUSH_ADMIN_SECRET)</Label>
-            <Input type="password" value={secret} onChange={e => setSecret(e.target.value)} placeholder="Votre secret..." />
-          </div>
           <Button onClick={handleSend} disabled={sending} className="w-full bg-primary text-white">
             {sending ? "Envoi en cours..." : "Envoyer à tous les abonnés"}
           </Button>
@@ -983,7 +973,6 @@ function AdminAlerts() {
             <div className="font-semibold text-foreground mb-1">Variables d'environnement requises</div>
             <code className="text-xs block">VAPID_PUBLIC_KEY=BAM-Ab_F...</code>
             <code className="text-xs block">VAPID_PRIVATE_KEY=e6Qt_r7...</code>
-            <code className="text-xs block">PUSH_ADMIN_SECRET=ton-secret</code>
             <code className="text-xs block">SUPABASE_URL=https://...</code>
             <code className="text-xs block">SUPABASE_SERVICE_KEY=eyJ...</code>
           </div>
