@@ -33,10 +33,10 @@ const getProxyDownloadUrl = (rawUrl: string | undefined | null, title?: string):
   return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}&download=true&filename=${encodeURIComponent(safeFilename)}`;
 };
 
-// Helper pour le mode offline (via proxy)
+// Helper pour le mode offline (via proxy) - CORRECTION : ajout de &download=true
 const getProxyVideoUrl = (rawUrl: string | undefined | null): string => {
   if (!rawUrl) return "";
-  return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}`;
+  return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}&download=true`;
 };
 
 // 🌐 Récupération de la fonction t globale
@@ -117,9 +117,6 @@ function NetworkStatusIcon() {
   );
 }
 
-/**
- * Détection du type de flux vidéo
- */
 type StreamType = "mp4" | "hls";
 
 function detectStreamType(url: string): StreamType {
@@ -139,9 +136,6 @@ function detectStreamType(url: string): StreamType {
   return "mp4";
 }
 
-/**
- * Déduit l'URL de secours MP4 si un flux HLS échoue
- */
 function deriveMp4Fallback(hlsUrl: string): string | null {
   if (!hlsUrl) return null;
   if (hlsUrl.includes(".m3u8")) {
@@ -158,7 +152,7 @@ interface VideoErrorOverlayProps {
 
 function VideoErrorOverlay({ message, isNetworkError, onRetry }: VideoErrorOverlayProps) {
   return (
-    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md px-6 text-center animate-in fade-in duration-300">
+    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md px-6 text-center animate-in fade-in duration-300 rounded-xl">
       <div className="relative mb-4">
         <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-lg shadow-red-500/10">
           {isNetworkError ? <WifiOff className="h-8 w-8" /> : <AlertTriangle className="h-8 w-8" />}
@@ -189,7 +183,7 @@ interface BufferingLoaderProps {
 
 function BufferingLoader({ progressPct }: BufferingLoaderProps) {
   return (
-    <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200">
+    <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200 rounded-xl">
       <div className="relative flex items-center justify-center">
         <div className="absolute h-16 w-16 rounded-full border-2 border-primary/20 animate-ping" />
         <div className="h-14 w-14 rounded-full bg-black/60 border border-white/10 flex items-center justify-center shadow-2xl backdrop-blur-md">
@@ -223,9 +217,6 @@ export interface QualityLevel {
   bitrate?: number;
 }
 
-// ---------------------------------------------------------------------------
-// Sélection de qualité pilotée par le débit réseau (seuils fixes)
-// ---------------------------------------------------------------------------
 const QUALITY_THRESHOLDS = [
   { height: 144, maxMbps: 5 },
   { height: 240, maxMbps: 10 },
@@ -254,7 +245,7 @@ function getConnection(): NetworkInformationLike | null {
 
 function getTargetHeightForBandwidth(mbps: number): number {
   for (const threshold of QUALITY_THRESHOLDS) {
-    if (mbps <= threshold.maxMbps) { // CORRECTION BUG <=
+    if (mbps <= threshold.maxMbps) {
       return threshold.height;
     }
   }
@@ -272,7 +263,6 @@ function readBandwidthMbps(): number | null {
 function findBestLevelIndex(levels: QualityLevel[], targetHeight: number): number {
   if (levels.length === 0) return -1;
   
-  // CORRECTION BUG : Ne jamais monter au-dessus de la cible
   const sortedDesc = [...levels].sort((a, b) => b.height - a.height);
   for (const lvl of sortedDesc) {
     if ((lvl.height || 0) <= targetHeight) return lvl.id;
@@ -299,9 +289,7 @@ function writeQualityOverride(height: number | null): void {
     } else {
       localStorage.setItem(QUALITY_OVERRIDE_KEY, String(height));
     }
-  } catch {
-    /* localStorage indisponible */
-  }
+  } catch { /* localStorage indisponible */ }
 }
 
 interface HybridVideoPlayerProps {
@@ -326,7 +314,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
   const [retryKey, setRetryKey] = useState(0);
 
   const [levels, setLevels] = useState<QualityLevel[]>([]);
-  const [currentQualityIndex, setCurrentQualityIndex] = useState<number>(-1); // -1 = Auto
+  const [currentQualityIndex, setCurrentQualityIndex] = useState<number>(-1);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [autoTargetHeight, setAutoTargetHeight] = useState<number | null>(null);
@@ -400,9 +388,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
 
   const updateProgressFromVideo = useCallback(() => {
     const video = videoRef.current;
-    if (!video || !video.duration || Number.isNaN(video.duration)) {
-      return;
-    }
+    if (!video || !video.duration || Number.isNaN(video.duration)) return;
     const current = video.currentTime;
     const buffered = video.buffered;
     for (let i = 0; i < buffered.length; i++) {
@@ -671,19 +657,18 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
   };
 
   return (
-    <div className="relative w-full h-full bg-black flex items-center justify-center select-none">
+    <div className="relative w-full h-full bg-black flex items-center justify-center select-none rounded-xl">
       <video
         ref={videoRef}
         poster={poster}
         controls
         preload="metadata"
         playsInline
-        className="w-full h-full object-contain"
+        className="w-full h-full object-contain rounded-xl"
       >
         {streamType === "mp4" && <source src={activeSrc} type="video/mp4" />}
       </video>
 
-      {/* Badges d'information (Résolution & Secours uniquement) */}
       {(isFallbackActive || (streamType === "hls" && currentLevelResolution)) && (
         <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
           {isFallbackActive && (
@@ -699,8 +684,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
         </div>
       )}
 
-      {/* Bouton de configuration de lecture */}
-      <div className="absolute top-3 right-3 z-20">
+      <div className="absolute top-3 right-3 z-50">
         <button
           type="button"
           onClick={() => setShowSettingsMenu(!showSettingsMenu)}
@@ -711,8 +695,7 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
         </button>
 
         {showSettingsMenu && (
-          <div className="absolute right-0 mt-2 w-52 rounded-xl bg-zinc-900/95 backdrop-blur-md border border-white/15 p-2 shadow-2xl z-30 text-xs text-white max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-transparent">
-            {/* Menu Qualité */}
+          <div className="absolute right-0 mt-2 w-52 rounded-xl bg-zinc-900/95 backdrop-blur-md border border-white/15 p-2 shadow-2xl z-50 text-xs text-white max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-600 scrollbar-track-transparent">
             {streamType === "hls" && levels.length > 0 && (
               <div className="mb-2">
                 <div className="font-semibold text-zinc-400 uppercase text-[10px] px-2 py-1">
@@ -747,7 +730,6 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
               </div>
             )}
 
-            {/* Menu Vitesse */}
             <div>
               <div className="font-semibold text-zinc-400 uppercase text-[10px] px-2 py-1">
                 Vitesse
@@ -1071,10 +1053,10 @@ export function Watch() {
             </div>
           )}
 
-          {/* LECTEUR DE STREAMING HYBRIDE (Suppression de overflow-hidden pour le menu) */}
+          {/* LECTEUR DE STREAMING HYBRIDE - CORRECTION : suppression de overflow-hidden */}
           <div className="relative w-full aspect-video bg-black rounded-xl shadow-2xl mb-4 group">
             {!isSignedIn ? (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center rounded-xl overflow-hidden">
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center rounded-xl">
                 <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-4 text-red-500">
                   <Lock className="h-6 w-6" />
                 </div>
@@ -1093,14 +1075,12 @@ export function Watch() {
             ) : video.isVip && !isUserVip ? (
               <VipGate />
             ) : video.videoUrl ? (
-              <div className="w-full h-full rounded-xl overflow-hidden">
-                <HybridVideoPlayer
-                  src={video.videoUrl}
-                  poster={video.thumbnailUrl || '/logo.jpg'}
-                />
-              </div>
+              <HybridVideoPlayer
+                src={video.videoUrl}
+                poster={video.thumbnailUrl || '/logo.jpg'}
+              />
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 rounded-xl overflow-hidden">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 rounded-xl">
                 <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">{t('watch.no_video_link')}</p>
               </div>
