@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "incremental": true,
-    "tsBuildInfoFile": ".tsbuildinfo",
-    "outDir": "dist",
-    "rootDir": "src"
-  },
-  "include": ["src"]
-}
