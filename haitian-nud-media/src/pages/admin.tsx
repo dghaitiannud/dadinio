@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useDropzone } from "react-dropzone";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, Ticket, Trash2, Bell, UserCheck, LayoutTemplate, Crown, ExternalLink, Check, X, LucideIcon } from "lucide-react";
+import { 
+  Shield, Users, Video as VideoIcon, ImageIcon, DollarSign, Download, 
+  Ticket, Trash2, Bell, UserCheck, LayoutTemplate, Crown, ExternalLink, 
+  Check, X, LucideIcon, UploadCloud, Loader2, CheckCircle, AlertCircle 
+} from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -27,6 +32,9 @@ import {
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2009 }, (_, i) => String(CURRENT_YEAR - i));
+
+// ⚠️ Idéalement, mets ça dans un .env (VITE_ADMIN_SECRET)
+const ADMIN_SECRET = "Pourquoi2020??";
 
 export function Admin() {
   const { t } = useTranslation();
@@ -133,10 +141,137 @@ function StatCard({ title, value, icon: Icon, color = "text-primary" }: StatCard
   );
 }
 
+// --- COMPOSANT D'UPLOAD ---
+function VideoUploader({ onUploadSuccess, adminSecret }: { onUploadSuccess: (url: string) => void, adminSecret: string }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState<"idle" | "uploading" | "processing" | "done" | "error">("idle");
+  const eventSourceRef = useRef<EventSource | null>(null);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => setFile(acceptedFiles[0]), []);
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+    onDrop, accept: { "video/mp4": [".mp4"] }, multiple: false 
+  });
+
+  const handleUpload = async () => {
+    if (!file) return;
+    
+    const jobId = crypto.randomUUID(); 
+    setStatus("uploading");
+    setProgress(0);
+    setMessage("Connexion au serveur...");
+
+    // 1. Connexion SSE
+    const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?secret=${adminSecret}`);
+    eventSourceRef.current = es;
+
+    es.addEventListener("progress", (e) => {
+      const data = JSON.parse(e.data);
+      setProgress(data.percent);
+      setMessage(data.message);
+      if (data.step === "transcode" || data.step === "upload") setStatus("processing");
+    });
+
+    es.addEventListener("complete", (e) => {
+      const data = JSON.parse(e.data);
+      setStatus("done");
+      es.close();
+      setTimeout(() => onUploadSuccess(data.url), 1500);
+    });
+
+    es.addEventListener("error", (e: any) => {
+      if (e.data) {
+        setMessage(JSON.parse(e.data).message);
+        setStatus("error");
+        es.close();
+      }
+    });
+
+    // 2. Upload XHR
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("filename", file.name.replace(".mp4", ""));
+    formData.append("jobId", jobId);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://api.haitiannud.com/api/upload-video");
+    xhr.setRequestHeader("x-admin-secret", adminSecret);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        setProgress(Math.round(pct * 0.1)); // Upload = 0 à 10% de la barre
+        setMessage(`Envoi du fichier... (${pct}%)`);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        setStatus("processing");
+        setMessage("Fichier reçu, transcodage en cours...");
+      } else {
+        setStatus("error");
+        setMessage("Erreur d'upload (Vérifiez le secret)");
+      }
+    };
+    xhr.send(formData);
+  };
+
+  return (
+    <div className="py-4">
+      {status === "idle" && !file && (
+        <div {...getRootProps()} className="border-2 border-dashed border-zinc-600 rounded-xl p-8 text-center cursor-pointer hover:border-primary transition">
+          <input {...getInputProps()} />
+          <UploadCloud className="mx-auto h-10 w-10 text-zinc-400 mb-3" />
+          <p className="text-sm text-zinc-300">{isDragActive ? "Déposez le MP4 ici..." : "Glissez un MP4 ou cliquez"}</p>
+        </div>
+      )}
+
+      {file && status === "idle" && (
+        <div className="text-center bg-muted/30 p-4 rounded-xl border border-border">
+          <p className="text-sm mb-4">Fichier : <span className="text-primary font-mono">{file.name}</span></p>
+          <Button onClick={handleUpload} className="w-full">Lancer la conversion HLS</Button>
+          <Button variant="ghost" onClick={() => setFile(null)} className="mt-2 text-xs w-full">Annuler</Button>
+        </div>
+      )}
+
+      {(status === "uploading" || status === "processing") && (
+        <div className="text-center p-4 bg-muted/30 rounded-xl border border-border">
+          <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-sm font-medium mb-3">{message}</p>
+          <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
+            <div className="bg-primary h-full transition-all" style={{ width: `${progress}%` }} />
+          </div>
+          <p className="text-right text-xs text-primary mt-1 font-mono">{progress}%</p>
+        </div>
+      )}
+
+      {status === "done" && (
+        <div className="text-center p-4 text-green-500">
+          <CheckCircle className="h-8 w-8 mx-auto mb-2" />
+          <p className="text-sm font-bold">Vidéo prête !</p>
+        </div>
+      )}
+
+      {status === "error" && (
+        <div className="text-center p-4 text-destructive">
+          <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+          <p className="text-sm font-bold">{message}</p>
+          <Button variant="outline" size="sm" onClick={() => setStatus("idle")} className="mt-2">Réessayer</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- VIDEOS TAB MODIFIÉ ---
 function VideosTab() {
   const { t } = useTranslation();
   const [videos, setVideos] = useState<Video[]>([]);
   const [open, setOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false); // Nouveau state
+  
   const [contentType, setContentType] = useState("");
   const [year, setYear] = useState(String(CURRENT_YEAR));
   const [formData, setFormData] = useState({ title: "", description: "", thumbnailUrl: "", videoUrl: "", durationSec: 120, isVip: false, published: true });
@@ -192,47 +327,77 @@ function VideosTab() {
     }
   };
 
+  // Appelé quand le FFmpeg+Supabase a terminé
+  const handleUploadSuccess = (finalUrl: string) => {
+    setUploadOpen(false);
+    setFormData({ ...formData, videoUrl: finalUrl });
+    setOpen(true);
+    toast.success("URL HLS prête ! Complétez les informations.");
+  };
+
   return (
     <Card className="bg-card">
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Gestion des Vidéos</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button>Ajouter une vidéo</Button></DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Nouvelle Vidéo</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t('common.title')}</Label>
-                <Input required value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-wrap gap-2">
+          
+          {/* BOUTON UPLOADER */}
+          <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+            <DialogTrigger asChild>
+              <Button variant="secondary" className="gap-2">
+                <UploadCloud className="h-4 w-4" /> Uploader & Convertir
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Usine à Vidéo (MP4 → HLS)</DialogTitle>
+              </DialogHeader>
+              <VideoUploader onUploadSuccess={handleUploadSuccess} adminSecret={ADMIN_SECRET} />
+            </DialogContent>
+          </Dialog>
+
+          {/* BOUTON AJOUT MANUEL */}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button>Ajouter manuellement</Button></DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader><DialogTitle>Nouvelle Vidéo</DialogTitle></DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>{t('common.category')}</Label>
-                  <Input required placeholder="ex: Kompa, Rasin, Trap..." value={contentType} onChange={e => setContentType(e.target.value)} />
+                  <Label>{t('common.title')}</Label>
+                  <Input required value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>{t('common.category')}</Label>
+                    <Input required placeholder="ex: Kompa, Rasin, Trap..." value={contentType} onChange={e => setContentType(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Année</Label>
+                    <Select value={year} onValueChange={setYear}>
+                      <SelectTrigger><SelectValue placeholder="Année" /></SelectTrigger>
+                      <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="px-3 py-2 bg-muted rounded-lg text-sm text-muted-foreground">Catégorie finale : <span className="font-semibold text-foreground">{buildCategory() || "—"}</span></div>
+                <div className="space-y-2"><Label>Description</Label><Textarea required value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
+                <div className="space-y-2"><Label>URL Miniature</Label><Input required value={formData.thumbnailUrl} onChange={e => setFormData({ ...formData, thumbnailUrl: e.target.value })} /></div>
                 <div className="space-y-2">
-                  <Label>Année</Label>
-                  <Select value={year} onValueChange={setYear}>
-                    <SelectTrigger><SelectValue placeholder="Année" /></SelectTrigger>
-                    <SelectContent>{YEARS.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <Label>URL Vidéo (HLS Master)</Label>
+                  <Input required value={formData.videoUrl} onChange={e => setFormData({ ...formData, videoUrl: e.target.value })} />
                 </div>
-              </div>
-              <div className="px-3 py-2 bg-muted rounded-lg text-sm text-muted-foreground">Catégorie finale : <span className="font-semibold text-foreground">{buildCategory() || "—"}</span></div>
-              <div className="space-y-2"><Label>Description</Label><Textarea required value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} /></div>
-              <div className="space-y-2"><Label>URL Miniature</Label><Input required value={formData.thumbnailUrl} onChange={e => setFormData({ ...formData, thumbnailUrl: e.target.value })} /></div>
-              <div className="space-y-2"><Label>URL Vidéo</Label><Input required value={formData.videoUrl} onChange={e => setFormData({ ...formData, videoUrl: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Durée (sec)</Label><Input type="number" required value={formData.durationSec} onChange={e => setFormData({ ...formData, durationSec: Number(e.target.value) })} /></div>
-                <div className="flex flex-col gap-4 mt-4">
-                  <div className="flex items-center gap-2"><Switch checked={formData.isVip} onCheckedChange={c => setFormData({ ...formData, isVip: c })} /><Label>Réservé VIP</Label></div>
-                  <div className="flex items-center gap-2"><Switch checked={formData.published} onCheckedChange={c => setFormData({ ...formData, published: c })} /><Label>Publié</Label></div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2"><Label>Durée (sec)</Label><Input type="number" required value={formData.durationSec} onChange={e => setFormData({ ...formData, durationSec: Number(e.target.value) })} /></div>
+                  <div className="flex flex-col gap-4 mt-4">
+                    <div className="flex items-center gap-2"><Switch checked={formData.isVip} onCheckedChange={c => setFormData({ ...formData, isVip: c })} /><Label>Réservé VIP</Label></div>
+                    <div className="flex items-center gap-2"><Switch checked={formData.published} onCheckedChange={c => setFormData({ ...formData, published: c })} /><Label>Publié</Label></div>
+                  </div>
                 </div>
-              </div>
-              <Button type="submit" disabled={createPending} className="w-full mt-4">{createPending ? "Enregistrement..." : "Enregistrer la vidéo"}</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <Button type="submit" disabled={createPending} className="w-full mt-4">{createPending ? "Enregistrement..." : "Enregistrer la vidéo"}</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="w-full overflow-x-auto rounded-xl border border-border">
