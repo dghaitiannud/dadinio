@@ -2,6 +2,8 @@
 // Stores video metadata + video blob for offline viewing
 // Limit: 5 videos max (100MB each = ~500MB limit)
 
+import { toast } from "sonner";
+
 const DB_NAME = "haitian-nud-offline";
 const DB_VERSION = 1;
 const STORE_NAME = "videos";
@@ -46,6 +48,7 @@ export async function listOfflineVideos(): Promise<OfflineVideo[]> {
     });
   } catch (err) {
     console.warn("Offline store not available:", err);
+    toast.error("Le stockage hors-ligne n'est pas disponible sur ce navigateur.");
     return [];
   }
 }
@@ -67,34 +70,44 @@ export async function getOfflineVideo(id: string): Promise<OfflineVideo | null> 
 }
 
 export async function saveOfflineVideo(video: Omit<OfflineVideo, "downloadedAt" | "sizeBytes">): Promise<void> {
-  const db = await openDB();
-  const count = await new Promise<number>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const req = store.count();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+  try {
+    const db = await openDB();
+    const count = await new Promise<number>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.count();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
 
-  if (count >= MAX_OFFLINE_VIDEOS) {
-    db.close();
-    throw new Error(`Limite atteinte : ${MAX_OFFLINE_VIDEOS} vidéos maximum. Supprimez une vidéo pour en ajouter une autre.`);
+    if (count >= MAX_OFFLINE_VIDEOS) {
+      db.close();
+      throw new Error(`Limite atteinte : ${MAX_OFFLINE_VIDEOS} vidéos maximum. Supprimez une vidéo pour en ajouter une autre.`);
+    }
+
+    const entry: OfflineVideo = {
+      ...video,
+      downloadedAt: Date.now(),
+      sizeBytes: video.videoBlob.size,
+    };
+
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.put(entry);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+    });
+  } catch (err: any) {
+    // Gestion du quota dépassé (QuotaExceededError)
+    if (err.name === "QuotaExceededError" || err.message?.toLowerCase().includes("quota")) {
+      toast.error("Stockage plein, impossible de sauvegarder la vidéo.");
+    } else {
+      toast.error(err.message || "Erreur lors de la sauvegarde hors-ligne.");
+    }
+    throw err; // On relance l'erreur pour que le composant appelant puisse réagir
   }
-
-  const entry: OfflineVideo = {
-    ...video,
-    downloadedAt: Date.now(),
-    sizeBytes: video.videoBlob.size,
-  };
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.put(entry);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-    tx.oncomplete = () => db.close();
-  });
 }
 
 export async function deleteOfflineVideo(id: string): Promise<void> {
