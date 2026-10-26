@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Link, Redirect } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -13,13 +13,13 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio, Globe, User, Send } from "lucide-react";
+import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio, Globe, User, Send, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { getWatchHistory, clearWatchHistory, type WatchEntry } from "@/lib/local-store";
 import { listMyTickets, createTicket, type SupportTicket } from "@/lib/supabase-db";
 import { PwaInstallButton } from "@/components/pwa-install";
 import { isPushSupported, getPushPermission, subscribeToPush, unsubscribeFromPush, getCurrentSubscription, type PushPermission } from "@/lib/push-notifications";
-import { supabase, LIVE_ADMIN_EMAIL } from "@/lib/supabase"; // <-- IMPORT STATIQUE ICI
+import { LIVE_ADMIN_EMAIL } from "@/lib/supabase";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function Account() {
@@ -108,7 +108,7 @@ export function Account() {
     if (!displayName.trim() || !appUser?.id) return;
     setSavingName(true);
     try {
-      // Plus d'import dynamique, on utilise le supabase importé en haut
+      const { supabase } = await import("@/lib/supabase");
       const { error } = await supabase
         .from("users")
         .update({ display_name: displayName.trim() })
