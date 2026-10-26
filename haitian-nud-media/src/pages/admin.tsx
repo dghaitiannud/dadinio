@@ -33,8 +33,8 @@ import {
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2009 }, (_, i) => String(CURRENT_YEAR - i));
 
-// ⚠️ Idéalement, mets ça dans un .env (VITE_ADMIN_SECRET)
-const ADMIN_SECRET = "Pourquoi2020??";
+// ⚠️ CORRECTION SÉCURITÉ : Utilisation de la variable d'environnement
+const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || "";
 
 export function Admin() {
   const { t } = useTranslation();
@@ -270,7 +270,7 @@ function VideosTab() {
   const { t } = useTranslation();
   const [videos, setVideos] = useState<Video[]>([]);
   const [open, setOpen] = useState(false);
-  const [uploadOpen, setUploadOpen] = useState(false); // Nouveau state
+  const [uploadOpen, setUploadOpen] = useState(false);
   
   const [contentType, setContentType] = useState("");
   const [year, setYear] = useState(String(CURRENT_YEAR));
@@ -327,7 +327,6 @@ function VideosTab() {
     }
   };
 
-  // Appelé quand le FFmpeg+Supabase a terminé
   const handleUploadSuccess = (finalUrl: string) => {
     setUploadOpen(false);
     setFormData({ ...formData, videoUrl: finalUrl });
@@ -341,7 +340,6 @@ function VideosTab() {
         <CardTitle>Gestion des Vidéos</CardTitle>
         <div className="flex flex-wrap gap-2">
           
-          {/* BOUTON UPLOADER */}
           <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
             <DialogTrigger asChild>
               <Button variant="secondary" className="gap-2">
@@ -356,7 +354,6 @@ function VideosTab() {
             </DialogContent>
           </Dialog>
 
-          {/* BOUTON AJOUT MANUEL */}
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button>Ajouter manuellement</Button></DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -571,7 +568,7 @@ function VipRequestsTab() {
       toast.success(action === "approved" ? `Accès VIP activé pour ${duration} jours !` : "Demande rejetée");
       
       try {
-        await fetch("https://api-6rzs.onrender.com/api/push/send", {
+        await fetch("https://api.haitiannud.com/api/push/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -582,7 +579,7 @@ function VipRequestsTab() {
             url: "/vip",
             icon: "/logo.jpg",
             targetUserId: r.userId,
-            adminSecret: "Pourquoi2020??" 
+            adminSecret: ADMIN_SECRET
           })
         });
       } catch (pushErr) {
@@ -829,7 +826,7 @@ function TicketsTab() {
       toast.success("Réponse envoyée");
 
       try {
-        await fetch("https://api-6rzs.onrender.com/api/push/send", {
+        await fetch("https://api.haitiannud.com/api/push/send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -840,7 +837,7 @@ function TicketsTab() {
             targetUserId: userIdToNotify,
             userId: userIdToNotify,
             user_id: userIdToNotify,
-            adminSecret: "Pourquoi2020??"
+            adminSecret: ADMIN_SECRET
           })
         });
       } catch (pushErr) {
@@ -900,7 +897,7 @@ function AdminAlerts() {
   const [title, setTitle] = useState("Nouvelle vidéo disponible !");
   const [body, setBody] = useState("Une nouvelle vidéo vient d'être publiée sur Haïtien Nud Média. Viens voir !");
   const [url, setUrl] = useState("/");
-  const [secret, setSecret] = useState("");
+  const [secret, setSecret] = useState(ADMIN_SECRET);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ sent: number; total: number; failed: number } | null>(null);
 
@@ -912,7 +909,7 @@ function AdminAlerts() {
     setResult(null);
     
     try {
-      const response = await fetch("https://api-6rzs.onrender.com/api/push/send", {
+      const response = await fetch("https://api.haitiannud.com/api/push/send", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
