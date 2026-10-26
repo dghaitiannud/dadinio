@@ -46,17 +46,26 @@ export function Home() {
     setIsLoadingVideos(true);
     setIsLoadingPhotos(true);
     
-    getBannerVideo().then(url => setBannerVideoUrl(url));
+    // 🛠️ CORRECTION : Ajout des .catch() et .finally() pour éviter le blocage
+    getBannerVideo()
+      .then(url => setBannerVideoUrl(url))
+      .catch(err => console.warn("Erreur bannière:", err));
 
-    getVideos().then(v => {
-      setAllVideos(v);
-      setIsLoadingVideos(false);
-    });
+    getVideos()
+      .then(v => setAllVideos(v))
+      .catch(err => {
+        console.error("Erreur chargement vidéos:", err);
+        setAllVideos([]); // On vide en cas d'erreur
+      })
+      .finally(() => setIsLoadingVideos(false)); // S'exécute TOUJOURS
 
-    getPhotos().then(p => {
-      setPhotos(p);
-      setIsLoadingPhotos(false);
-    });
+    getPhotos()
+      .then(p => setPhotos(p))
+      .catch(err => {
+        console.error("Erreur chargement photos:", err);
+        setPhotos([]);
+      })
+      .finally(() => setIsLoadingPhotos(false)); // S'exécute TOUJOURS
   }, []);
 
   // Effet de frappe en boucle (Typing / Deleting effect)
@@ -68,7 +77,6 @@ export function Home() {
         setDisplayText(FULL_TEXT.substring(0, displayText.length + 1));
       }, 120);
     } else if (!isDeleting && displayText.length === FULL_TEXT.length) {
-      // Pause une fois le texte complété
       timer = setTimeout(() => {
         setIsDeleting(true);
       }, 3500);
@@ -165,7 +173,6 @@ export function Home() {
               controls={false}
               className="w-full h-full object-cover pointer-events-none filter brightness-90"
             />
-            {/* Superposition de dégradés cinématiques */}
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/30 to-transparent" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)]" />
@@ -178,11 +185,8 @@ export function Home() {
           </div>
         )}
         
-        {/* Contenu de la bannière */}
         <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 md:p-16 lg:p-24 container mx-auto z-10">
           <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-6 duration-700">
-            
-            {/* Badge Nouveauté Pro */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 backdrop-blur-md mb-4 text-xs font-semibold text-primary-foreground shadow-lg">
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -191,7 +195,6 @@ export function Home() {
               <span>{t('home.new_on_platform')}</span>
             </div>
             
-            {/* Titre avec effet typographique moderne */}
             <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white mb-6 leading-none min-h-[50px] sm:min-h-[70px] flex items-center">
               <span className="drop-shadow-md">{haitianPart}</span>
               <span className="bg-gradient-to-r from-blue-400 via-primary to-indigo-500 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(30,94,255,0.8)] ml-2">
@@ -204,7 +207,6 @@ export function Home() {
               Découvrez les contenus les plus exclusifs et récents de la plateforme en haute définition.
             </p>
 
-            {/* Boutons d'action */}
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <Button 
                 size="lg" 
@@ -226,7 +228,6 @@ export function Home() {
                 </Button>
               )}
             </div>
-
           </div>
         </div>
       </section>
@@ -292,7 +293,6 @@ export function Home() {
       </section>
 
       <div className="container mx-auto px-4 py-8 flex flex-col gap-12">
-        {/* Rail supérieur : Nouvelles Vidéos */}
         {activeTab === "all" && (
           <section>
             <div className="flex items-center justify-between mb-6">
@@ -352,7 +352,6 @@ export function Home() {
           </section>
         )}
 
-        {/* Dynamic Main Gallery Content */}
         <section className="mb-8">
           <div className="mb-6">
             <h2 className="text-2xl font-serif font-bold">
@@ -362,7 +361,6 @@ export function Home() {
             </h2>
           </div>
 
-          {/* ONGLET PHOTO */}
           {activeTab === "photo" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {isLoadingPhotos ? (
@@ -434,7 +432,6 @@ export function Home() {
             </div>
           )}
 
-          {/* ONGLET VIDÉO */}
           {activeTab === "video" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 gap-y-10">
               {isLoadingVideos ? (
@@ -459,10 +456,8 @@ export function Home() {
             </div>
           )}
 
-          {/* ONGLET ACCUEIL */}
           {activeTab === "all" && (
             <div className="space-y-10">
-              {/* Section Vidéos */}
               <div>
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <VideoIcon className="h-5 w-5 text-primary" /> Vidéos
@@ -478,7 +473,6 @@ export function Home() {
                 </div>
               </div>
 
-              {/* Section Photos */}
               <div>
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                   <ImageIcon className="h-5 w-5 text-primary" /> Photos
@@ -523,7 +517,6 @@ export function Home() {
         </section>
       </div>
 
-      {/* Modal plein écran photo */}
       {selectedPhoto && (
         <div
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200"
