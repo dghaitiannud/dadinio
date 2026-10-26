@@ -4,7 +4,7 @@ import Hls from "hls.js";
 import { useAuth } from "@/lib/auth-context";
 import {
   getVideo, getVideos, registerView, requestDownload,
-  listComments, createComment, type Video, type Comment
+  listComments, createComment, getVideoAds, type Video, type Comment, type VideoAd
 } from "@/lib/supabase-db";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,24 +22,21 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { downloadAndSaveVideo, listOfflineVideos } from "@/lib/offline-store";
+import { AdOverlay } from "@/components/ad-overlay";
 
-// URL de base de votre serveur API Proxy sur Render (utilisé pour les téléchargements)
 const API_BASE_URL = "https://api.haitiannud.com";
 
-// Helper pour générer l'URL de téléchargement direct avec headers attachment
 const getProxyDownloadUrl = (rawUrl: string | undefined | null, title?: string): string => {
   if (!rawUrl) return "";
   const safeFilename = (title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_") + ".mp4";
   return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}&download=true&filename=${encodeURIComponent(safeFilename)}`;
 };
 
-// Helper pour le mode offline (via proxy) - CORRECTION : ajout de &download=true
 const getProxyVideoUrl = (rawUrl: string | undefined | null): string => {
   if (!rawUrl) return "";
   return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}&download=true`;
 };
 
-// 🌐 Récupération de la fonction t globale
 const t = (key: string, options?: any) => (window as any).t ? (window as any).t(key, options) : key;
 
 function VipGate() {
@@ -296,9 +293,10 @@ interface HybridVideoPlayerProps {
   src: string;
   poster?: string;
   fallbackSrc?: string;
+  videoId: string;
 }
 
-function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps) {
+function HybridVideoPlayer({ src, poster, fallbackSrc, videoId }: HybridVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const mediaRecoveryAttempts = useRef<number>(0);
@@ -319,12 +317,27 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [autoTargetHeight, setAutoTargetHeight] = useState<number | null>(null);
 
+  // === PUBLICITÉS ===
+  const [ads, setAds] = useState<VideoAd[]>([]);
+  const [currentAd, setCurrentAd] = useState<VideoAd | null>(null);
+  const [playedAds, setPlayedAds] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     setActiveSrc(src);
     setIsFallbackActive(false);
     setCurrentQualityIndex(-1);
     setLevels([]);
   }, [src]);
+
+  // Chargement des pubs au démarrage
+  useEffect(() => {
+    if (!videoId) return;
+    getVideoAds(videoId).then((list) => {
+      setAds(list);
+      const preRoll = list.find(a => a.adType === 'pre-roll');
+      if (preRoll) setCurrentAd(preRoll);
+    });
+  }, [videoId]);
 
   const streamType = useMemo(() => detectStreamType(activeSrc), [activeSrc]);
 
@@ -400,6 +413,25 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
       }
     }
   }, []);
+
+  // Détection Mid-roll
+  const handleVideoTimeUpdate = () => {
+    const video = videoRef.current;
+    if (!video || currentAd) return;
+    
+    const pending = ads.find(
+      a => a.adType === 'mid-roll' &&
+           !playedAds.has(a.id) &&
+           video.currentTime >= a.triggerSeconds &&
+           video.currentTime <= a.triggerSeconds + 2
+    );
+    
+    if (pending) {
+      video.pause();
+      setCurrentAd(pending);
+      setPlayedAds(prev => new Set(prev).add(pending.id));
+    }
+  };
 
   useEffect(() => {
     const video = videoRef.current;
@@ -658,12 +690,26 @@ function HybridVideoPlayer({ src, poster, fallbackSrc }: HybridVideoPlayerProps)
 
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center select-none rounded-xl">
+      
+      {currentAd && (
+        <AdOverlay
+          adUrl={currentAd.adVideoUrl}
+          clickUrl={currentAd.clickUrl}
+          skipAfter={currentAd.skipAfter}
+          onComplete={() => {
+            setCurrentAd(null);
+            videoRef.current?.play().catch(() => {});
+          }}
+        />
+      )}
+
       <video
         ref={videoRef}
         poster={poster}
         controls
         preload="metadata"
         playsInline
+        onTimeUpdate={handleVideoTimeUpdate}
         className="w-full h-full object-contain rounded-xl"
       >
         {streamType === "mp4" && <source src={activeSrc} type="video/mp4" />}
@@ -1053,7 +1099,6 @@ export function Watch() {
             </div>
           )}
 
-          {/* LECTEUR DE STREAMING HYBRIDE - CORRECTION : suppression de overflow-hidden */}
           <div className="relative w-full aspect-video bg-black rounded-xl shadow-2xl mb-4 group">
             {!isSignedIn ? (
               <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center rounded-xl">
@@ -1078,6 +1123,7 @@ export function Watch() {
               <HybridVideoPlayer
                 src={video.videoUrl}
                 poster={video.thumbnailUrl || '/logo.jpg'}
+                videoId={video.id}
               />
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 rounded-xl">
