@@ -259,7 +259,7 @@ function readBandwidthMbps(): number | null {
 
 function findBestLevelIndex(levels: QualityLevel[], targetHeight: number): number {
   if (levels.length === 0) return -1;
-  
+
   const sortedDesc = [...levels].sort((a, b) => b.height - a.height);
   for (const lvl of sortedDesc) {
     if ((lvl.height || 0) <= targetHeight) return lvl.id;
@@ -418,14 +418,14 @@ function HybridVideoPlayer({ src, poster, fallbackSrc, videoId }: HybridVideoPla
   const handleVideoTimeUpdate = () => {
     const video = videoRef.current;
     if (!video || currentAd) return;
-    
+
     const pending = ads.find(
       a => a.adType === 'mid-roll' &&
            !playedAds.has(a.id) &&
            video.currentTime >= a.triggerSeconds &&
            video.currentTime <= a.triggerSeconds + 2
     );
-    
+
     if (pending) {
       video.pause();
       setCurrentAd(pending);
@@ -688,9 +688,11 @@ function HybridVideoPlayer({ src, poster, fallbackSrc, videoId }: HybridVideoPla
     toast.info(`Vitesse : ${speed}x`);
   };
 
+  console.log("PUB TEST - Ads chargées :", ads, "| Pub en cours :", currentAd);
+
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center select-none rounded-xl">
-      
+
       {currentAd && (
         <AdOverlay
           adUrl={currentAd.adVideoUrl}
@@ -844,7 +846,7 @@ export function Watch() {
       try {
         const v = await getVideo(id);
         setVideo(v);
-        
+
         if (v) {
           setLikesCount((v as any).likes_count || Math.floor(v.views * 0.12) || 0);
           registerView(id);
@@ -962,7 +964,7 @@ export function Watch() {
       a.href = downloadTargetUrl;
       const filename = `${(video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_")}.mp4`;
       a.setAttribute("download", filename);
-      
+
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1042,7 +1044,7 @@ export function Watch() {
       setComments(updated);
     } catch {
       toast.error("Erreur lors de l'ajout du commentaire");
-    } finally {
+    } fontally {
       setCommentPending(false);
     }
   };
@@ -1091,7 +1093,7 @@ export function Watch() {
     <div className="container mx-auto px-4 py-6 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          
+
           {isSignedIn && (
             <div className="flex items-center justify-between mb-2 px-1">
               <span className="text-xs text-muted-foreground font-medium">{t('watch.streaming')}</span>
@@ -1175,7 +1177,7 @@ export function Watch() {
                 <Button variant="secondary" onClick={copyLink} className="rounded-full bg-accent hover:bg-accent/80">
                   <Copy className="h-4 w-4 mr-2" /> Copier le lien
                 </Button>
-                
+
                 {isSignedIn && (!video.isVip || isUserVip) && (
                   <>
                     <Button onClick={handleDownload} disabled={downloadPending} className="rounded-full bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(30,94,255,0.3)]">
