@@ -27,7 +27,7 @@ export function ForgotPasswordPage() {
       const response = await fetch("https://api.haitiannud.com/api/auth/check-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email })
       });
 
       const checkResult = await response.json();
@@ -62,87 +62,87 @@ export function ForgotPasswordPage() {
             {sent ? <ShieldCheck className="h-6 w-6" /> : <KeyRound className="h-6 w-6" />}
           </div>
           <h1 className="text-2xl font-serif font-bold text-foreground">
-            {sent ? "Email envoyé !" : "Mot de passe oublié ?"}
+            {sent ? t("Email envoyé !") : t("Mot de passe oublié ?")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {sent
-              ? "Un lien de réinitialisation a été envoyé à votre adresse email."
-              : "Entrez votre email pour recevoir un lien de réinitialisation."}
+            {sent ? t("Un lien de réinitialisation a été envoyé à votre adresse email.") : t("Entrez votre email pour recevoir un lien de réinitialisation.")
+
+            }
           </p>
         </div>
 
         {/* Bloc d'erreur visuel si l'e-mail n'est pas présent dans la DB */}
-        {error && (
-          <div className="mb-4 flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 animate-in fade-in-50">
+        {error &&
+        <div className="mb-4 flex items-start gap-2 rounded-xl bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 animate-in fade-in-50">
             <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
             <div>
               <span className="font-semibold">{t('common.error')}</span>
               {error}
             </div>
           </div>
-        )}
+        }
 
-        {!sent ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {!sent ?
+        <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">{t('account.email')}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setError(null);
-                  }}
-                  placeholder="votre@email.com"
-                  className="pl-10"
-                  required
-                />
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError(null);
+                }}
+                placeholder={t("votre@email.com")}
+                className="pl-10"
+                required />
+              
               </div>
             </div>
             <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            >
-              {loading ? "Vérification..." : "Envoyer le lien de réinitialisation"}
+            type="submit"
+            disabled={loading}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+            
+              {loading ? t("Vérification...") : t("Envoyer le lien de réinitialisation")}
             </Button>
-          </form>
-        ) : (
-          <div className="space-y-4">
+          </form> :
+
+        <div className="space-y-4">
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl text-center">
               <ShieldCheck className="h-8 w-8 text-primary mx-auto mb-2" />
               <p className="text-sm text-primary font-medium">
-                Vérifiez votre boîte de réception et cliquez sur le lien reçu.
+                {t("Vérifiez votre boîte de réception et cliquez sur le lien reçu.")}
               </p>
             </div>
             <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                setSent(false);
-                setEmail("");
-                setError(null);
-              }}
-            >
-              Renvoyer l'email
-            </Button>
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              setSent(false);
+              setEmail("");
+              setError(null);
+            }}>
+              {t("Renvoyer l'email")}
+            
+          </Button>
           </div>
-        )}
+        }
 
         <div className="mt-6 text-center">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setLocation("/login")}
-            className="text-muted-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Retour à la connexion
+            className="text-muted-foreground">
+            
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t("Retour à la connexion")}
           </Button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }

@@ -1,3 +1,4 @@
+// src/lib/supabase-db.ts
 import { supabase } from './supabase';
 
 export const FREE_DOWNLOAD_LIMIT = 3;
@@ -91,6 +92,20 @@ export interface VipRequest {
   durationDays?: number;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
+}
+
+// ✅ AJOUT : Interface VideoAd (nécessaire pour getVideoAds)
+export interface VideoAd {
+  id: string;
+  videoId: string | null;
+  title: string;
+  adVideoUrl: string;
+  adType: 'pre-roll' | 'mid-roll';
+  triggerSeconds: number;
+  skipAfter: number;
+  resolution: string;
+  clickUrl: string | null;
+  language: string;
 }
 
 // ====================================================
@@ -334,7 +349,6 @@ export async function getAdminStats(): Promise<AdminStats> {
     const { count: videoCount } = await supabase.from('videos').select('*', { count: 'exact', head: true });
     const { count: photoCount } = await supabase.from('photos').select('*', { count: 'exact', head: true });
     
-    // Récupération globale du total des vues via la fonction SQL RPC
     const { data: totalViewsData } = await supabase.rpc('get_total_views');
     
     const { count: downloadCount } = await supabase.from('downloads').select('*', { count: 'exact', head: true });
@@ -601,6 +615,7 @@ export async function adminProcessVipRequest(
     if (userError) throw userError;
   }
 }
+
 // ====================================================
 // PUBLICITÉS
 // ====================================================
@@ -618,7 +633,6 @@ export async function getVideoAds(videoId: string, lang: string = "fr"): Promise
     const { data, error } = await query.order('trigger_seconds', { ascending: true });
     if (error) throw error;
     
-    // Filtrage par langue (on garde celles de la langue OU du français par défaut)
     const filtered = (data || []).filter((a: any) => 
       !a.language || a.language === lang || a.language === 'fr'
     );

@@ -9,10 +9,10 @@ import { QualityLevel } from "./types";
 import { useTranslation } from "react-i18next";
 
 const QUALITY_THRESHOLDS = [
-  { height: 144, maxMbps: 5 }, { height: 240, maxMbps: 10 },
-  { height: 360, maxMbps: 20 }, { height: 480, maxMbps: 30 },
-  { height: 720, maxMbps: Infinity },
-] as const;
+{ height: 144, maxMbps: 5 }, { height: 240, maxMbps: 10 },
+{ height: 360, maxMbps: 20 }, { height: 480, maxMbps: 30 },
+{ height: 720, maxMbps: Infinity }] as
+const;
 
 const QUALITY_OVERRIDE_KEY = "hls-quality-override";
 
@@ -45,7 +45,7 @@ function deriveMp4Fallback(hlsUrl: string): string | null {
   return null;
 }
 
-function VideoErrorOverlay({ message, isNetworkError, onRetry }: { message: string; isNetworkError: boolean; onRetry: () => void }) {
+function VideoErrorOverlay({ message, isNetworkError, onRetry }: {message: string;isNetworkError: boolean;onRetry: () => void;}) {const { t } = useTranslation();
   return (
     <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md px-6 text-center animate-in fade-in duration-300 rounded-xl">
       <div className="relative mb-4">
@@ -54,20 +54,20 @@ function VideoErrorOverlay({ message, isNetworkError, onRetry }: { message: stri
         </div>
       </div>
       <h3 className="text-lg font-semibold text-white mb-1.5">
-        {isNetworkError ? "Connexion interrompue" : "Problème de lecture"}
+        {isNetworkError ? t("Connexion interrompue") : t("Problème de lecture")}
       </h3>
       <p className="text-sm text-zinc-400 max-w-sm mb-6 leading-relaxed">{message}</p>
       <button
         onClick={onRetry}
-        className="bg-primary hover:bg-primary/90 text-white font-medium rounded-xl px-5 py-2.5 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105 flex items-center"
-      >
-        <RotateCcw className="h-4 w-4" /> Réessayer la lecture
+        className="bg-primary hover:bg-primary/90 text-white font-medium rounded-xl px-5 py-2.5 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105 flex items-center">
+        
+        <RotateCcw className="h-4 w-4" /> {t("Réessayer la lecture")}
       </button>
-    </div>
-  );
+    </div>);
+
 }
 
-function BufferingLoader({ progressPct }: { progressPct: number | null }) {
+function BufferingLoader({ progressPct }: {progressPct: number | null;}) {const { t } = useTranslation();
   return (
     <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200 rounded-xl">
       <div className="relative flex items-center justify-center">
@@ -77,26 +77,27 @@ function BufferingLoader({ progressPct }: { progressPct: number | null }) {
         </div>
       </div>
       <div className="mt-3.5 flex flex-col items-center">
-        <span className="text-xs font-medium tracking-wide text-white/90 drop-shadow">Chargement du flux...</span>
-        {progressPct !== null && progressPct > 0 && progressPct <= 100 && (
-          <div className="mt-1 flex items-center gap-1.5">
+        <span className="text-xs font-medium tracking-wide text-white/90 drop-shadow">{t("Chargement du flux...")}</span>
+        {progressPct !== null && progressPct > 0 && progressPct <= 100 &&
+        <div className="mt-1 flex items-center gap-1.5">
             <div className="w-20 h-1 bg-white/20 rounded-full overflow-hidden">
               <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${progressPct}%` }} />
             </div>
             <span className="text-[10px] font-mono text-zinc-300">{progressPct}%</span>
           </div>
-        )}
+        }
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
-export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: string; poster?: string; videoId: string; fallbackSrc?: string }) {
+export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: {src: string;poster?: string;videoId: string;fallbackSrc?: string;}) {
+  const { t } = useTranslation();
   // 🛠️ CORRECTION 1 : On récupère i18n
   const { i18n } = useTranslation();
   const { appUser } = useAuth();
   const isVip = appUser?.plan === "vip";
-  
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const lastPlaybackPosition = useRef<number>(0);
@@ -106,7 +107,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
   const [activeSrc, setActiveSrc] = useState<string>(src);
   const [isBuffering, setIsBuffering] = useState(false);
   const [bufferProgress, setBufferProgress] = useState<number | null>(null);
-  const [playbackError, setPlaybackError] = useState<{ message: string; isNetwork: boolean } | null>(null);
+  const [playbackError, setPlaybackError] = useState<{message: string;isNetwork: boolean;} | null>(null);
   const [currentLevelResolution, setCurrentLevelResolution] = useState<string | null>(null);
   const [isFallbackActive, setIsFallbackActive] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
@@ -122,7 +123,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
   const [currentAd, setCurrentAd] = useState<VideoAd | null>(null);
   const [playedAds, setPlayedAds] = useState<Set<string>>(new Set());
 
-  const streamType = useMemo(() => (activeSrc.includes(".m3u8") ? "hls" : "mp4"), [activeSrc]);
+  const streamType = useMemo(() => activeSrc.includes(".m3u8") ? "hls" : "mp4", [activeSrc]);
 
   useEffect(() => {
     setActiveSrc(src);
@@ -134,13 +135,13 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
   // Chargement des pubs (sauf si VIP)
   useEffect(() => {
     if (!videoId || isVip) return;
-    
+
     // 🛠️ CORRECTION 1 (suite) : Utilisation de i18n.language au lieu de t('common.lang_code')
     const langCode = i18n.language.split('-')[0] || "fr";
 
     getVideoAds(videoId, langCode).then((list) => {
       setAds(list);
-      const preRolls = list.filter(a => a.adType === 'pre-roll');
+      const preRolls = list.filter((a) => a.adType === 'pre-roll');
       if (preRolls.length > 0) {
         const randomPreRoll = preRolls[Math.floor(Math.random() * preRolls.length)];
         setCurrentAd(randomPreRoll);
@@ -171,7 +172,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
     } else {
       setPlaybackError({
         message: !navigator.onLine ? "Vous semblez hors ligne. Vérifiez votre connexion." : reason,
-        isNetwork: isNetwork || !navigator.onLine,
+        isNetwork: isNetwork || !navigator.onLine
       });
       cleanupHls();
     }
@@ -184,7 +185,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
     const buffered = video.buffered;
     for (let i = 0; i < buffered.length; i++) {
       if (buffered.start(i) <= current && current <= buffered.end(i)) {
-        const pct = Math.min(100, Math.round((buffered.end(i) / video.duration) * 100));
+        const pct = Math.min(100, Math.round(buffered.end(i) / video.duration * 100));
         setBufferProgress(pct);
         return;
       }
@@ -210,7 +211,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
           enableWorker: true,
           lowLatencyMode: true,
           backBufferLength: 60,
-          maxBufferLength: 30,
+          maxBufferLength: 30
         });
         hlsRef.current = hls;
 
@@ -224,7 +225,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
               id: index,
               label: lvl.height ? `${lvl.height}p` : `${Math.round(lvl.bitrate / 1000)}k`,
               height: lvl.height || 0,
-              bitrate: lvl.bitrate,
+              bitrate: lvl.bitrate
             }));
             setLevels(parsedLevels);
 
@@ -325,7 +326,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
     const videoDuration = video.duration;
     const midRollTrigger = videoDuration > 120 ? videoDuration / 2 : 120;
 
-    const pendingMidRolls = ads.filter(a => a.adType === 'mid-roll' && !playedAds.has(a.id));
+    const pendingMidRolls = ads.filter((a) => a.adType === 'mid-roll' && !playedAds.has(a.id));
     if (pendingMidRolls.length > 0) {
       const targetAd = pendingMidRolls[0];
       const triggerTime = targetAd.triggerSeconds > 0 ? targetAd.triggerSeconds : midRollTrigger;
@@ -333,7 +334,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
       if (currentTime >= triggerTime && currentTime <= triggerTime + 2) {
         video.pause();
         setCurrentAd(targetAd);
-        setPlayedAds(prev => new Set(prev).add(targetAd.id));
+        setPlayedAds((prev) => new Set(prev).add(targetAd.id));
       }
     }
   };
@@ -343,22 +344,22 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
     setIsFallbackActive(false);
     setPlaybackError(null);
     setIsBuffering(true);
-    setRetryKey(prev => prev + 1);
+    setRetryKey((prev) => prev + 1);
   };
 
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center select-none rounded-xl">
-      {currentAd && (
-        <AdOverlay
-          adUrl={currentAd.adVideoUrl}
-          clickUrl={currentAd.clickUrl}
-          skipAfter={currentAd.skipAfter}
-          onComplete={() => {
-            setCurrentAd(null);
-            videoRef.current?.play().catch(() => {});
-          }}
-        />
-      )}
+      {currentAd &&
+      <AdOverlay
+        adUrl={currentAd.adVideoUrl}
+        clickUrl={currentAd.clickUrl}
+        skipAfter={currentAd.skipAfter}
+        onComplete={() => {
+          setCurrentAd(null);
+          videoRef.current?.play().catch(() => {});
+        }} />
+
+      }
 
       <video
         ref={videoRef}
@@ -367,25 +368,25 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
         preload="metadata"
         playsInline
         onTimeUpdate={handleVideoTimeUpdate}
-        className="w-full h-full object-contain rounded-xl"
-      >
+        className="w-full h-full object-contain rounded-xl">
+        
         {streamType === "mp4" && <source src={activeSrc} type="video/mp4" />}
       </video>
 
-      {(isFallbackActive || (streamType === "hls" && currentLevelResolution)) && (
-        <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 flex items-center gap-1.5">
-          {isFallbackActive && (
-            <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-zinc-300 border border-white/10">
-              MP4 (Secours)
+      {(isFallbackActive || streamType === "hls" && currentLevelResolution) &&
+      <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 flex items-center gap-1.5">
+          {isFallbackActive &&
+        <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-zinc-300 border border-white/10">
+              {t("MP4 (Secours)")}
             </span>
-          )}
-          {streamType === "hls" && currentLevelResolution && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/80 backdrop-blur-sm text-white">
+        }
+          {streamType === "hls" && currentLevelResolution &&
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/80 backdrop-blur-sm text-white">
               {currentLevelResolution}
             </span>
-          )}
+        }
         </div>
-      )}
+      }
 
       <PlayerSettings
         showSettingsMenu={showSettingsMenu}
@@ -404,7 +405,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
           } else {
             hlsRef.current.currentLevel = idx;
             setCurrentQualityIndex(idx);
-            
+
             // 🛠️ CORRECTION 2 : Sauvegarde de la qualité manuelle
             const selected = levels[idx];
             if (selected?.height) {
@@ -417,11 +418,11 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: 
           setPlaybackSpeed(speed);
           if (videoRef.current) videoRef.current.playbackRate = speed;
           setShowSettingsMenu(false);
-        }}
-      />
+        }} />
+      
 
       {isBuffering && !playbackError && <BufferingLoader progressPct={bufferProgress} />}
       {playbackError && <VideoErrorOverlay message={playbackError.message} isNetworkError={playbackError.isNetwork} onRetry={handleRetry} />}
-    </div>
-  );
+    </div>);
+
 }

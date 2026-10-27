@@ -46,7 +46,7 @@ export function Account() {
   useEffect(() => {
     if (appUser?.id) {
       setIsLoadingTickets(true);
-      listMyTickets(appUser.id).then(t => {
+      listMyTickets(appUser.id).then((t) => {
         setTickets(t);
         setIsLoadingTickets(false);
       });
@@ -96,9 +96,9 @@ export function Account() {
         await navigator.share({
           title: "Haïtien Nud Média",
           text: "Rejoins-moi sur HAITIAN NUD MEDIA",
-          url: referralLink,
+          url: referralLink
         });
-      } catch { }
+      } catch {}
     } else {
       copyReferral();
     }
@@ -109,10 +109,10 @@ export function Account() {
     setSavingName(true);
     try {
       // Plus d'import dynamique, on utilise le supabase importé en haut
-      const { error } = await supabase
-        .from("users")
-        .update({ display_name: displayName.trim() })
-        .eq("id", appUser.id);
+      const { error } = await supabase.
+      from("users").
+      update({ display_name: displayName.trim() }).
+      eq("id", appUser.id);
       if (error) throw error;
       await refreshUser();
       toast.success("Nom mis à jour");
@@ -146,45 +146,45 @@ export function Account() {
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                 <h1 className="text-2xl md:text-3xl font-serif font-bold">{appUser?.displayName || "Utilisateur"}</h1>
-                {appUser?.plan === "vip" ? (
-                  <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white border-0 shadow-sm px-2.5 py-0.5 text-xs font-semibold">
+                {appUser?.plan === "vip" ?
+                <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white border-0 shadow-sm px-2.5 py-0.5 text-xs font-semibold">
                     <Star className="h-3 w-3 mr-1 fill-current" /> VIP
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs">{t('account.free_member')}</Badge>
-                )}
+                  </Badge> :
+
+                <Badge variant="secondary" className="text-xs">{t('account.free_member')}</Badge>
+                }
               </div>
 
               <p className="text-sm text-muted-foreground">{appUser?.email}</p>
 
               {/* Raccourcis Administrateur */}
-              {(isAdmin || appUser?.email === LIVE_ADMIN_EMAIL) && (
-                <div className="flex flex-wrap items-center gap-2 pt-2 justify-center sm:justify-start">
-                  {isAdmin && (
-                    <Link href="/admin">
+              {(isAdmin || appUser?.email === LIVE_ADMIN_EMAIL) &&
+              <div className="flex flex-wrap items-center gap-2 pt-2 justify-center sm:justify-start">
+                  {isAdmin &&
+                <Link href="/admin">
                       <Button size="sm" variant="outline" className="h-7 text-xs bg-primary/5 border-primary/30 text-primary">
                         <Shield className="h-3.5 w-3.5 mr-1" /> Admin
                       </Button>
                     </Link>
-                  )}
-                  {(appUser?.email === LIVE_ADMIN_EMAIL || isAdmin) && (
-                    <Link href="/admin-live">
+                }
+                  {(appUser?.email === LIVE_ADMIN_EMAIL || isAdmin) &&
+                <Link href="/admin-live">
                       <Button size="sm" variant="outline" className="h-7 text-xs bg-red-500/10 border-red-500/30 text-red-500 hover:bg-red-500/20">
-                        <Radio className="h-3.5 w-3.5 mr-1 animate-pulse" /> Studio Live
+                        <Radio className="h-3.5 w-3.5 mr-1 animate-pulse" /> {t("Studio Live")}
                       </Button>
                     </Link>
-                  )}
+                }
                 </div>
-              )}
+              }
             </div>
           </div>
 
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleLogout} 
-            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 self-end md:self-start"
-          >
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 self-end md:self-start">
+            
             <LogOut className="h-4 w-4 mr-2" />{t('nav.logout')}
           </Button>
         </div>
@@ -194,31 +194,31 @@ export function Account() {
       <Tabs defaultValue="subscription" className="w-full">
         <div className="overflow-x-auto no-scrollbar border-b border-border mb-6">
           <TabsList className="bg-transparent h-auto p-0 gap-6 justify-start">
-            <TabsTrigger 
-              value="subscription" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2"
-            >
+            <TabsTrigger
+              value="subscription"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2">
+              
               <Star className="h-4 w-4" />
               {t('account.subscription')}
             </TabsTrigger>
-            <TabsTrigger 
-              value="history" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2"
-            >
+            <TabsTrigger
+              value="history"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2">
+              
               <History className="h-4 w-4" />
               {t('account.history')}
             </TabsTrigger>
-            <TabsTrigger 
-              value="settings" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2"
-            >
+            <TabsTrigger
+              value="settings"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2">
+              
               <SettingsIcon className="h-4 w-4" />
               {t('account.settings')}
             </TabsTrigger>
-            <TabsTrigger 
-              value="support" 
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2"
-            >
+            <TabsTrigger
+              value="support"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-3 text-xs md:text-sm font-medium gap-2">
+              
               <Ticket className="h-4 w-4" />
               {t('account.support')}
             </TabsTrigger>
@@ -233,12 +233,12 @@ export function Account() {
             <Card className="border-border bg-card shadow-xs flex flex-col justify-between">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Star className="h-4 w-4 text-primary" /> Statut Abonnement
+                  <Star className="h-4 w-4 text-primary" /> {t("Statut Abonnement")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {appUser?.plan === "vip" ? (
-                  <div className="space-y-3">
+                {appUser?.plan === "vip" ?
+                <div className="space-y-3">
                     <div className="p-3.5 bg-primary/10 border border-primary/20 rounded-xl text-primary font-medium flex justify-between items-center text-sm">
                       <span>{t('account.active_sub')}</span>
                       <Badge className="bg-primary text-white text-[11px]">{t('common.vip')}</Badge>
@@ -249,9 +249,9 @@ export function Account() {
                         {appUser?.subscriptionEndsAt ? format(new Date(appUser.subscriptionEndsAt), "dd MMMM yyyy", { locale: fr }) : "À vie"}
                       </span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="py-3 text-center space-y-3">
+                  </div> :
+
+                <div className="py-3 text-center space-y-3">
                     <p className="text-sm text-muted-foreground">{t('account.free_plan_msg')}</p>
                     <Link href="/plans" className="block">
                       <Button className="w-full bg-primary text-white shadow-sm h-9 text-xs font-semibold">
@@ -259,7 +259,7 @@ export function Account() {
                       </Button>
                     </Link>
                   </div>
-                )}
+                }
               </CardContent>
             </Card>
 
@@ -267,7 +267,7 @@ export function Account() {
             <Card className="border-border bg-card shadow-xs flex flex-col justify-between">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Download className="h-4 w-4 text-primary" /> Quota de Téléchargements
+                  <Download className="h-4 w-4 text-primary" /> {t("Quota de Téléchargements")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -277,7 +277,7 @@ export function Account() {
                     <div className="text-xs text-muted-foreground">{t('account.free_downloads_limit')}</div>
                   </div>
                   <div className="text-3xl font-bold font-mono text-primary">
-                    {appUser?.plan === "vip" ? "∞" : (3 - (appUser?.freeDownloadsUsed || 0))}
+                    {appUser?.plan === "vip" ? "∞" : 3 - (appUser?.freeDownloadsUsed || 0)}
                   </div>
                 </div>
               </CardContent>
@@ -286,16 +286,16 @@ export function Account() {
           </div>
 
           {/* Parrainage */}
-          {isFree && (
-            <Card className="border-primary/20 bg-card shadow-xs">
+          {isFree &&
+          <Card className="border-primary/20 bg-card shadow-xs">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Share2 className="h-4 w-4 text-primary" /> Parrainez vos proches
+                  <Share2 className="h-4 w-4 text-primary" /> {t("Parrainez vos proches")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-xs text-muted-foreground">
-                  Partagez Haïtien Nud Média avec vos amis pour leur faire découvrir la plateforme.
+                  {t("Partagez Haïtien Nud Média avec vos amis pour leur faire découvrir la plateforme.")}
                 </p>
                 <div className="flex gap-2">
                   <Input value={referralLink} readOnly className="font-mono text-xs bg-muted/30 h-9" />
@@ -304,11 +304,11 @@ export function Account() {
                   </Button>
                 </div>
                 <Button onClick={shareReferral} variant="secondary" className="w-full h-9 text-xs font-medium">
-                  <Share2 className="h-3.5 w-3.5 mr-2" /> Partager le lien
+                  <Share2 className="h-3.5 w-3.5 mr-2" /> {t("Partager le lien")}
                 </Button>
               </CardContent>
             </Card>
-          )}
+          }
         </TabsContent>
 
         {/* TAB 2: History */}
@@ -316,23 +316,23 @@ export function Account() {
           <Card className="border-border bg-card shadow-xs">
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <History className="h-4 w-4 text-primary" /> Historique de lecture
+                <History className="h-4 w-4 text-primary" /> {t("Historique de lecture")}
               </CardTitle>
-              {history.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={() => { clearWatchHistory(); setHistory([]); }} className="text-destructive h-8 text-xs">
+              {history.length > 0 &&
+              <Button variant="ghost" size="sm" onClick={() => {clearWatchHistory();setHistory([]);}} className="text-destructive h-8 text-xs">
                   <Trash2 className="h-3.5 w-3.5 mr-1" /> Vider
                 </Button>
-              )}
+              }
             </CardHeader>
             <CardContent>
-              {history.length === 0 ? (
-                <div className="text-center py-12 text-xs text-muted-foreground border border-dashed border-border rounded-xl">
-                  Aucune vidéo consultée récemment.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {history.map((h) => (
-                    <Link key={h.id} href={`/watch/${h.id}`} className="flex items-center gap-3 p-2.5 rounded-xl border border-border/60 bg-muted/20 hover:border-primary/40 transition-colors">
+              {history.length === 0 ?
+              <div className="text-center py-12 text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                  {t("Aucune vidéo consultée récemment.")}
+                </div> :
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {history.map((h) =>
+                <Link key={h.id} href={`/watch/${h.id}`} className="flex items-center gap-3 p-2.5 rounded-xl border border-border/60 bg-muted/20 hover:border-primary/40 transition-colors">
                       <img src={h.thumbnailUrl} alt="" className="w-20 h-12 object-cover rounded-md shrink-0 bg-muted" />
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-xs line-clamp-1">{h.title}</div>
@@ -341,9 +341,9 @@ export function Account() {
                         </div>
                       </div>
                     </Link>
-                  ))}
+                )}
                 </div>
-              )}
+              }
             </CardContent>
           </Card>
         </TabsContent>
@@ -380,12 +380,12 @@ export function Account() {
             <Card className="border-border bg-card shadow-xs">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-primary" /> Langue d'affichage
+                  <Globe className="h-4 w-4 text-primary" /> {t("Langue d'affichage")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-xs text-muted-foreground">
-                  Choisissez la langue de l'interface pour personnaliser votre navigation.
+                  {t("Choisissez la langue de l'interface pour personnaliser votre navigation.")}
                 </p>
                 <LanguageSwitcher />
               </CardContent>
@@ -399,12 +399,12 @@ export function Account() {
             <Card className="border-border bg-card shadow-xs flex flex-col justify-between">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Smartphone className="h-4 w-4 text-primary" /> Application Mobile
+                  <Smartphone className="h-4 w-4 text-primary" /> {t("Application Mobile")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-xs text-muted-foreground mb-4">
-                  Installez l'application sur votre écran d'accueil pour un accès plus rapide.
+                  {t("Installez l'application sur votre écran d'accueil pour un accès plus rapide.")}
                 </p>
                 <PwaInstallButton variant="card" />
               </CardContent>
@@ -427,14 +427,14 @@ export function Account() {
                 <form onSubmit={handleSupportSubmit} className="space-y-3">
                   <div className="space-y-1">
                     <Label htmlFor="subject" className="text-xs">{t('common.subject')}</Label>
-                    <Input id="subject" placeholder="Sujet..." value={subject} onChange={e => setSubject(e.target.value)} className="h-9 text-xs bg-muted/20" />
+                    <Input id="subject" placeholder={t("Sujet...")} value={subject} onChange={(e) => setSubject(e.target.value)} className="h-9 text-xs bg-muted/20" />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="message" className="text-xs">{t('common.message')}</Label>
-                    <Textarea id="message" placeholder="Votre message..." rows={4} value={message} onChange={e => setMessage(e.target.value)} className="text-xs bg-muted/20 resize-none" />
+                    <Textarea id="message" placeholder={t("Votre message...")} rows={4} value={message} onChange={(e) => setMessage(e.target.value)} className="text-xs bg-muted/20 resize-none" />
                   </div>
                   <Button type="submit" disabled={ticketPending || !subject || !message} className="w-full h-9 text-xs font-semibold">
-                    {ticketPending ? "Envoi..." : "Envoyer"}
+                    {ticketPending ? t("Envoi...") : "Envoyer"}
                   </Button>
                 </form>
               </CardContent>
@@ -444,16 +444,16 @@ export function Account() {
             <Card className="border-border bg-card shadow-xs">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Ticket className="h-4 w-4 text-primary" /> Mes Demandes
+                  <Ticket className="h-4 w-4 text-primary" /> {t("Mes Demandes")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
-                  {isLoadingTickets ? (
-                    <div className="text-center py-6 text-xs text-muted-foreground">{t('common.loading')}</div>
-                  ) : tickets && tickets.length > 0 ? (
-                    tickets.map((ticket) => (
-                      <div key={ticket.id} className="p-3 border border-border/60 rounded-xl bg-muted/20 space-y-2">
+                  {isLoadingTickets ?
+                  <div className="text-center py-6 text-xs text-muted-foreground">{t('common.loading')}</div> :
+                  tickets && tickets.length > 0 ?
+                  tickets.map((ticket) =>
+                  <div key={ticket.id} className="p-3 border border-border/60 rounded-xl bg-muted/20 space-y-2">
                         <div className="flex justify-between items-start gap-2">
                           <h4 className="font-semibold text-xs">{ticket.subject}</h4>
                           <Badge variant={ticket.status === 'open' ? 'secondary' : ticket.status === 'answered' ? 'default' : 'outline'} className="text-[10px] px-1.5 py-0">
@@ -461,22 +461,22 @@ export function Account() {
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-2">{ticket.message}</p>
-                        {ticket.reply && (
-                          <div className="p-2 bg-accent/40 rounded-lg text-xs border border-border/40">
-                            <span className="font-medium text-primary block mb-0.5">Support :</span>
+                        {ticket.reply &&
+                    <div className="p-2 bg-accent/40 rounded-lg text-xs border border-border/40">
+                            <span className="font-medium text-primary block mb-0.5">{t("Support :")}</span>
                             {ticket.reply}
                           </div>
-                        )}
+                    }
                         <div className="text-[10px] text-muted-foreground">
                           {format(new Date(ticket.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
                         </div>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 text-xs text-muted-foreground border border-dashed border-border rounded-xl">
-                      Aucune demande envoyée.
+                  ) :
+
+                  <div className="text-center py-12 text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                      {t("Aucune demande envoyée.")}
                     </div>
-                  )}
+                  }
                 </div>
               </CardContent>
             </Card>
@@ -485,11 +485,11 @@ export function Account() {
         </TabsContent>
       </Tabs>
 
-    </div>
-  );
+    </div>);
+
 }
 
-function PushNotificationCard({ userId }: { userId?: string }) {
+function PushNotificationCard({ userId }: {userId?: string;}) {
   const { t } = useTranslation();
   const [permission, setPermission] = useState<PushPermission>("default");
   const [subscribed, setSubscribed] = useState(false);
@@ -536,52 +536,52 @@ function PushNotificationCard({ userId }: { userId?: string }) {
       <Card className="border-border bg-card shadow-xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Bell className="h-4 w-4 text-primary" /> Notifications Push
+            <Bell className="h-4 w-4 text-primary" /> {t("Notifications Push")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-xs text-muted-foreground">{t('account.push_not_supported')}</p>
         </CardContent>
-      </Card>
-    );
+      </Card>);
+
   }
 
   return (
     <Card className="border-border bg-card shadow-xs">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <Bell className="h-4 w-4 text-primary" /> Notifications Push
+          <Bell className="h-4 w-4 text-primary" /> {t("Notifications Push")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-border/60 bg-muted/20">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            {subscribed ? (
-              <BellRing className="h-4 w-4 text-primary shrink-0" />
-            ) : (
-              <BellOff className="h-4 w-4 text-muted-foreground shrink-0" />
-            )}
+            {subscribed ?
+            <BellRing className="h-4 w-4 text-primary shrink-0" /> :
+
+            <BellOff className="h-4 w-4 text-muted-foreground shrink-0" />
+            }
             <div>
               <div className="font-medium text-xs">
-                {subscribed ? "Activées" : "Désactivées"}
+                {subscribed ? t("Activées") : t("Désactivées")}
               </div>
               <div className="text-[11px] text-muted-foreground line-clamp-1">
-                {subscribed ? "Alertes nouveautés" : "Activer pour recevoir les alertes"}
+                {subscribed ? t("Alertes nouveautés") : t("Activer pour recevoir les alertes")}
               </div>
             </div>
           </div>
           <Switch
             checked={subscribed}
             onCheckedChange={handleToggle}
-            disabled={loading || permission === "denied"}
-          />
+            disabled={loading || permission === "denied"} />
+          
         </div>
-        {permission === "denied" && (
-          <p className="text-[11px] text-destructive bg-destructive/10 p-2.5 rounded-lg">
-            Autorisez les notifications dans les réglages de votre navigateur.
+        {permission === "denied" &&
+        <p className="text-[11px] text-destructive bg-destructive/10 p-2.5 rounded-lg">
+            {t("Autorisez les notifications dans les réglages de votre navigateur.")}
           </p>
-        )}
+        }
       </CardContent>
-    </Card>
-  );
+    </Card>);
+
 }

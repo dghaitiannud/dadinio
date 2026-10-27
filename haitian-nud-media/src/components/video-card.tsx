@@ -16,14 +16,14 @@ export function VideoCard({ video, className = "" }: VideoCardProps) {
   const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
 
   return (
-    <Link href={`/watch/${video.id}`} className={`group block ${className}`}>
+    <Link href={`/watch/${video.id}`} className={t("group block {{className}}", { className: className })}>
       <div className="relative aspect-video rounded-xl overflow-hidden bg-muted mb-3">
         <img
           src={video.thumbnailUrl || `${basePath}/logo.jpg`}
           alt={video.title}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-        />
+          loading="lazy" />
+        
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <div className="w-12 h-12 rounded-full bg-primary/90 flex items-center justify-center text-primary-foreground transform scale-75 group-hover:scale-100 transition-transform duration-300 shadow-[0_0_20px_rgba(30,94,255,0.6)]">
             <Play className="h-5 w-5 ml-1" fill="currentColor" />
@@ -34,12 +34,12 @@ export function VideoCard({ video, className = "" }: VideoCardProps) {
           {Math.floor(video.durationSec / 60)}:{(video.durationSec % 60).toString().padStart(2, '0')}
         </div>
 
-        {video.isVip && (
-          <div className="absolute top-2 left-2">
+        {video.isVip &&
+        <div className="absolute top-2 left-2">
             <Badge variant="secondary" className="bg-gradient-to-r from-primary to-blue-400 text-white border-0 shadow-lg font-bold gap-1">
               <Star className="h-3 w-3 fill-current" />{t('common.vip')}</Badge>
           </div>
-        )}
+        }
       </div>
 
       <div className="flex gap-3">
@@ -58,6 +58,6 @@ export function VideoCard({ video, className = "" }: VideoCardProps) {
           </div>
         </div>
       </div>
-    </Link>
-  );
+    </Link>);
+
 }

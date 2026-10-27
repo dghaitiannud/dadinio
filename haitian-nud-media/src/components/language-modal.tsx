@@ -34,27 +34,27 @@ export function LanguageModal() {
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
             <Globe className="h-8 w-8" />
           </div>
-          <DialogTitle className="text-2xl font-serif text-center">Choose your language</DialogTitle>
+          <DialogTitle className="text-2xl font-serif text-center">{t("Choose your language")}</DialogTitle>
           <DialogDescription className="text-center text-base mt-2">
-            Choisissez votre langue / Chwazi lang ou / Elige tu idioma
+            {t("Choisissez votre langue / Chwazi lang ou / Elige tu idioma")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-3 mt-6">
           <Button variant={i18n.language.startsWith("fr") ? "default" : "outline"} onClick={() => changeLanguage("fr")} className="h-12 text-base">
-            🇫🇷 Français
+            {t("🇫🇷 Français")}
           </Button>
           <Button variant={i18n.language.startsWith("ht") ? "default" : "outline"} onClick={() => changeLanguage("ht")} className="h-12 text-base">
-            🇭🇹 Kreyòl
+            {t("🇭🇹 Kreyòl")}
           </Button>
           <Button variant={i18n.language.startsWith("en") ? "default" : "outline"} onClick={() => changeLanguage("en")} className="h-12 text-base">
-            🇺🇸 English
+            {t("🇺🇸 English")}
           </Button>
           <Button variant={i18n.language.startsWith("es") ? "default" : "outline"} onClick={() => changeLanguage("es")} className="h-12 text-base">
-            🇪🇸 Español
+            {t("🇪🇸 Español")}
           </Button>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }

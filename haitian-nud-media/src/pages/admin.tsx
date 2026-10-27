@@ -27,11 +27,11 @@ export function Admin() {
     return (
       <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
         <Shield className="h-16 w-16 mx-auto text-destructive mb-4" />
-        <h1 className="text-3xl font-bold">Accès Refusé</h1>
-        <p className="text-muted-foreground mt-2">Vous n'avez pas les droits d'administration.</p>
+        <h1 className="text-3xl font-bold">{t("Accès Refusé")}</h1>
+        <p className="text-muted-foreground mt-2">{t("Vous n'avez pas les droits d'administration.")}</p>
         <Button className="mt-6" onClick={() => setLocation("/")}>{t('watch.back_home')}</Button>
-      </div>
-    );
+      </div>);
+
   }
 
   const token = session?.access_token || "";
@@ -40,7 +40,7 @@ export function Admin() {
     <div className="container mx-auto px-4 py-8 min-h-screen">
       <h1 className="text-3xl font-serif font-bold mb-8 flex items-center gap-3">
         <Shield className="h-8 w-8 text-primary" />
-        Panneau d'Administration
+        {t("Panneau d'Administration")}
       </h1>
       
       <AdminStatsCards />
@@ -48,18 +48,18 @@ export function Admin() {
       <Tabs defaultValue="videos" className="w-full mt-8">
         <div className="w-full overflow-x-auto pb-2 scrollbar-none">
           <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 bg-muted p-1 rounded-xl">
-            <TabsTrigger value="videos" className="px-3 py-1.5 text-xs sm:text-sm font-medium">Vidéos</TabsTrigger>
+            <TabsTrigger value="videos" className="px-3 py-1.5 text-xs sm:text-sm font-medium">{t("Vidéos")}</TabsTrigger>
             <TabsTrigger value="photos" className="px-3 py-1.5 text-xs sm:text-sm font-medium">Photos</TabsTrigger>
             <TabsTrigger value="ads" className="px-3 py-1.5 text-xs sm:text-sm font-medium">
               <Megaphone className="h-3.5 w-3.5 mr-1" /> Pubs
             </TabsTrigger>
             <TabsTrigger value="vip" className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-yellow-500 gap-1.5">
-              <Crown className="h-3.5 w-3.5 fill-yellow-500 shrink-0" /> Demandes VIP
+              <Crown className="h-3.5 w-3.5 fill-yellow-500 shrink-0" /> {t("Demandes VIP")}
             </TabsTrigger>
             <TabsTrigger value="users" className="px-3 py-1.5 text-xs sm:text-sm font-medium">Utilisateurs</TabsTrigger>
             <TabsTrigger value="tickets" className="px-3 py-1.5 text-xs sm:text-sm font-medium">Messages</TabsTrigger>
             <TabsTrigger value="alerts" className="px-3 py-1.5 text-xs sm:text-sm font-medium">Alertes</TabsTrigger>
-            <TabsTrigger value="banner" className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-primary">Bannière</TabsTrigger>
+            <TabsTrigger value="banner" className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-primary">{t("Bannière")}</TabsTrigger>
           </TabsList>
         </div>
 
@@ -72,6 +72,6 @@ export function Admin() {
         <TabsContent value="alerts"><AlertsTab token={token} /></TabsContent>
         <TabsContent value="banner"><BannerTab /></TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>);
+
 }

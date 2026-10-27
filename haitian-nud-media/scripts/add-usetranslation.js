@@ -10,8 +10,6 @@ const traverse = traverseModule.default || traverseModule;
 const generate = generateModule.default || generateModule;
 
 const SRC_DIR = './src';
-
-// Dossiers ignorés (le code UI shadcn ne doit pas être touché)
 const EXCLUDED_PATHS = ['node_modules', 'components/ui', 'locales', '.test.', '.spec.'];
 
 function walkFiles(dir, callback) {
@@ -34,12 +32,11 @@ function processFile(filePath) {
     return;
   }
 
-  // === Analyse du fichier ===
-  let usesT = false;              // Le fichier utilise t('...')
-  let usesGlobalT = false;        // Le fichier utilise (window as any).t
+  let usesT = false;
+  let usesGlobalT = false;
   let hasUseTranslationImport = false;
-  let hasTDeclaration = false;    // const { t } = ... déjà quelque part
-  let hasTopLevelT = false;       // const t = (key...) => ... (fonction globale)
+  let hasTopLevelT = false;
+  let alreadyHasHookInComponent = false;
 
   traverse(ast, {
     ImportDeclaration(p) {
@@ -53,33 +50,36 @@ function processFile(filePath) {
     },
     CallExpression(p) {
       if (b.isIdentifier(p.node.callee) && p.node.callee.name === 't') usesT = true;
+      // Détecte si useTranslation() est déjà appelé
+      if (b.isIdentifier(p.node.callee) && p.node.callee.name === 'useTranslation') {
+        alreadyHasHookInComponent = true;
+      }
     },
     AssignmentExpression(p) {
-      // Détection de (window as any).t = ...
       if (b.isMemberExpression(p.node.left) && b.isIdentifier(p.node.left.property, { name: 't' })) {
         usesGlobalT = true;
       }
     },
     VariableDeclarator(p) {
       if (b.isIdentifier(p.node.id) && p.node.id.name === 't') {
-        hasTDeclaration = true;
-        // Détection de `const t = (key, opts) => ...`
         if (b.isArrowFunctionExpression(p.node.init) || b.isFunctionExpression(p.node.init)) {
-          if (p.scope.parent === null || p.scope.parent.parent === null) hasTopLevelT = true;
+          try {
+            const fnParent = p.scope?.getFunctionParent?.();
+            if (!fnParent) hasTopLevelT = true;
+          } catch {}
         }
       }
     },
   });
 
-  // Si le fichier n'utilise pas t() → on ne touche à rien
+  // === SKIP cases ===
   if (!usesT) return;
-  // Si le fichier a déjà un `const t = ...` global (comme App.tsx) → on ne touche pas
-  if (hasTopLevelT) {
-    console.log(`⏭️  ${filePath.replace('./src/', '')} → t global déjà défini`);
+  if (hasTopLevelT || usesGlobalT) {
+    console.log(`⏭️  ${filePath.replace('./src/', '')} → t global (skip)`);
     return;
   }
-  // Si hasTDeclaration est vrai mais pas topLevelT, c'est peut-être déjà un useTranslation
-  if (hasTDeclaration && hasUseTranslationImport) {
+  // ✅ NEW : skip si useTranslation() est déjà appelé quelque part
+  if (alreadyHasHookInComponent) {
     return;
   }
 
@@ -103,7 +103,7 @@ function processFile(filePath) {
     modified = true;
   }
 
-  // 2. Ajouter `const { t } = useTranslation();` dans le 1er composant
+  // 2. Ajouter `const { t } = useTranslation();`
   let inserted = false;
 
   const declarationToInsert = b.variableDeclaration('const', [
@@ -114,17 +114,24 @@ function processFile(filePath) {
   ]);
 
   traverse(ast, {
-    // Cas 1 : function MyComponent() { ... }
     FunctionDeclaration(p) {
       if (inserted) return;
       const name = p.node.id?.name;
       if (name && /^[A-Z]/.test(name)) {
+        // ✅ NEW : Vérifie si la fonction a déjà un useTranslation() dans son corps
+        const hasHookAlready = p.node.body.body.some(stmt =>
+          b.isVariableDeclaration(stmt) &&
+          stmt.declarations.some(d =>
+            d.init && b.isCallExpression(d.init) &&
+            b.isIdentifier(d.init.callee, { name: 'useTranslation' })
+          )
+        );
+        if (hasHookAlready) return;
+
         p.node.body.body.unshift(declarationToInsert);
         inserted = true;
       }
     },
-    // Cas 2 : export function MyComponent() { ... } (couvert par FunctionDeclaration)
-    // Cas 3 : const MyComponent = () => { ... }
     VariableDeclarator(p) {
       if (inserted) return;
       const id = p.node.id;
@@ -134,6 +141,15 @@ function processFile(filePath) {
         (b.isArrowFunctionExpression(init) || b.isFunctionExpression(init))
       ) {
         if (b.isBlockStatement(init.body)) {
+          const hasHookAlready = init.body.body.some(stmt =>
+            b.isVariableDeclaration(stmt) &&
+            stmt.declarations.some(d =>
+              d.init && b.isCallExpression(d.init) &&
+              b.isIdentifier(d.init.callee, { name: 'useTranslation' })
+            )
+          );
+          if (hasHookAlready) return;
+
           init.body.body.unshift(declarationToInsert);
           inserted = true;
         }
@@ -145,8 +161,6 @@ function processFile(filePath) {
     const output = generate(ast, { retainLines: true, jsescOption: { minimal: true } }, code);
     fs.writeFileSync(filePath, output.code);
     console.log(`✅ ${filePath.replace('./src/', '')} → useTranslation ajouté`);
-  } else if (usesT && !inserted) {
-    console.log(`⚠️  ${filePath.replace('./src/', '')} → utilise t() mais aucun composant trouvé`);
   }
 }
 

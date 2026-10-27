@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download } from "lucide-react";import { useTranslation } from "react-i18next";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+  userChoice: Promise<{outcome: "accepted" | "dismissed";}>;
 }
 
-function HaitianNudLogo() {
+function HaitianNudLogo() {const { t } = useTranslation();
   return (
     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-primary font-serif text-[10px] font-bold tracking-[0.18em]">
       HN
-    </div>
-  );
+    </div>);
+
 }
 
-export function PwaInstallButton({ variant = "compact" }: { variant?: "compact" | "card" }) {
+export function PwaInstallButton({ variant = "compact" }: {variant?: "compact" | "card";}) {const { t } = useTranslation();
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
 
@@ -48,26 +48,26 @@ export function PwaInstallButton({ variant = "compact" }: { variant?: "compact" 
       <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 flex items-center gap-4">
         <HaitianNudLogo />
         <div className="flex-1 min-w-0">
-          <div className="font-semibold">Installer l'application</div>
+          <div className="font-semibold">{t("Installer l'application")}</div>
           <div className="text-xs text-muted-foreground">
-            {deferred
-              ? "Ajoutez Haitian nud à votre écran d'accueil."
-              : "Sur iPhone : Partager → \"Sur l'écran d'accueil\". Sur Android : menu → \"Installer l'application\"."}
+            {deferred ? t("Ajoutez Haitian nud à votre écran d'accueil.") : t("Sur iPhone : Partager → \"Sur l'écran d'accueil\". Sur Android : menu → \"Installer l'application\".")
+
+            }
           </div>
         </div>
-        {deferred && (
-          <Button size="sm" onClick={install} className="bg-primary text-primary-foreground shrink-0">
+        {deferred &&
+        <Button size="sm" onClick={install} className="bg-primary text-primary-foreground shrink-0">
             <Download className="h-4 w-4 mr-1" /> Installer
           </Button>
-        )}
-      </div>
-    );
+        }
+      </div>);
+
   }
 
   if (!deferred) return null;
   return (
     <Button size="sm" variant="outline" onClick={install} className="border-primary/40 text-primary hover:bg-primary/10">
-      <Download className="h-4 w-4 mr-1" /> Installer l'app
-    </Button>
-  );
+      <Download className="h-4 w-4 mr-1" /> {t("Installer l'app")}
+    </Button>);
+
 }

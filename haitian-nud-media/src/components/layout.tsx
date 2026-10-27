@@ -9,21 +9,21 @@ import { ReactNode } from "react";
 import { BellRing } from "lucide-react";
 import { toast } from "sonner";
 // Import du nouveau composant de chat
-import { FloatingSupport } from "@/components/floating-support"; 
+import { FloatingSupport } from "@/components/floating-support";import { useTranslation } from "react-i18next";
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 // 🔔 BANNIÈRE GLOBALE PSYCHOLOGIQUE POUR FORCER LES NOTIFICATIONS
-function NotificationWarningBanner() {
+function NotificationWarningBanner() {const { t } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
   const [showBanner, setShowBanner] = useState(false);
   const supported = isPushSupported();
 
   useEffect(() => {
     if (isSignedIn && supported) {
-      getCurrentSubscription().then(sub => {
+      getCurrentSubscription().then((sub) => {
         if (!sub && getPushPermission() !== "denied") {
           setShowBanner(true);
         }
@@ -36,8 +36,8 @@ function NotificationWarningBanner() {
   return (
     <div className="bg-gradient-to-r from-amber-600 via-yellow-600 to-amber-600 text-white text-xs py-2.5 px-4 text-center font-semibold flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top duration-500 z-[100] sticky top-0 shadow-md">
       <BellRing className="h-4 w-4 animate-bounce shrink-0" />
-      <span>Activez vos notifications pour être alerté dès que votre accès VIP est validé et ne manquer aucune nouvelle vidéo !</span>
-      <button 
+      <span>{t("Activez vos notifications pour être alerté dès que votre accès VIP est validé et ne manquer aucune nouvelle vidéo !")}</span>
+      <button
         onClick={async () => {
           try {
             const ok = await subscribeToPush(appUser?.id);
@@ -51,12 +51,12 @@ function NotificationWarningBanner() {
             console.error("Erreur d'activation push banner:", err);
           }
         }}
-        className="bg-black/20 hover:bg-black/40 text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide transition-all ml-2 border border-white/20 active:scale-95"
-      >
-        Activer maintenant
+        className="bg-black/20 hover:bg-black/40 text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide transition-all ml-2 border border-white/20 active:scale-95">
+        {t("Activer maintenant")}
+      
       </button>
-    </div>
-  );
+    </div>);
+
 }
 
 export function Layout({ children }: LayoutProps) {
@@ -79,6 +79,6 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Le bouton de chat flottant est ajouté ici, il sera présent sur toutes les pages */}
       <FloatingSupport currentUser={appUser} />
-    </div>
-  );
+    </div>);
+
 }

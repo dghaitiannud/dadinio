@@ -28,7 +28,7 @@ export function AdminLive() {
       if (isSignedIn) {
         const userRole = (appUser as any)?.role;
         const userEmail = (appUser as any)?.email;
-        
+
         // Sécurité par rôle OU par liste d'emails autorisés
         if (userRole === 'admin' || (userEmail && ADMIN_EMAILS.includes(userEmail))) {
           setIsChecking(false); // Accès accordé
@@ -71,7 +71,7 @@ export function AdminLive() {
   if (isChecking) {
     return (
       <div className="flex h-[50vh] w-full items-center justify-center text-sm text-muted-foreground animate-pulse">
-        Vérification des autorisations...
+        {t("Vérification des autorisations...")}
       </div>
     );
   }
@@ -86,7 +86,7 @@ export function AdminLive() {
   // 3. Fonction pour lancer le live
   const handleStartLive = async () => {
     setActionLoading(true);
-    const currentPlaybackId = "hOHyJBsghEMe9mVy6lX7hecK1lBitndcOtMO9uttXtw"; 
+    const currentPlaybackId = "hOHyJBsghEMe9mVy6lX7hecK1lBitndcOtMO9uttXtw";
 
     const { error } = await supabase
       .from('app_settings')
@@ -118,10 +118,11 @@ export function AdminLive() {
   return (
     <div className="max-w-md mx-auto p-4 flex flex-col gap-4">
       <div className="flex items-center justify-between border-b pb-2">
-        <h1 className="text-xl font-bold tracking-tight">Console de Streaming Pro</h1>
+        <h1 className="text-xl font-bold tracking-tight">{t("Console de Streaming Pro")}</h1>
         {isActive && (
           <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white animate-pulse">
-            <Radio className="w-3.5 h-3.5" />{t('common.live')}</span>
+            <Radio className="w-3.5 h-3.5" />{t('common.live')}
+          </span>
         )}
       </div>
 
@@ -132,30 +133,27 @@ export function AdminLive() {
             streamType="live"
             autoPlay
             muted
-            preferCmcd="low-latency"
-            maxLiveSyncPlaybackRate={2}
-            placeholder=""
             className="w-full h-full object-cover"
           />
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-zinc-500 p-6 text-center gap-2">
             <VideoOff className="w-8 h-8 text-zinc-600" />
-            <p className="text-sm font-medium">Le flux est actuellement hors ligne</p>
-            <p className="text-xs text-zinc-600">Configurez votre logiciel d'envoi et lancez le direct.</p>
+            <p className="text-sm font-medium">{t("Le flux est actuellement hors ligne")}</p>
+            <p className="text-xs text-zinc-600">{t("Configurez votre logiciel d'envoi et lancez le direct.")}</p>
           </div>
         )}
       </div>
 
-      <Button 
-        onClick={isActive ? handleStopLive : handleStartLive} 
+      <Button
+        onClick={isActive ? handleStopLive : handleStartLive}
         disabled={actionLoading}
         variant={isActive ? "destructive" : "default"}
         className="w-full py-6 text-base font-semibold rounded-xl shadow-md transition-all"
       >
         {isActive ? (
-          <><VideoOff className="mr-2 h-5 w-5"/> Interrompre la diffusion</>
+          <><VideoOff className="mr-2 h-5 w-5" /> {t("Interrompre la diffusion")}</>
         ) : (
-          <><Radio className="mr-2 h-5 w-5"/> Activer le flux sur le site</>
+          <><Radio className="mr-2 h-5 w-5" /> {t("Activer le flux sur le site")}</>
         )}
       </Button>
     </div>

@@ -54,36 +54,36 @@ export function ResetPasswordPage() {
             {done ? <CheckCircle className="h-6 w-6" /> : <Lock className="h-6 w-6" />}
           </div>
           <h1 className="text-2xl font-serif font-bold text-foreground">
-            {done ? "Mot de passe mis à jour !" : "Nouveau mot de passe"}
+            {done ? t("Mot de passe mis à jour !") : t("Nouveau mot de passe")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {done
-              ? "Vous allez être redirigé vers la page de connexion."
-              : "Choisissez un nouveau mot de passe sécurisé."}
+            {done ? t("Vous allez être redirigé vers la page de connexion.") : t("Choisissez un nouveau mot de passe sécurisé.")
+
+            }
           </p>
         </div>
 
-        {!done ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
+        {!done ?
+        <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">{t('auth.new_password')}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10"
-                  required
-                  minLength={6}
-                />
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pl-10 pr-10"
+                required
+                minLength={6} />
+              
                 <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                onClick={() => setShowPassword(!showPassword)}>
+                
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
@@ -93,55 +93,55 @@ export function ResetPasswordPage() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="confirm"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10"
-                  required
-                  minLength={6}
-                />
+                id="confirm"
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pl-10 pr-10"
+                required
+                minLength={6} />
+              
                 <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
             </div>
             <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-            >
-              {loading ? "Mise à jour..." : "Réinitialiser le mot de passe"}
+            type="submit"
+            disabled={loading}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+            
+              {loading ? t("Mise à jour...") : t("Réinitialiser le mot de passe")}
             </Button>
-          </form>
-        ) : (
-          <div className="text-center">
+          </form> :
+
+        <div className="text-center">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <p className="text-muted-foreground mb-4">
-              Votre mot de passe a été réinitialisé avec succès.
+              {t("Votre mot de passe a été réinitialisé avec succès.")}
             </p>
             <Button onClick={() => setLocation("/login")} className="w-full">
-              Aller à la connexion
+              {t("Aller à la connexion")}
             </Button>
           </div>
-        )}
+        }
 
         <div className="mt-6 text-center">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setLocation("/login")}
-            className="text-muted-foreground"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Retour à la connexion
+            className="text-muted-foreground">
+            
+            <ArrowLeft className="h-4 w-4 mr-2" /> {t("Retour à la connexion")}
           </Button>
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }

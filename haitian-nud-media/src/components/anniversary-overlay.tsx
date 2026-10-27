@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { PartyPopper, Sparkles, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';import { useTranslation } from "react-i18next";
 
-export function AnniversaryOverlay() {
+export function AnniversaryOverlay() {const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const [years, setYears] = useState(1);
 
   // 🧪 MODE TEST : Passe à `true` pour forcer l'affichage maintenant !
-  const TEST_MODE = false; 
+  const TEST_MODE = false;
 
   useEffect(() => {
     const now = new Date();
     const month = now.getMonth(); // 0 = Janvier, 7 = Août
-    const date = now.getDate();   // Jour du mois (1 à 31)
+    const date = now.getDate(); // Jour du mois (1 à 31)
     const year = now.getFullYear();
 
     const isFirstWeekOfAugust = month === 7 && date >= 1 && date <= 7;
@@ -81,13 +81,13 @@ export function AnniversaryOverlay() {
           </div>
           <div>
             <div className="flex items-center gap-1.5 font-extrabold text-sm uppercase tracking-wider text-black/80">
-              <Sparkles className="h-4 w-4" /> Joyeux Anniversaire !
+              <Sparkles className="h-4 w-4" /> {t("Joyeux Anniversaire !")}
             </div>
             <h4 className="font-serif font-black text-lg leading-tight text-black">
-              Haitian Nud fête ses {years} {years > 1 ? 'ans' : 'an'} ! 🥳
+              {t("Haitian Nud fête ses")} {years} {years > 1 ? 'ans' : 'an'} ! 🥳
             </h4>
             <p className="text-xs text-black/80 font-medium">
-              Merci de faire partie de notre communauté !
+              {t("Merci de faire partie de notre communauté !")}
             </p>
           </div>
         </div>
@@ -96,11 +96,11 @@ export function AnniversaryOverlay() {
           variant="ghost"
           size="icon"
           onClick={handleClose}
-          className="hover:bg-black/10 rounded-full h-8 w-8 text-black shrink-0"
-        >
+          className="hover:bg-black/10 rounded-full h-8 w-8 text-black shrink-0">
+          
           <X className="h-5 w-5" />
         </Button>
       </div>
-    </div>
-  );
+    </div>);
+
 }

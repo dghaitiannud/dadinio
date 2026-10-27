@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
-import { confirmAge } from "@/lib/supabase-db";
+import { confirmAge } from "@/lib/supabase-db";import { useTranslation } from "react-i18next";
 
-export function AgeGate() {
+export function AgeGate() {const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { isSignedIn, user, appUser, refreshUser } = useAuth();
   const [confirming, setConfirming] = useState(false);
@@ -27,11 +27,11 @@ export function AgeGate() {
         await confirmAge(user.id);
         await refreshUser();
       } catch {
+
+
+
         // silently ignore
-      } finally {
-        setConfirming(false);
-      }
-    }
+      } finally {setConfirming(false);}}
   };
 
   const handleReject = () => {
@@ -47,20 +47,20 @@ export function AgeGate() {
           </div>
           <DialogTitle className="text-2xl font-serif text-center">Avertissement</DialogTitle>
           <DialogDescription className="text-center text-base mt-2">
-            Réservé aux adultes (18+). Mineurs interdits.
-            <br/><br/>
-            Ce site peut contenir du contenu mature. Vous devez avoir 18 ans ou plus pour entrer.
+            {t("Réservé aux adultes (18+). Mineurs interdits.")}
+            <br /><br />
+            {t("Ce site peut contenir du contenu mature. Vous devez avoir 18 ans ou plus pour entrer.")}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="flex-col sm:flex-row gap-3 sm:gap-2 mt-6">
           <Button variant="outline" className="w-full" onClick={handleReject}>
-            Je suis mineur(e)
+            {t("Je suis mineur(e)")}
           </Button>
           <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold" onClick={handleConfirm} disabled={confirming}>
-            {confirming ? "Validation..." : "J'ai 18 ans ou plus"}
+            {confirming ? t("Validation...") : t("J'ai 18 ans ou plus")}
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>);
+
 }

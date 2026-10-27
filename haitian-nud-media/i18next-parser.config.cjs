@@ -3,16 +3,19 @@ module.exports = {
   createOldCatalogs: false,
   defaultNamespace: 'translation',
   indentation: 2,
-  keepRemoved: false,
+  keepRemoved: true, // Conserve les clés existantes
+  
   lexers: {
-    js: ['JavascriptLexer'],
-    jsx: ['JsxLexer'],
+    tsx: ['JsxLexer', 'JavascriptLexer'],
     ts: ['JavascriptLexer'],
-    tsx: ['JsxLexer'],
+    jsx: ['JsxLexer', 'JavascriptLexer'],
+    js: ['JavascriptLexer'],
   },
+
   locales: ['fr', 'en', 'ht', 'es'],
   output: 'src/locales/$LOCALE.json',
-  input: ['src/**/*.{ts,tsx,js,jsx}'],
+  input: ['src/**/*.{ts,tsx}'],
+
   sort: true,
-  verbose: true,
+  verbose: false,
 };

@@ -32,7 +32,7 @@ export function Live() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [viewerCount, setViewerCount] = useState(1);
-  
+
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   if (!isSignedIn) {
@@ -41,11 +41,11 @@ export function Live() {
 
   useEffect(() => {
     async function fetchLiveSettings() {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("id", "live_playback_id")
-        .single();
+      const { data } = await supabase.
+      from("app_settings").
+      select("value").
+      eq("id", "live_playback_id").
+      single();
 
       if (data && data.value) {
         setPlaybackId(data.value);
@@ -58,38 +58,38 @@ export function Live() {
 
     fetchLiveSettings();
 
-    const settingsSubscription = supabase
-      .channel("public:app_settings")
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.live_playback_id" },
-        (payload) => {
-          const newValue = payload.new.value;
-          if (newValue) {
-            setPlaybackId(newValue);
-            setIsActive(true);
-            toast.success("Le live commence !");
-          } else {
-            setIsActive(false);
-            setPlaybackId(null);
-            toast.info("Le live s'est terminé.");
-          }
+    const settingsSubscription = supabase.
+    channel("public:app_settings").
+    on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.live_playback_id" },
+      (payload) => {
+        const newValue = payload.new.value;
+        if (newValue) {
+          setPlaybackId(newValue);
+          setIsActive(true);
+          toast.success("Le live commence !");
+        } else {
+          setIsActive(false);
+          setPlaybackId(null);
+          toast.info("Le live s'est terminé.");
         }
-      )
-      .subscribe();
+      }
+    ).
+    subscribe();
 
     const liveChannel = supabase.channel("live_interactions", {
-      config: { broadcast: { self: false } },
+      config: { broadcast: { self: false } }
     });
 
-    liveChannel
-      .on("broadcast", { event: "reaction" }, ({ payload }) => {
-        triggerLocalReaction(payload.emoji);
-      })
-      .on("broadcast", { event: "comment" }, ({ payload }) => {
-        setMessages((prev) => [...prev, payload]);
-      })
-      .subscribe();
+    liveChannel.
+    on("broadcast", { event: "reaction" }, ({ payload }) => {
+      triggerLocalReaction(payload.emoji);
+    }).
+    on("broadcast", { event: "comment" }, ({ payload }) => {
+      setMessages((prev) => [...prev, payload]);
+    }).
+    subscribe();
 
     return () => {
       supabase.removeChannel(settingsSubscription);
@@ -120,7 +120,7 @@ export function Live() {
     supabase.channel("live_interactions").send({
       type: "broadcast",
       event: "reaction",
-      payload: { emoji },
+      payload: { emoji }
     });
   };
 
@@ -135,14 +135,14 @@ export function Live() {
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
       user: appUser?.displayName || "Anonyme",
-      text: inputText.trim(),
+      text: inputText.trim()
     };
 
     setMessages((prev) => [...prev, newMessage]);
     supabase.channel("live_interactions").send({
       type: "broadcast",
       event: "comment",
-      payload: newMessage,
+      payload: newMessage
     });
 
     setInputText("");
@@ -158,18 +158,18 @@ export function Live() {
             <Sparkles className="h-6 w-6 animate-pulse" />
           </div>
           <div>
-            <h3 className="font-bold text-sm sm:text-base text-foreground">Envie de faire des streams & monétiser ton contenu ?</h3>
-            <p className="text-xs text-muted-foreground">Rejoins l'équipe et deviens créatrice ou actrice de live sur HAITIAN NUD.</p>
+            <h3 className="font-bold text-sm sm:text-base text-foreground">{t("Envie de faire des streams & monétiser ton contenu ?")}</h3>
+            <p className="text-xs text-muted-foreground">{t("Rejoins l'équipe et deviens créatrice ou actrice de live sur HAITIAN NUD.")}</p>
           </div>
         </div>
-        <a 
-          href="https://T.me/dg_haitiannud" 
-          target="_blank" 
+        <a
+          href="https://T.me/dg_haitiannud"
+          target="_blank"
           rel="noopener noreferrer"
-          className="shrink-0 w-full sm:w-auto"
-        >
+          className="shrink-0 w-full sm:w-auto">
+          
           <Button className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-primary hover:opacity-90 text-white font-bold h-11 rounded-xl px-6 shadow-md transition-all">
-            Devenir créatrice ou actrice de live <ExternalLink className="ml-2 h-4 w-4" />
+            {t("Devenir créatrice ou actrice de live")} <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
         </a>
       </div>
@@ -177,15 +177,15 @@ export function Live() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Colonne Lecteur Vidéo */}
         <div className="flex-1 flex flex-col justify-between relative bg-black rounded-2xl overflow-hidden aspect-video lg:aspect-auto lg:h-[72vh] border border-border shadow-2xl">
-          {isActive && playbackId ? (
-            <div className="relative w-full h-full bg-black">
+          {isActive && playbackId ?
+          <div className="relative w-full h-full bg-black">
               <MuxPlayer
-                playbackId={playbackId}
-                streamType="live"
-                autoPlay
-                muted={isMuted}
-                className="w-full h-full object-contain"
-              />
+              playbackId={playbackId}
+              streamType="live"
+              autoPlay
+              muted={isMuted}
+              className="w-full h-full object-contain" />
+            
 
               {/* Overlay Badges */}
               <div className="absolute top-4 left-4 flex gap-2 items-center z-10">
@@ -199,37 +199,37 @@ export function Live() {
 
               {/* Bouton Mute */}
               <Button
-                variant="secondary"
-                size="icon"
-                className="absolute bottom-4 left-4 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 z-10"
-                onClick={() => setIsMuted(!isMuted)}
-              >
+              variant="secondary"
+              size="icon"
+              className="absolute bottom-4 left-4 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 z-10"
+              onClick={() => setIsMuted(!isMuted)}>
+              
                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center flex-1 text-center p-8 bg-neutral-950 text-neutral-400 h-full w-full">
+            </div> :
+
+          <div className="flex flex-col items-center justify-center flex-1 text-center p-8 bg-neutral-950 text-neutral-400 h-full w-full">
               <div className="p-4 bg-neutral-900 rounded-full border border-neutral-800 mb-4">
                 <Radio className="h-10 w-10 text-neutral-500 animate-pulse" />
               </div>
-              <h3 className="text-xl font-bold text-white">Aucun direct en cours</h3>
+              <h3 className="text-xl font-bold text-white">{t("Aucun direct en cours")}</h3>
               <p className="text-xs sm:text-sm mt-1 max-w-sm text-neutral-400">
-                Restez à l'affût, une notification sera envoyée dès le démarrage du prochain live !
+                {t("Restez à l'affût, une notification sera envoyée dès le démarrage du prochain live !")}
               </p>
             </div>
-          )}
+          }
 
           {/* Zone des réactions volantes */}
           <div className="absolute bottom-16 right-4 w-24 h-64 pointer-events-none z-20 overflow-hidden">
-            {reactions.map((r) => (
-              <div
-                key={r.id}
-                className="absolute bottom-0 text-3xl animate-fade-up-float drop-shadow-md"
-                style={{ left: `${r.left}%` }}
-              >
+            {reactions.map((r) =>
+            <div
+              key={r.id}
+              className="absolute bottom-0 text-3xl animate-fade-up-float drop-shadow-md"
+              style={{ left: `${r.left}%` }}>
+              
                 {r.emoji}
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -240,43 +240,43 @@ export function Live() {
           <div className="p-3.5 border-b border-border/80 bg-muted/40 flex items-center justify-between">
             <span className="font-bold text-sm flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-emerald-500 animate-ping' : 'bg-muted-foreground'}`} />
-              Chat en direct
+              {t("Chat en direct")}
             </span>
             
             {/* Émojis réactifs (Désactivés si live inactif) */}
             <div className={`flex gap-1 transition-opacity ${!isActive ? 'opacity-40 pointer-events-none' : ''}`}>
-              {["❤️", "🔥", "😂", "👑"].map((emoji) => (
-                <Button 
-                  key={emoji} 
-                  variant="ghost" 
-                  size="sm" 
-                  disabled={!isActive}
-                  className="text-base p-1 h-8 w-8 hover:bg-primary/20 hover:scale-110 transition-transform rounded-lg" 
-                  onClick={() => sendReaction(emoji)}
-                >
+              {["❤️", "🔥", "😂", "👑"].map((emoji) =>
+              <Button
+                key={emoji}
+                variant="ghost"
+                size="sm"
+                disabled={!isActive}
+                className="text-base p-1 h-8 w-8 hover:bg-primary/20 hover:scale-110 transition-transform rounded-lg"
+                onClick={() => sendReaction(emoji)}>
+                
                   {emoji}
                 </Button>
-              ))}
+              )}
             </div>
           </div>
 
           {/* Zone des messages */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3 text-sm">
-            {!isActive ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-4 text-muted-foreground space-y-2">
+            {!isActive ?
+            <div className="h-full flex flex-col items-center justify-center text-center p-4 text-muted-foreground space-y-2">
                 <MessageSquareLock className="h-8 w-8 text-muted-foreground/60" />
-                <p className="text-xs font-medium">Le chat en direct est verrouillé.</p>
+                <p className="text-xs font-medium">{t("Le chat en direct est verrouillé.")}</p>
                 <p className="text-[11px] text-muted-foreground/80">
-                  Les réactions et messages s'activeront automatiquement dès que le live commencera.
+                  {t("Les réactions et messages s'activeront automatiquement dès que le live commencera.")}
                 </p>
-              </div>
-            ) : messages.length === 0 ? (
-              <div className="text-center py-8 text-xs text-muted-foreground italic">
-                Soyez le premier à envoyer un message !
-              </div>
-            ) : (
-              messages.map((m) => (
-                <div key={m.id} className="flex gap-2.5 items-start bg-muted/30 p-2.5 rounded-xl border border-border/40">
+              </div> :
+            messages.length === 0 ?
+            <div className="text-center py-8 text-xs text-muted-foreground italic">
+                {t("Soyez le premier à envoyer un message !")}
+              </div> :
+
+            messages.map((m) =>
+            <div key={m.id} className="flex gap-2.5 items-start bg-muted/30 p-2.5 rounded-xl border border-border/40">
                   <Avatar className="h-6 w-6 border border-primary/20">
                     <AvatarFallback className="text-[10px] bg-primary/20 font-bold text-primary">
                       {m.user.charAt(0).toUpperCase()}
@@ -287,33 +287,33 @@ export function Live() {
                     <p className="text-foreground/90 break-words mt-0.5 text-xs leading-relaxed">{m.text}</p>
                   </div>
                 </div>
-              ))
-            )}
+            )
+            }
             <div ref={chatEndRef} />
           </div>
 
           {/* Formulaire d'envoi (Désactivé si live inactif) */}
           <form onSubmit={handleSendMessage} className="p-3 border-t border-border/80 bg-muted/20 flex gap-2">
             <Input
-              placeholder={isActive ? "Envoyer un message..." : "Live hors-ligne..."}
+              placeholder={isActive ? t("Envoyer un message...") : t("Live hors-ligne...")}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               disabled={!isActive}
               maxLength={150}
-              className="bg-background rounded-xl text-xs h-10 border-border/80 focus:border-primary"
-            />
-            <Button 
-              type="submit" 
-              size="icon" 
+              className="bg-background rounded-xl text-xs h-10 border-border/80 focus:border-primary" />
+            
+            <Button
+              type="submit"
+              size="icon"
               disabled={!inputText.trim() || !isActive}
-              className="h-10 w-10 shrink-0 rounded-xl bg-primary hover:bg-primary/90"
-            >
+              className="h-10 w-10 shrink-0 rounded-xl bg-primary hover:bg-primary/90">
+              
               <Send className="h-4 w-4" />
             </Button>
           </form>
 
         </div>
       </div>
-    </div>
-  );
+    </div>);
+
 }

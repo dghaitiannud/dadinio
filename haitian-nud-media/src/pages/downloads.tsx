@@ -11,8 +11,8 @@ import {
   getOfflineVideoUrl,
   revokeOfflineVideoUrl,
   formatBytes,
-  type OfflineVideo,
-} from "@/lib/offline-store";
+  type OfflineVideo } from
+"@/lib/offline-store";
 import { Play, Trash2, WifiOff, Film, ArrowLeft } from "lucide-react";
 
 export function DownloadsPage() {
@@ -77,46 +77,46 @@ export function DownloadsPage() {
         <h1 className="text-2xl font-serif font-bold">{t('downloads.my_downloads')}</h1>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="w-full aspect-video rounded-xl" />
-          ))}
-        </div>
-      ) : videos.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
+      {loading ?
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) =>
+        <Skeleton key={i} className="w-full aspect-video rounded-xl" />
+        )}
+        </div> :
+      videos.length === 0 ?
+      <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
             <WifiOff className="h-10 w-10 text-muted-foreground" />
           </div>
           <h2 className="text-xl font-semibold mb-2">{t('downloads.no_downloads')}</h2>
           <p className="text-muted-foreground max-w-md mb-6">
-            Téléchargez des vidéos pour les regarder sans connexion internet. Maximum 5 vidéos.
+            {t("Téléchargez des vidéos pour les regarder sans connexion internet. Maximum 5 vidéos.")}
           </p>
           <Link href="/">
             <Button className="bg-primary text-white">{t('downloads.browse_videos')}</Button>
           </Link>
-        </div>
-      ) : (
-        <>
+        </div> :
+
+      <>
           <p className="text-sm text-muted-foreground mb-4">
-            {videos.length}/5 vidéos — {formatBytes(videos.reduce((s, v) => s + v.sizeBytes, 0))} utilisés
+            {videos.length}{t("/5 vidéos —")} {formatBytes(videos.reduce((s, v) => s + v.sizeBytes, 0))} {t("utilisés")}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {videos.map((video) => (
-              <Card key={video.id} className="overflow-hidden border-border bg-card">
+            {videos.map((video) =>
+          <Card key={video.id} className="overflow-hidden border-border bg-card">
                 <div className="relative aspect-video bg-black">
                   <img
-                    src={video.thumbnailUrl}
-                    alt={video.title}
-                    className="w-full h-full object-cover opacity-80"
-                  />
+                src={video.thumbnailUrl}
+                alt={video.title}
+                className="w-full h-full object-cover opacity-80" />
+              
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Button
-                      size="icon"
-                      className="w-14 h-14 rounded-full bg-primary/90 text-white hover:bg-primary hover:scale-110 transition-all"
-                      onClick={() => handlePlay(video)}
-                    >
+                  size="icon"
+                  className="w-14 h-14 rounded-full bg-primary/90 text-white hover:bg-primary hover:scale-110 transition-all"
+                  onClick={() => handlePlay(video)}>
+                  
                       <Play className="h-6 w-6 ml-1" fill="currentColor" />
                     </Button>
                   </div>
@@ -134,46 +134,46 @@ export function DownloadsPage() {
                       {Math.floor(video.durationSec / 60)}:{(video.durationSec % 60).toString().padStart(2, "0")}
                     </span>
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
-                      onClick={() => handleDelete(video.id)}
-                    >
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+                  onClick={() => handleDelete(video.id)}>
+                  
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+          )}
           </div>
         </>
-      )}
+      }
 
       {/* Offline Video Player Modal */}
-      {playingId && videoUrl && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
+      {playingId && videoUrl &&
+      <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
           <div className="w-full max-w-4xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-white font-semibold truncate">
                 {videos.find((v) => v.id === playingId)?.title}
               </h3>
               <Button
-                variant="ghost"
-                size="sm"
-                className="text-white hover:bg-white/10"
-                onClick={handleClosePlayer}
-              >{t('common.close')}</Button>
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10"
+              onClick={handleClosePlayer}>
+              {t('common.close')}</Button>
             </div>
             <video
-              src={videoUrl}
-              controls
-              autoPlay
-              className="w-full rounded-lg"
-              style={{ maxHeight: "70vh" }}
-            />
+            src={videoUrl}
+            controls
+            autoPlay
+            className="w-full rounded-lg"
+            style={{ maxHeight: "70vh" }} />
+          
           </div>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }

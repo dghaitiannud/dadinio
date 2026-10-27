@@ -4,8 +4,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useTranslation } from "react-i18next";
 import {
   getVideo, getVideos, registerView, requestDownload,
-  listComments, createComment, type Video, type Comment
-} from "@/lib/supabase-db";
+  listComments, createComment, type Video, type Comment } from
+"@/lib/supabase-db";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -39,24 +39,24 @@ function VipGate() {
       </div>
       <h3 className="text-xl font-bold text-white mb-2">{t('watch.private_space')}</h3>
       <p className="text-zinc-400 text-sm text-center mb-6 max-w-xs leading-relaxed">
-        Cette vidéo exclusive est réservée aux membres VIP. Devenez Premium pour débloquer tout le catalogue instantanément.
+        {t("Cette vidéo exclusive est réservée aux membres VIP. Devenez Premium pour débloquer tout le catalogue instantanément.")}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 justify-center w-full max-w-sm">
         <Link href="/plans" className="w-full sm:flex-1">
           <Button size="sm" className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold gap-2 py-5 rounded-xl shadow-lg">
-            Devenir Membre VIP <ArrowRight className="h-4 w-4" />
+            {t("Devenir Membre VIP")} <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
       </div>
-    </div>
-  );
+    </div>);
+
 }
 
 export function Watch() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams<{id: string;}>();
   const { t } = useTranslation();
   const { isSignedIn, user, appUser, isLoading: authLoading } = useAuth();
-  
+
   const [video, setVideo] = useState<Video | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
@@ -86,18 +86,18 @@ export function Watch() {
       try {
         const v = await getVideo(id);
         setVideo(v);
-        
+
         if (v) {
           setLikesCount((v as any).likes_count || Math.floor(v.views * 0.12) || 0);
           registerView(id);
           if (user?.id) {
             import("@/lib/local-store").then(({ pushWatchHistory }) =>
-              pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
+            pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
             );
           }
-          getVideos({ category: v.category })
-            .then(vids => setRelatedVideos(vids.filter(vid => vid.id !== id)))
-            .catch(err => console.warn('Failed to load related videos:', err));
+          getVideos({ category: v.category }).
+          then((vids) => setRelatedVideos(vids.filter((vid) => vid.id !== id))).
+          catch((err) => console.warn('Failed to load related videos:', err));
         }
       } catch (err) {
         console.error('Failed to load video:', err);
@@ -190,7 +190,7 @@ export function Watch() {
     const toastId = toast.loading("Démarrage du téléchargement...");
 
     try {
-      const res = await requestDownload(id, appUser.id, isUserVip, appUser.freeDownloadsUsed);
+      const res = await requestDownload(id, appUser.id, isUserVip ?? false, appUser.freeDownloadsUsed);
       const rawDownloadUrl = res.url || video?.videoUrl;
 
       if (!rawDownloadUrl) {
@@ -202,7 +202,7 @@ export function Watch() {
       a.href = downloadTargetUrl;
       const filename = `${(video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_")}.mp4`;
       a.setAttribute("download", filename);
-      
+
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -249,7 +249,7 @@ export function Watch() {
         video.durationSec,
         video.category,
         (loaded, total) => {
-          const pct = total > 0 ? Math.round((loaded / total) * 100) : 0;
+          const pct = total > 0 ? Math.round(loaded / total * 100) : 0;
           if (pct % 10 === 0) {
             toast.loading(`Téléchargement offline : ${pct}%`, { id: toastId });
           }
@@ -293,8 +293,8 @@ export function Watch() {
         <h2 className="text-2xl font-bold mb-2">{t('watch.invalid_id')}</h2>
         <p className="text-muted-foreground mb-6">{t('watch.invalid_url')}</p>
         <Link href="/"><Button>{t('watch.back_home')}</Button></Link>
-      </div>
-    );
+      </div>);
+
   }
 
   if (isLoadingVideo || authLoading) {
@@ -305,8 +305,8 @@ export function Watch() {
             <div className="w-full aspect-video rounded-xl bg-zinc-900 animate-pulse" />
           </div>
         </div>
-      </div>
-    );
+      </div>);
+
   }
 
   if (videoError || !video) {
@@ -316,8 +316,8 @@ export function Watch() {
         <h2 className="text-2xl font-serif font-bold mb-2">{t('common.error_loading')}</h2>
         <p className="text-muted-foreground mb-6">{videoError || "Vidéo introuvable"}</p>
         <Link href="/"><Button>{t('watch.back_home')}</Button></Link>
-      </div>
-    );
+      </div>);
+
   }
 
   return (
@@ -327,37 +327,37 @@ export function Watch() {
           
           {/* LECTEUR */}
           <div className="relative w-full aspect-video bg-black rounded-xl shadow-2xl mb-4 group">
-            {!isSignedIn ? (
-              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center rounded-xl">
+            {!isSignedIn ?
+            <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-zinc-950 px-6 text-center rounded-xl">
                 <div className="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center mb-4 text-red-500">
                   <Lock className="h-6 w-6" />
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">{t('watch.restricted_content')}</h3>
                 <p className="text-zinc-400 text-sm text-center mb-6 max-w-xs">
-                  Konekte oswa kreye yon kont pou w ka gade videyo sa a.
+                  {t("Konekte oswa kreye yon kont pou w ka gade videyo sa a.")}
                 </p>
                 <div className="flex gap-3">
                   <Link href="/login">
                     <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5">
-                      Se connecter
+                      {t("Se connecter")}
                     </Button>
                   </Link>
                 </div>
-              </div>
-            ) : video.isVip && !isUserVip ? (
-              <VipGate />
-            ) : video.videoUrl ? (
-              <HybridVideoPlayer
-                src={video.videoUrl}
-                poster={video.thumbnailUrl || '/logo.jpg'}
-                videoId={video.id}
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 rounded-xl">
+              </div> :
+            video.isVip && !isUserVip ?
+            <VipGate /> :
+            video.videoUrl ?
+            <HybridVideoPlayer
+              src={video.videoUrl}
+              poster={video.thumbnailUrl || '/logo.jpg'}
+              videoId={video.id} /> :
+
+
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4 rounded-xl">
                 <AlertCircle className="h-10 w-10 text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">{t('watch.no_video_link')}</p>
               </div>
-            )}
+            }
           </div>
 
           {/* DETAILS DE LA VIDEO */}
@@ -366,11 +366,11 @@ export function Watch() {
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="secondary" className="bg-accent text-accent-foreground border-border">{video.category}</Badge>
-                  {video.isVip && (
-                    <Badge variant="secondary" className="bg-gradient-to-r from-yellow-500 to-orange-400 text-white border-0">
+                  {video.isVip &&
+                  <Badge variant="secondary" className="bg-gradient-to-r from-yellow-500 to-orange-400 text-white border-0">
                       <Star className="h-3 w-3 mr-1 fill-current" />{t('common.vip')}
                     </Badge>
-                  )}
+                  }
                 </div>
                 <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-2 leading-tight">{video.title}</h1>
                 <div className="flex items-center text-sm text-muted-foreground gap-2">
@@ -382,18 +382,18 @@ export function Watch() {
 
               {/* BOUTONS D'ACTION */}
               <div className="flex flex-wrap items-center gap-2">
-                <Button 
-                  variant="secondary" 
-                  onClick={handleLike} 
+                <Button
+                  variant="secondary"
+                  onClick={handleLike}
                   className={`rounded-full bg-accent hover:bg-accent/80 transition-all duration-200 ${
-                    isLiked ? "text-red-500 bg-red-500/10 border-red-500/30" : ""
-                  }`}
-                >
-                  <Heart 
+                  isLiked ? "text-red-500 bg-red-500/10 border-red-500/30" : ""}`
+                  }>
+                  
+                  <Heart
                     className={`h-4 w-4 mr-2 transition-all duration-300 ${isAnimating ? "scale-125" : "scale-100"} ${
-                      isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"
-                    }`} 
-                  />
+                    isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"}`
+                    } />
+                  
                   <span>{likesCount > 0 ? likesCount.toLocaleString() : "J'aime"}</span>
                 </Button>
 
@@ -401,35 +401,35 @@ export function Watch() {
                   <Share2 className="h-4 w-4 mr-2" /> Partager
                 </Button>
                 <Button variant="secondary" onClick={copyLink} className="rounded-full bg-accent hover:bg-accent/80">
-                  <Copy className="h-4 w-4 mr-2" /> Copier le lien
+                  <Copy className="h-4 w-4 mr-2" /> {t("Copier le lien")}
                 </Button>
                 
-                {isSignedIn && (!video.isVip || isUserVip) && (
-                  <>
+                {isSignedIn && (!video.isVip || isUserVip) &&
+                <>
                     <Button onClick={handleDownload} disabled={downloadPending} className="rounded-full bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(30,94,255,0.3)]">
                       {downloadPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                      {downloadPending ? "Téléchargement..." : "Télécharger"}
+                      {downloadPending ? t("Téléchargement...") : t("Télécharger")}
                     </Button>
-                    {isOfflineAvailable ? (
-                      <Button variant="secondary" className="rounded-full bg-green-500/20 text-green-600 hover:bg-green-500/30 border-green-500/30">
-                        <WifiOff className="h-4 w-4 mr-2" /> Disponible offline
+                    {isOfflineAvailable ?
+                  <Button variant="secondary" className="rounded-full bg-green-500/20 text-green-600 hover:bg-green-500/30 border-green-500/30">
+                        <WifiOff className="h-4 w-4 mr-2" /> {t("Disponible offline")}
+                      </Button> :
+
+                  <Button
+                    onClick={handleOfflineDownload}
+                    disabled={offlineDownloading}
+                    variant="secondary"
+                    className="rounded-full bg-accent hover:bg-accent/80">
+                    
+                        {offlineDownloading ?
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('watch.downloading')}</> :
+
+                    <><WifiOff className="h-4 w-4 mr-2" />{t('watch.watch_offline')}</>
+                    }
                       </Button>
-                    ) : (
-                      <Button
-                        onClick={handleOfflineDownload}
-                        disabled={offlineDownloading}
-                        variant="secondary"
-                        className="rounded-full bg-accent hover:bg-accent/80"
-                      >
-                        {offlineDownloading ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('watch.downloading')}</>
-                        ) : (
-                          <><WifiOff className="h-4 w-4 mr-2" />{t('watch.watch_offline')}</>
-                        )}
-                      </Button>
-                    )}
+                  }
                   </>
-                )}
+                }
               </div>
             </div>
 
@@ -449,14 +449,13 @@ export function Watch() {
             anonymous={anonymous}
             setAnonymous={setAnonymous}
             commentPending={commentPending}
-            handleComment={handleCommentSubmit}
-            t={t}
-          />
+            handleComment={handleCommentSubmit} />
+          
         </div>
 
         {/* SIDEBAR (VIDEOS SIMILAIRES) */}
-        <RelatedVideos relatedVideos={relatedVideos} t={t} />
+        <RelatedVideos relatedVideos={relatedVideos} />
       </div>
-    </div>
-  );
+    </div>);
+
 }
