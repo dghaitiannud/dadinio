@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Hls from "hls.js";
 import { useAuth } from "@/lib/auth-context";
-import { toast } from "sonner";
-import { Settings, Check, WifiOff, RotateCcw, AlertTriangle, Loader2 } from "lucide-react";
+import { WifiOff, RotateCcw, AlertTriangle, Loader2 } from "lucide-react"; // Settings et Check retirés
 import { getVideoAds, type VideoAd } from "@/lib/supabase-db";
 import { AdOverlay } from "@/components/ad-overlay";
 import { PlayerSettings } from "./player-settings";
 import { QualityLevel } from "./types";
 import { useTranslation } from "react-i18next";
-
-// ... (Fonctions helper: detectStreamType, deriveMp4Fallback, getConnection, etc. restent identiques)
-// ... (COMPOSANTS: VideoErrorOverlay, BufferingLoader restent identiques)
 
 const QUALITY_THRESHOLDS = [
   { height: 144, maxMbps: 5 }, { height: 240, maxMbps: 10 },
@@ -41,10 +37,65 @@ function findBestLevelIndex(levels: QualityLevel[], targetHeight: number): numbe
   return [...levels].sort((a, b) => a.height - b.height)[0].id;
 }
 
-export function HybridVideoPlayer({ src, poster, videoId }: { src: string; poster?: string; videoId: string }) {
-  const { t } = useTranslation();
+function deriveMp4Fallback(hlsUrl: string): string | null {
+  if (!hlsUrl) return null;
+  if (hlsUrl.includes(".m3u8")) {
+    return hlsUrl.replace(/\.m3u8(\?.*)?$/i, ".mp4$1");
+  }
+  return null;
+}
+
+function VideoErrorOverlay({ message, isNetworkError, onRetry }: { message: string; isNetworkError: boolean; onRetry: () => void }) {
+  return (
+    <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md px-6 text-center animate-in fade-in duration-300 rounded-xl">
+      <div className="relative mb-4">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 shadow-lg shadow-red-500/10">
+          {isNetworkError ? <WifiOff className="h-8 w-8" /> : <AlertTriangle className="h-8 w-8" />}
+        </div>
+      </div>
+      <h3 className="text-lg font-semibold text-white mb-1.5">
+        {isNetworkError ? "Connexion interrompue" : "Problème de lecture"}
+      </h3>
+      <p className="text-sm text-zinc-400 max-w-sm mb-6 leading-relaxed">{message}</p>
+      <button
+        onClick={onRetry}
+        className="bg-primary hover:bg-primary/90 text-white font-medium rounded-xl px-5 py-2.5 gap-2 shadow-lg shadow-primary/20 transition-all hover:scale-105 flex items-center"
+      >
+        <RotateCcw className="h-4 w-4" /> Réessayer la lecture
+      </button>
+    </div>
+  );
+}
+
+function BufferingLoader({ progressPct }: { progressPct: number | null }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/45 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200 rounded-xl">
+      <div className="relative flex items-center justify-center">
+        <div className="absolute h-16 w-16 rounded-full border-2 border-primary/20 animate-ping" />
+        <div className="h-14 w-14 rounded-full bg-black/60 border border-white/10 flex items-center justify-center shadow-2xl backdrop-blur-md">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
+      </div>
+      <div className="mt-3.5 flex flex-col items-center">
+        <span className="text-xs font-medium tracking-wide text-white/90 drop-shadow">Chargement du flux...</span>
+        {progressPct !== null && progressPct > 0 && progressPct <= 100 && (
+          <div className="mt-1 flex items-center gap-1.5">
+            <div className="w-20 h-1 bg-white/20 rounded-full overflow-hidden">
+              <div className="h-full bg-primary rounded-full transition-all duration-300" style={{ width: `${progressPct}%` }} />
+            </div>
+            <span className="text-[10px] font-mono text-zinc-300">{progressPct}%</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: { src: string; poster?: string; videoId: string; fallbackSrc?: string }) {
+  // 🛠️ CORRECTION 1 : On récupère i18n
+  const { i18n } = useTranslation();
   const { appUser } = useAuth();
-  const isVip = appUser?.plan === "vip"; // VIP = Pas de pubs
+  const isVip = appUser?.plan === "vip";
   
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -73,13 +124,22 @@ export function HybridVideoPlayer({ src, poster, videoId }: { src: string; poste
 
   const streamType = useMemo(() => (activeSrc.includes(".m3u8") ? "hls" : "mp4"), [activeSrc]);
 
-  // Chargement des pubs (avec langue) - Sauf si VIP
+  useEffect(() => {
+    setActiveSrc(src);
+    setIsFallbackActive(false);
+    setCurrentQualityIndex(-1);
+    setLevels([]);
+  }, [src]);
+
+  // Chargement des pubs (sauf si VIP)
   useEffect(() => {
     if (!videoId || isVip) return;
     
-    getVideoAds(videoId, t('common.lang_code') || "fr").then((list) => {
+    // 🛠️ CORRECTION 1 (suite) : Utilisation de i18n.language au lieu de t('common.lang_code')
+    const langCode = i18n.language.split('-')[0] || "fr";
+
+    getVideoAds(videoId, langCode).then((list) => {
       setAds(list);
-      // 1. Choix aléatoire d'une pre-roll
       const preRolls = list.filter(a => a.adType === 'pre-roll');
       if (preRolls.length > 0) {
         const randomPreRoll = preRolls[Math.floor(Math.random() * preRolls.length)];
@@ -87,39 +147,204 @@ export function HybridVideoPlayer({ src, poster, videoId }: { src: string; poste
         setPlayedAds(new Set([randomPreRoll.id]));
       }
     });
-  }, [videoId, isVip, t]);
+  }, [videoId, isVip, i18n.language]);
 
-  // ... (Les fonctions HLS setup, cleanup, applyAutoQuality, triggerMp4Fallback restent identiques)
+  const cleanupHls = useCallback(() => {
+    if (hlsRef.current) {
+      hlsRef.current.stopLoad();
+      hlsRef.current.detachMedia();
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+  }, []);
 
-  // Détection Mid-roll (ajustée pour les vidéos de 3-4 mins)
+  const triggerMp4Fallback = useCallback((reason: string, isNetwork = false) => {
+    const video = videoRef.current;
+    if (video) lastPlaybackPosition.current = video.currentTime || 0;
+
+    const targetMp4 = fallbackSrc || deriveMp4Fallback(src);
+    if (targetMp4 && targetMp4 !== activeSrc) {
+      cleanupHls();
+      setIsFallbackActive(true);
+      setActiveSrc(targetMp4);
+      setPlaybackError(null);
+    } else {
+      setPlaybackError({
+        message: !navigator.onLine ? "Vous semblez hors ligne. Vérifiez votre connexion." : reason,
+        isNetwork: isNetwork || !navigator.onLine,
+      });
+      cleanupHls();
+    }
+  }, [fallbackSrc, src, activeSrc, cleanupHls]);
+
+  const updateProgressFromVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.duration || Number.isNaN(video.duration)) return;
+    const current = video.currentTime;
+    const buffered = video.buffered;
+    for (let i = 0; i < buffered.length; i++) {
+      if (buffered.start(i) <= current && current <= buffered.end(i)) {
+        const pct = Math.min(100, Math.round((buffered.end(i) / video.duration) * 100));
+        setBufferProgress(pct);
+        return;
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !activeSrc) return;
+
+    setPlaybackError(null);
+    setIsBuffering(true);
+    setBufferProgress(null);
+    setCurrentLevelResolution(null);
+    mediaRecoveryAttempts.current = 0;
+    networkRecoveryAttempts.current = 0;
+
+    cleanupHls();
+
+    if (streamType === "hls") {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 60,
+          maxBufferLength: 30,
+        });
+        hlsRef.current = hls;
+
+        hls.loadSource(activeSrc);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+          setIsBuffering(false);
+          if (data.levels && data.levels.length > 0) {
+            const parsedLevels: QualityLevel[] = data.levels.map((lvl, index) => ({
+              id: index,
+              label: lvl.height ? `${lvl.height}p` : `${Math.round(lvl.bitrate / 1000)}k`,
+              height: lvl.height || 0,
+              bitrate: lvl.bitrate,
+            }));
+            setLevels(parsedLevels);
+
+            const mbps = readBandwidthMbps();
+            if (mbps !== null) {
+              const targetHeight = getTargetHeightForBandwidth(mbps);
+              const idx = findBestLevelIndex(parsedLevels, targetHeight);
+              hls.currentLevel = idx;
+              setAutoTargetHeight(targetHeight);
+            }
+
+            const first = data.levels[0];
+            if (first.height) setCurrentLevelResolution(`${first.height}p`);
+          }
+          if (lastPlaybackPosition.current > 0) {
+            video.currentTime = lastPlaybackPosition.current;
+            video.play().catch(() => {});
+          }
+        });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+          const currentLevel = hls.levels[data.level];
+          if (currentLevel?.height) setCurrentLevelResolution(`${currentLevel.height}p`);
+        });
+
+        hls.on(Hls.Events.BUFFER_APPENDED, () => updateProgressFromVideo());
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) return;
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            networkRecoveryAttempts.current += 1;
+            if (networkRecoveryAttempts.current <= 3 && navigator.onLine) {
+              setTimeout(() => hls.startLoad(), 1000 * networkRecoveryAttempts.current);
+            } else {
+              triggerMp4Fallback("Impossible de joindre le flux HLS. Basculement MP4.", true);
+            }
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            mediaRecoveryAttempts.current += 1;
+            if (mediaRecoveryAttempts.current <= 2) {
+              hls.recoverMediaError();
+            } else {
+              triggerMp4Fallback("Erreur de décodage du flux. Basculement MP4.", false);
+            }
+          } else {
+            triggerMp4Fallback("Lecture du flux HLS interrompue.", false);
+          }
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = activeSrc;
+        video.load();
+      } else {
+        triggerMp4Fallback("Format HLS non supporté sur ce navigateur.", false);
+      }
+    } else {
+      video.removeAttribute("src");
+      video.load();
+      video.src = activeSrc;
+      video.load();
+      if (lastPlaybackPosition.current > 0) {
+        video.currentTime = lastPlaybackPosition.current;
+        video.play().catch(() => {});
+      }
+    }
+
+    const handleWaiting = () => setIsBuffering(true);
+    const handlePlaying = () => {
+      setIsBuffering(false);
+      setPlaybackError(null);
+    };
+    const handleCanPlay = () => setIsBuffering(false);
+    const handleProgress = () => updateProgressFromVideo();
+    const handleError = () => {
+      triggerMp4Fallback("Erreur lors du chargement de la vidéo.", !navigator.onLine);
+      setIsBuffering(false);
+    };
+
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("progress", handleProgress);
+    video.addEventListener("error", handleError);
+
+    return () => {
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("progress", handleProgress);
+      video.removeEventListener("error", handleError);
+      cleanupHls();
+    };
+  }, [activeSrc, streamType, retryKey, cleanupHls, triggerMp4Fallback, updateProgressFromVideo]);
+
   const handleVideoTimeUpdate = () => {
     const video = videoRef.current;
     if (!video || currentAd || isVip) return;
 
     const currentTime = video.currentTime;
     const videoDuration = video.duration;
-
-    // Si la vidéo dure environ 3-4 mins (180s), on déclenche une pub à la moitié
     const midRollTrigger = videoDuration > 120 ? videoDuration / 2 : 120;
 
-    const pendingMidRolls = ads.filter(
-      a => a.adType === 'mid-roll' && !playedAds.has(a.id)
-    );
-
+    const pendingMidRolls = ads.filter(a => a.adType === 'mid-roll' && !playedAds.has(a.id));
     if (pendingMidRolls.length > 0) {
-      const randomMidRoll = pendingMidRolls[0]; // On prend la première dispo
-      // Si l'user a spécifié une trigger_seconds, on l'utilise, sinon on utilise la moitié
-      const triggerTime = randomMidRoll.triggerSeconds > 0 ? randomMidRoll.triggerSeconds : midRollTrigger;
+      const targetAd = pendingMidRolls[0];
+      const triggerTime = targetAd.triggerSeconds > 0 ? targetAd.triggerSeconds : midRollTrigger;
 
       if (currentTime >= triggerTime && currentTime <= triggerTime + 2) {
         video.pause();
-        setCurrentAd(randomMidRoll);
-        setPlayedAds(prev => new Set(prev).add(randomMidRoll.id));
+        setCurrentAd(targetAd);
+        setPlayedAds(prev => new Set(prev).add(targetAd.id));
       }
     }
   };
 
-  // ... (useEffect principal HLS setup)
+  const handleRetry = () => {
+    setActiveSrc(src);
+    setIsFallbackActive(false);
+    setPlaybackError(null);
+    setIsBuffering(true);
+    setRetryKey(prev => prev + 1);
+  };
 
   return (
     <div className="relative w-full h-full bg-black flex items-center justify-center select-none rounded-xl">
@@ -147,7 +372,20 @@ export function HybridVideoPlayer({ src, poster, videoId }: { src: string; poste
         {streamType === "mp4" && <source src={activeSrc} type="video/mp4" />}
       </video>
 
-      {/* Badges et Loaders... */}
+      {(isFallbackActive || (streamType === "hls" && currentLevelResolution)) && (
+        <div className="absolute top-3 left-3 z-20 pointer-events-none opacity-80 flex items-center gap-1.5">
+          {isFallbackActive && (
+            <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded bg-black/60 backdrop-blur-sm text-zinc-300 border border-white/10">
+              MP4 (Secours)
+            </span>
+          )}
+          {streamType === "hls" && currentLevelResolution && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/80 backdrop-blur-sm text-white">
+              {currentLevelResolution}
+            </span>
+          )}
+        </div>
+      )}
 
       <PlayerSettings
         showSettingsMenu={showSettingsMenu}
@@ -163,12 +401,15 @@ export function HybridVideoPlayer({ src, poster, videoId }: { src: string; poste
             localStorage.removeItem(QUALITY_OVERRIDE_KEY);
             hlsRef.current.currentLevel = -1;
             setCurrentQualityIndex(-1);
-            // applyAutoQuality();
           } else {
             hlsRef.current.currentLevel = idx;
             setCurrentQualityIndex(idx);
+            
+            // 🛠️ CORRECTION 2 : Sauvegarde de la qualité manuelle
             const selected = levels[idx];
-            if (selected?.height) localStorage.setItem(QUALITY_OVERRIDE_KEY, String(selected.height));
+            if (selected?.height) {
+              localStorage.setItem(QUALITY_OVERRIDE_KEY, String(selected.height));
+            }
           }
         }}
         playbackSpeed={playbackSpeed}
@@ -178,6 +419,9 @@ export function HybridVideoPlayer({ src, poster, videoId }: { src: string; poste
           setShowSettingsMenu(false);
         }}
       />
+
+      {isBuffering && !playbackError && <BufferingLoader progressPct={bufferProgress} />}
+      {playbackError && <VideoErrorOverlay message={playbackError.message} isNetworkError={playbackError.isNetwork} onRetry={handleRetry} />}
     </div>
   );
 }
