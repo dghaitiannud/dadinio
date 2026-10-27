@@ -1,0 +1,8481 @@
+$ USD
+
+---NEXT---
+
+$ USD / ~
+
+---NEXT---
+
+("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      sessionIdRef.current = crypto.randomUUID();
+    }
+  }, []);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, isTyping]);
+
+  if (!currentUser || currentUser.email === ADMIN_EMAIL || currentUser.role === 'admin') {
+    return null;
+  }
+
+  async function handleSend() {
+    const text = input.trim();
+    if (!text || isTyping) return;
+
+    setMessages((prev) => [...prev, { role: 'user', content: text }]);
+    setInput('');
+    setIsTyping(true);
+
+    try {
+      const res = await fetch(API_CHAT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chatInput: text,
+          sessionId: sessionIdRef.current
+        })
+      });
+
+      if (!res.ok) throw new Error('Erreur réseau');
+
+      const data = await res.json();
+      const reply = data.output ?? data.text ?? "Désolé, je n'ai pas pu traiter votre demande.";
+
+      setMessages((prev) => [...prev, { role: 'bot', content: reply }]);
+    } catch (err) {
+      setMessages((prev) => [
+      ...prev,
+      { role: 'bot', content: 'Erreur de connexion. Réessayez dans un instant ou contactez un humain.' }]
+      );
+    } finally {
+      setIsTyping(false);
+    }
+  }
+
+  const handleTicketSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !ticketMessage.trim() || !currentUser?.id) return;
+
+    setTicketLoading(true);
+    try {
+      await createTicket(currentUser.id, subject.trim(), ticketMessage.trim());
+      setTicketSuccess(true);
+      setSubject('');
+      setTicketMessage('');
+      toast.success("Message envoyé au support");
+      setTimeout(() => setTicketSuccess(false), 4000);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Erreur d'envoi");
+    } finally {
+      setTicketLoading(false);
+    }
+  };
+
+  return (
+
+---NEXT---
+
+("");
+  const [isLoadingVideos, setIsLoadingVideos] = useState(true);
+  const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
+
+  const [sortBy, setSortBy] = useState
+
+---NEXT---
+
+("all");
+  const [allVideos, setAllVideos] = useState
+
+---NEXT---
+
+("all-vip");
+  const [vipVideos, setVipVideos] = useState
+
+---NEXT---
+
+("avantage");
+  const [paymentMethod, setPaymentMethod] = useState
+
+---NEXT---
+
+("default");
+  const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const supported = isPushSupported();
+
+  useEffect(() => {
+    if (!supported) return;
+    setPermission(getPushPermission());
+    getCurrentSubscription().then((sub) => setSubscribed(!!sub));
+  }, [supported]);
+
+  const handleToggle = async () => {
+    setLoading(true);
+    try {
+      if (subscribed) {
+        const ok = await unsubscribeFromPush();
+        if (ok) {
+          setSubscribed(false);
+          setPermission(getPushPermission());
+          toast.success("Notifications désactivées");
+        } else {
+          toast.error("Impossible de désactiver");
+        }
+      } else {
+        const ok = await subscribeToPush(userId);
+        if (ok) {
+          setSubscribed(true);
+          setPermission("granted");
+          toast.success("Notifications activées !");
+        } else if (getPushPermission() === "denied") {
+          toast.error("Notifications bloquées dans votre navigateur");
+        } else {
+          toast.error("Impossible d'activer les notifications");
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!supported) {
+    return (
+
+---NEXT---
+
+("idle");
+
+  const loadAds = async () => {
+    const { data } = await supabase.from('video_ads').select('*').order('created_at', { ascending: false });
+    setAds(data || []);
+  };
+
+  useEffect(() => {loadAds();}, []);
+
+  const handleUpload = async () => {
+    if (!file || !form.title) {
+    toast.error("Titre et fichier requis");
+    return;
+  }
+
+    const jobId = crypto.randomUUID();
+    setStatus("uploading");
+    setProgress(0);
+    setMessage("Connexion...");
+
+    const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?token=${token}`);
+
+    es.addEventListener("progress", (e) => {
+      const data = JSON.parse(e.data);
+      setProgress(data.percent);
+      setMessage(data.message);
+      if (data.step === "transcode" || data.step === "upload") setStatus("processing");
+    });
+
+    es.addEventListener("complete", async (e) => {
+      const data = JSON.parse(e.data);
+      es.close();
+
+      await supabase.from("video_ads").insert({
+        title: form.title,
+        ad_video_url: data.url,
+        ad_type: form.type,
+        trigger_seconds: form.trigger,
+        skip_after: form.skip,
+        resolution: form.resolution,
+        click_url: form.clickUrl || null,
+        language: form.language
+      });
+
+      toast.success("Pub ajoutée avec succès !");
+      setStatus("idle");
+      setFile(null);
+      setForm({ title: "", type: "pre-roll", trigger: 0, skip: 5, resolution: "720p", clickUrl: "", language: "fr" });
+      loadAds();
+    });
+
+    es.addEventListener("error", (e: any) => {
+      if (e.data) {
+        toast.error(JSON.parse(e.data).message);
+        setStatus("idle");
+        es.close();
+      }
+    });
+
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("title", form.title);
+    formData.append("resolution", form.resolution);
+    formData.append("jobId", jobId);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://api.haitiannud.com/api/upload-ad");
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) {
+        const pct = Math.round(ev.loaded / ev.total * 100);
+        setProgress(Math.round(pct * 0.1));
+        setMessage(`Envoi... (${pct}%)`);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status !== 200) {
+        toast.error("Erreur lors de l'envoi");
+        setStatus("idle");
+      }
+    };
+    xhr.send(formData);
+  };
+
+  return (
+
+---NEXT---
+
+("idle");
+
+  const onDrop = useCallback((acceptedFiles: File[]) => setFile(acceptedFiles[0]), []);
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop, accept: { "video/mp4": [".mp4"] }, multiple: false
+  });
+
+  const handleUpload = async () => {
+    if (!file) return;
+
+    const jobId = crypto.randomUUID();
+    setStatus("uploading");
+    setProgress(0);
+    setMessage("Connexion au serveur...");
+
+    const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?token=${token}`);
+
+    es.addEventListener("progress", (e) => {
+      const data = JSON.parse(e.data);
+      setProgress(data.percent);
+      setMessage(data.message);
+      if (data.step === "transcode" || data.step === "upload") setStatus("processing");
+    });
+
+    es.addEventListener("complete", (e) => {
+      const data = JSON.parse(e.data);
+      setStatus("done");
+      es.close();
+      setTimeout(() => onUploadSuccess(data.url), 1500);
+    });
+
+    es.addEventListener("error", (e: any) => {
+      if (e.data) {
+        setMessage(JSON.parse(e.data).message);
+        setStatus("error");
+        es.close();
+      }
+    });
+
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("filename", file.name.replace(".mp4", ""));
+    formData.append("jobId", jobId);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "https://api.haitiannud.com/api/upload-video");
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round(e.loaded / e.total * 100);
+        setProgress(Math.round(pct * 0.1));
+        setMessage(`Envoi du fichier... (${pct}%)`);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        setStatus("processing");
+        setMessage("Fichier reçu, transcodage en cours...");
+      } else {
+        setStatus("error");
+        setMessage("Erreur d'upload (Session invalide)");
+      }
+    };
+    xhr.send(formData);
+  };
+
+  return (
+
+---NEXT---
+
+("natcash");
+  const [file, setFile] = useState
+
+---NEXT---
+
+("recent");
+  const [selectedPhoto, setSelectedPhoto] = useState
+
+---NEXT---
+
+("signin");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const [signupSuccess, setSignupSuccess] = useState(false);
+  const [formError, setFormError] = useState
+
+---NEXT---
+
+('chat');
+  const [input, setInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
+  const [subject, setSubject] = useState('');
+  const [ticketMessage, setTicketMessage] = useState('');
+  const [ticketLoading, setTicketLoading] = useState(false);
+  const [ticketSuccess, setTicketSuccess] = useState(false);
+
+  const [messages, setMessages] = useState
+
+---NEXT---
+
+('info');
+  const [selectedPlanId, setSelectedPlanId] = useState
+
+---NEXT---
+
+((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.count();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    if (count >= MAX_OFFLINE_VIDEOS) {
+      db.close();
+      throw new Error(`Limite atteinte : ${MAX_OFFLINE_VIDEOS} vidéos maximum. Supprimez une vidéo pour en ajouter une autre.`);
+    }
+
+    const entry: OfflineVideo = {
+      ...video,
+      downloadedAt: Date.now(),
+      sizeBytes: video.videoBlob.size,
+    };
+
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.put(entry);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+    });
+  } catch (err: any) {
+    // Gestion du quota dépassé (QuotaExceededError)
+    if (err.name === "QuotaExceededError" || err.message?.toLowerCase().includes("quota")) {
+      toast.error("Stockage plein, impossible de sauvegarder la vidéo.");
+    } else {
+      toast.error(err.message || "Erreur lors de la sauvegarde hors-ligne.");
+    }
+    throw err; // On relance l'erreur pour que le composant appelant puisse réagir
+  }
+}
+
+export async function deleteOfflineVideo(id: string): Promise
+
+---NEXT---
+
+();
+  const { t } = useTranslation();
+  const { isSignedIn, user, appUser, isLoading: authLoading } = useAuth();
+
+  const [video, setVideo] = useState
+
+---NEXT---
+
+(-1);
+  const [playbackSpeed, setPlaybackSpeed] = useState
+
+---NEXT---
+
+(0);
+
+  const [activeSrc, setActiveSrc] = useState
+
+---NEXT---
+
+(0);
+  const mediaRecoveryAttempts = useRef
+
+---NEXT---
+
+(0);
+  const networkRecoveryAttempts = useRef
+
+---NEXT---
+
+(1);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [autoTargetHeight, setAutoTargetHeight] = useState
+
+---NEXT---
+
+([
+  { role: 'bot', content: 'Bonjour ! Comment puis-je vous aider aujourd\'hui ?' }]
+  );
+
+  const scrollRef = useRef
+
+---NEXT---
+
+([]);
+  const [bannerVideoUrl, setBannerVideoUrl] = useState
+
+---NEXT---
+
+([]);
+  const [blockPending, setBlockPending] = useState
+
+---NEXT---
+
+([]);
+  const [currentAd, setCurrentAd] = useState
+
+---NEXT---
+
+([]);
+  const [currentQualityIndex, setCurrentQualityIndex] = useState
+
+---NEXT---
+
+([]);
+  const [displayName, setDisplayName] = useState("");
+  const [savingName, setSavingName] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setHistory(getWatchHistory());
+  }, []);
+
+  useEffect(() => {
+    if (appUser?.displayName) setDisplayName(appUser.displayName);
+  }, [appUser?.displayName]);
+
+  useEffect(() => {
+    if (appUser?.id) {
+      setIsLoadingTickets(true);
+      listMyTickets(appUser.id).then((t) => {
+        setTickets(t);
+        setIsLoadingTickets(false);
+      });
+    }
+  }, [appUser?.id]);
+
+  if (!isSignedIn) {
+    return
+
+---NEXT---
+
+([]);
+  const [form, setForm] = useState({ title: "", type: "pre-roll", trigger: 0, skip: 5, resolution: "720p", clickUrl: "", language: "fr" });
+  const [file, setFile] = useState
+
+---NEXT---
+
+([]);
+  const [inputText, setInputText] = useState("");
+  const [viewerCount, setViewerCount] = useState(1);
+
+  const chatEndRef = useRef
+
+---NEXT---
+
+([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // États pour l'effet machine à écrire (Typing effect)
+  const [messageIndex, setMessageIndex] = useState(0);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // ✍️ Effet d'animation de machine à écrire configuré plus lentement
+  useEffect(() => {
+    const currentFullText = TICKER_MESSAGES[messageIndex];
+    
+    // Vitesse de frappe : 120ms par lettre (plus lent pour une lecture confortable)
+    // Vitesse d'effacement : 40ms par lettre
+    let typingSpeed = isDeleting ? 40 : 120;
+
+    // 🕒 PAUSE : Si le texte est entièrement écrit, on le laisse figer pendant 6 secondes (6000ms)
+    if (!isDeleting && currentPlaceholder === currentFullText) {
+      typingSpeed = 6000; 
+      setIsDeleting(true);
+    } 
+    // Si le texte est complètement effacé, on passe au message suivant
+    else if (isDeleting && currentPlaceholder === "") {
+      setIsDeleting(false);
+      setMessageIndex((prev) => (prev + 1) % TICKER_MESSAGES.length);
+      typingSpeed = 300;
+    }
+
+    const timeout = setTimeout(() => {
+      setCurrentPlaceholder(
+        isDeleting
+          ? currentFullText.substring(0, currentPlaceholder.length - 1)
+          : currentFullText.substring(0, currentPlaceholder.length + 1)
+      );
+    }, typingSpeed);
+
+    return () => clearTimeout(timeout);
+  }, [currentPlaceholder, isDeleting, messageIndex]);
+
+  // Debounce logic pour la recherche Supabase
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      const newUrl = new URL(window.location.href);
+      if (query) {
+        newUrl.searchParams.set("q", query);
+      } else {
+        newUrl.searchParams.delete("q");
+      }
+      window.history.replaceState({}, "", newUrl.toString());
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    getVideos(debouncedQuery ? { q: debouncedQuery } : undefined)
+      .then(v => {
+        setVideos(v);
+        setIsLoading(false);
+      });
+  }, [debouncedQuery]);
+
+  return (
+
+---NEXT---
+
+([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 🌟 PROTECTION DOUBLE : Connecté + Statut VIP requis
+  const isAccessGranted = isSignedIn && appUser && (appUser as any).plan === "vip";
+
+  useEffect(() => {
+    if (!isAccessGranted) return;
+
+    async function loadVipContent() {
+      setIsLoading(true);
+      try {
+        const [allVideos, allPhotos] = await Promise.all([
+        getVideos(),
+        getPhotos()]
+        );
+
+        setVipVideos(allVideos.filter((v) => v.isVip));
+        setVipPhotos(allPhotos.filter((p) => p.isVip));
+      } catch (error) {
+        console.error("Erreur lors du chargement du catalogue VIP :", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadVipContent();
+  }, [isAccessGranted]);
+
+  // 🔒 Écran d'accès refusé (non connecté ou non VIP)
+  if (!isAccessGranted) {
+    return (
+
+---NEXT---
+
+([]);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false);
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [ticketPending, setTicketPending] = useState(false);
+  const [history, setHistory] = useState
+
+---NEXT---
+
+([]);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(true);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [videoError, setVideoError] = useState
+
+---NEXT---
+
+([]);
+  const [loading, setLoading] = useState(true);
+  const [playingId, setPlayingId] = useState
+
+---NEXT---
+
+([]);
+  const [messages, setMessages] = useState
+
+---NEXT---
+
+([]);
+  const [open, setOpen] = useState(false);
+  const [contentType, setContentType] = useState("");
+  const [year, setYear] = useState(String(CURRENT_YEAR));
+  const [formData, setFormData] = useState({ title: "", description: "", imageUrl: "", isVip: false, published: true });
+  const [createPending, setCreatePending] = useState(false);
+  const [deletePending, setDeletePending] = useState
+
+---NEXT---
+
+([]);
+  const [open, setOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const [contentType, setContentType] = useState("");
+  const [year, setYear] = useState(String(CURRENT_YEAR));
+  const [formData, setFormData] = useState({ title: "", description: "", thumbnailUrl: "", videoUrl: "", durationSec: 120, isVip: false, published: true });
+  const [createPending, setCreatePending] = useState(false);
+  const [deletePending, setDeletePending] = useState
+
+---NEXT---
+
+([]);
+  const [photos, setPhotos] = useState
+
+---NEXT---
+
+([]);
+  const [processingId, setProcessingId] = useState
+
+---NEXT---
+
+([]);
+  const [relatedVideos, setRelatedVideos] = useState
+
+---NEXT---
+
+([]);
+  const [selectedTicket, setSelectedTicket] = useState
+
+---NEXT---
+
+([]);
+  const [vipPhotos, setVipPhotos] = useState
+
+---NEXT---
+
+(null);
+
+  // --- Animation de titre dynamique & cyclique ---
+  const FULL_TEXT = "HAITIAN NUD";
+  const [displayText, setDisplayText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
+
+  useEffect(() => {
+    setIsLoadingVideos(true);
+    setIsLoadingPhotos(true);
+
+    // 🛠️ CORRECTION : Ajout des .catch() et .finally() pour éviter le blocage
+    getBannerVideo().
+    then((url) => setBannerVideoUrl(url)).
+    catch((err) => console.warn("Erreur bannière:", err));
+
+    getVideos().
+    then((v) => setAllVideos(v)).
+    catch((err) => {
+      console.error("Erreur chargement vidéos:", err);
+      setAllVideos([]); // On vide en cas d'erreur
+    }).
+    finally(() => setIsLoadingVideos(false)); // S'exécute TOUJOURS
+
+    getPhotos().
+    then((p) => setPhotos(p)).
+    catch((err) => {
+      console.error("Erreur chargement photos:", err);
+      setPhotos([]);
+    }).
+    finally(() => setIsLoadingPhotos(false)); // S'exécute TOUJOURS
+  }, []);
+
+  // Effet de frappe en boucle (Typing / Deleting effect)
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+
+    if (!isDeleting && displayText.length
+
+---NEXT---
+
+(null);
+
+  // === PUBLICITÉS ===
+  const [ads, setAds] = useState
+
+---NEXT---
+
+(null);
+
+  const [commentBody, setCommentBody] = useState("");
+  const [anonymous, setAnonymous] = useState(false);
+  const [commentPending, setCommentPending] = useState(false);
+  const [downloadPending, setDownloadPending] = useState(false);
+  const [offlineDownloading, setOfflineDownloading] = useState(false);
+  const [isOfflineAvailable, setIsOfflineAvailable] = useState(false);
+
+  const [isLiked, setIsLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
+
+  useEffect(() => {
+    if (!id) return;
+
+    const loadVideo = async () => {
+      setIsLoadingVideo(true);
+      setVideoError(null);
+      try {
+        const v = await getVideo(id);
+        setVideo(v);
+
+        if (v) {
+          setLikesCount((v as any).likes_count || Math.floor(v.views * 0.12) || 0);
+          registerView(id);
+          if (user?.id) {
+            import("@/lib/local-store").then(({ pushWatchHistory }) =>
+            pushWatchHistory({ id, title: v.title, thumbnailUrl: v.thumbnailUrl })
+            );
+          }
+          getVideos({ category: v.category }).
+          then((vids) => setRelatedVideos(vids.filter((vid) => vid.id !== id))).
+          catch((err) => console.warn('Failed to load related videos:', err));
+        }
+      } catch (err) {
+        console.error('Failed to load video:', err);
+        setVideoError('Impossible de charger la vidéo. Vérifiez votre connexion.');
+      } finally {
+        setIsLoadingVideo(false);
+      }
+    };
+
+    const loadComments = async () => {
+      setIsLoadingComments(true);
+      try {
+        const c = await listComments(id);
+        setComments(c);
+      } catch (err) {
+        console.warn('Failed to load comments:', err);
+      } finally {
+        setIsLoadingComments(false);
+      }
+    };
+
+    const checkOffline = async () => {
+      try {
+        const list = await listOfflineVideos();
+        setIsOfflineAvailable(list.some((v) => v.id === id));
+      } catch {
+        setIsOfflineAvailable(false);
+      }
+    };
+
+    loadVideo();
+    loadComments();
+    checkOffline();
+  }, [id, user?.id]);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Lien copié");
+    } catch {
+      toast.error("Impossible de copier le lien");
+    }
+  };
+
+  const handleLike = () => {
+    if (!isSignedIn) {
+      toast.error("Ou bezwen konekte pouw ka renmen videyo sa a");
+      return;
+    }
+    setIsAnimating(true);
+    setTimeout(() => setIsAnimating(false), 300);
+
+    if (isLiked) {
+      setIsLiked(false);
+      setLikesCount((prev) => Math.max(0, prev - 1));
+    } else {
+      setIsLiked(true);
+      setLikesCount((prev) => prev + 1);
+      toast.success("Mèsi pou sipò w !");
+    }
+  };
+
+  const handleShare = async () => {
+    if (!isSignedIn) {
+      toast.error("Ou bezwen konekte pouw ka pataje videyo sa a");
+      return;
+    }
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: video?.title || "HAITIAN NUD", url });
+      } catch {}
+    } else {
+      await copyLink();
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!id || !appUser) return;
+    if (!isSignedIn) {
+      toast.error("Fòk ou konekte pou kapab telechaje");
+      return;
+    }
+    if (video?.isVip && !isUserVip) {
+      toast.error("Vidéo VIP Abonnez-vous pour accéder au téléchargement.");
+      return;
+    }
+
+    setDownloadPending(true);
+    const toastId = toast.loading("Démarrage du téléchargement...");
+
+    try {
+      const res = await requestDownload(id, appUser.id, isUserVip ?? false, appUser.freeDownloadsUsed);
+      const rawDownloadUrl = res.url || video?.videoUrl;
+
+      if (!rawDownloadUrl) {
+        throw new Error("Lien de téléchargement introuvable.");
+      }
+
+      const downloadTargetUrl = getProxyDownloadUrl(rawDownloadUrl, video?.title);
+      const a = document.createElement("a");
+      a.href = downloadTargetUrl;
+      const filename = `${(video?.title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_")}.mp4`;
+      a.setAttribute("download", filename);
+
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      toast.success(
+        isUserVip ? "Téléchargement lancé dans le navigateur !" : `Téléchargement lancé. ${res.remaining} restant(s).`,
+        { id: toastId }
+      );
+    } catch (e: any) {
+      if (e.message === 'vip_required') {
+        toast.error("Abonnement VIP requis pour cette vidéo.", { id: toastId });
+      } else if (e.message === 'quota_exceeded') {
+        toast.error("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité.", { id: toastId });
+      } else {
+        if (video?.videoUrl) {
+          window.location.href = getProxyDownloadUrl(video.videoUrl, video?.title);
+          toast.success("Téléchargement démarré.", { id: toastId });
+        } else {
+          toast.error(e?.message || "Erreur lors du lancement du téléchargement", { id: toastId });
+        }
+      }
+    } finally {
+      setDownloadPending(false);
+    }
+  };
+
+  const handleOfflineDownload = async () => {
+    if (!video || !video.videoUrl) return;
+    if (!isSignedIn) {
+      toast.error("Fòk ou konekte pou gade offline");
+      return;
+    }
+    setOfflineDownloading(true);
+    const toastId = toast.loading("Démarrage de la sauvegarde offline...");
+
+    try {
+      const proxiedVideoUrl = getProxyVideoUrl(video.videoUrl);
+      await downloadAndSaveVideo(
+        video.id,
+        proxiedVideoUrl,
+        video.title,
+        video.description,
+        video.thumbnailUrl,
+        video.durationSec,
+        video.category,
+        (loaded, total) => {
+          const pct = total > 0 ? Math.round(loaded / total * 100) : 0;
+          if (pct % 10 === 0) {
+            toast.loading(`Téléchargement offline : ${pct}%`, { id: toastId });
+          }
+        }
+      );
+      toast.success("Vidéo disponible offline !", { id: toastId });
+      setIsOfflineAvailable(true);
+    } catch (e: any) {
+      console.error("Erreur Offline :", e);
+      let msg = e?.message || "Erreur de téléchargement offline";
+      if (msg.includes("503") || msg.includes("Failed to fetch")) {
+        msg = "Connexion lente ou interrompue. Réessayez dans quelques instants.";
+      }
+      toast.error(msg, { id: toastId });
+    } finally {
+      setOfflineDownloading(false);
+    }
+  };
+
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !commentBody.trim() || !isSignedIn || !appUser) return;
+    setCommentPending(true);
+    try {
+      await createComment(id, appUser.id, commentBody, anonymous, appUser.displayName || appUser.email);
+      setCommentBody("");
+      toast.success("Commentaire ajouté");
+      const updated = await listComments(id);
+      setComments(updated);
+    } catch {
+      toast.error("Erreur lors de l'ajout du commentaire");
+    } finally {
+      setCommentPending(false);
+    }
+  };
+
+  if (!id) {
+    return (
+
+---NEXT---
+
+(null);
+
+  const buildCategory = () => `${contentType.trim()} ${year}`.trim();
+
+  useEffect(() => {loadPhotos();}, []);
+
+  const loadPhotos = async () => {
+    try {const p = await adminListPhotos();setPhotos(p);}
+    catch (err) {toast.error("Erreur de chargement");}
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatePending(true);
+    try {
+      await adminCreatePhoto({ ...formData, category: buildCategory() });
+      toast.success("Photo ajoutée !");
+      setOpen(false);
+      setFormData({ title: "", description: "", imageUrl: "", isVip: false, published: true });
+      await loadPhotos();
+    } catch (err: any) {toast.error(err?.message || "Erreur");} finally
+    {setCreatePending(false);}
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Retirer cette photo ?")) return;
+    setDeletePending(id);
+    try {
+      await adminDeletePhoto(id);
+      setPhotos((prev) => prev.filter((p) => p.id !== id));
+      toast.success("Photo archivée");
+    } catch (err: any) {toast.error(err?.message || "Erreur");} finally
+    {setDeletePending(null);}
+  };
+
+  return (
+
+---NEXT---
+
+(null);
+
+  const buildCategory = () => `${contentType.trim()} ${year}`.trim();
+
+  useEffect(() => {loadVideos();}, []);
+
+  const loadVideos = async () => {
+    try {
+      const v = await adminListVideos();
+      setVideos(v);
+    } catch (err) {
+      toast.error("Erreur de chargement des vidéos");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatePending(true);
+    try {
+      await adminCreateVideo({ ...formData, category: buildCategory() });
+      toast.success("Vidéo ajoutée");
+      setOpen(false);
+      setFormData({ title: "", description: "", thumbnailUrl: "", videoUrl: "", durationSec: 120, isVip: false, published: true });
+      setContentType("");
+      setYear(String(CURRENT_YEAR));
+      await loadVideos();
+    } catch (e: any) {
+      toast.error(e?.message || "Erreur d'ajout");
+    } finally {
+      setCreatePending(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Supprimer cette vidéo ?")) return;
+    setDeletePending(id);
+    try {
+      await adminDeleteVideo(id);
+      setVideos((prev) => prev.filter((v) => v.id !== id));
+      toast.success("Vidéo supprimée");
+    } catch (e: any) {
+      toast.error(e?.message || "Erreur de suppression");
+    } finally {
+      setDeletePending(null);
+    }
+  };
+
+  return (
+
+---NEXT---
+
+(null);
+
+  const handleSend = async () => {
+    if (!title || !body) {
+    toast.error("Titre et message requis");
+    return;
+  }
+    setSending(true);
+    setResult(null);
+    try {
+      const response = await fetch("https://api.haitiannud.com/api/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ title, body, url, icon: "/logo.jpg" })
+      });
+      const res = await response.json();
+      if (!response.ok) throw new Error(res.error || "Erreur serveur");
+      setResult(res);
+      toast.success(`${res.sent}/${res.total} envoyées !`);
+    } catch (e: any) {toast.error(e?.message || "Erreur");} finally
+    {setSending(false);}
+  };
+
+  return (
+
+---NEXT---
+
+(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Interrogation de ton API privée sur Render pour valider l'existence de l'e-mail
+      const response = await fetch("https://api.haitiannud.com/api/auth/check-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+
+      const checkResult = await response.json();
+
+      if (!response.ok || !checkResult.exists) {
+        setError("Cet e-mail n'existe pas sur la plateforme.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Si l'e-mail existe, on procède à l'envoi du lien de réinitialisation via Supabase
+      const { error: resetError } = await resetPassword(email);
+      if (resetError) {
+        toast.error(resetError.message || "Erreur lors de l'envoi");
+      } else {
+        setSent(true);
+        toast.success("Email envoyé ! Vérifiez votre boîte de réception.");
+      }
+    } catch (err: any) {
+      setError("Impossible de joindre le serveur de sécurité.");
+      toast.error("Erreur de connexion au serveur.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+
+---NEXT---
+
+(null);
+
+  const loadVideos = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await listOfflineVideos();
+      setVideos(list);
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur de chargement");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadVideos();
+  }, [loadVideos]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteOfflineVideo(id);
+      if (playingId === id) {
+        if (videoUrl) revokeOfflineVideoUrl(videoUrl);
+        setPlayingId(null);
+        setVideoUrl(null);
+      }
+      toast.success("Vidéo supprimée");
+      loadVideos();
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur de suppression");
+    }
+  };
+
+  const handlePlay = (video: OfflineVideo) => {
+    if (videoUrl) revokeOfflineVideoUrl(videoUrl);
+    const url = getOfflineVideoUrl(video);
+    setVideoUrl(url);
+    setPlayingId(video.id);
+  };
+
+  const handleClosePlayer = () => {
+    if (videoUrl) revokeOfflineVideoUrl(videoUrl);
+    setVideoUrl(null);
+    setPlayingId(null);
+  };
+
+  return (
+
+---NEXT---
+
+(null);
+
+  if (!isSignedIn) {
+    return
+
+---NEXT---
+
+(null);
+
+  if (isSignedIn) {
+    setLocation("/");
+    return null;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setFormError(null);
+
+    try {
+      if (mode === "signin") {
+        const result = await signIn(email, password);
+        const errorObj = result?.error || result;
+
+        if (errorObj && errorObj.message) {
+          setFormError(errorObj.message);
+          toast.error(errorObj.message);
+        } else if (errorObj && typeof errorObj === 'string') {
+          setFormError(errorObj);
+        } else {
+          toast.success("Demande envoyée");
+          setTimeout(() => {
+            if (!isSignedIn) {
+              setFormError("Identifiants incorrects ou adresse e-mail non confirmée.");
+            } else {
+              setLocation("/");
+            }
+          }, 1000);
+        }
+      } else {
+        const result = await signUp(email, password, displayName);
+        const errorObj = result?.error || result;
+
+        if (errorObj && errorObj.message) {
+          setFormError(errorObj.message);
+          toast.error(errorObj.message);
+        } else if (result?.data?.user?.identities?.length === 0) {
+          setFormError("Cet e-mail est déjà utilisé par un autre compte.");
+          setMode("signin");
+        } else {
+          setSignupSuccess(true);
+          toast.success("Compte créé avec succès !");
+        }
+      }
+    } catch (err: any) {
+      console.error("Erreur interceptée :", err);
+      const msg = err?.message || err?.error_description || "Une erreur est survenue.";
+      setFormError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+
+---NEXT---
+
+(null);
+
+  useEffect(() => {
+    getAdminStats().then((s) => setStats(s)).catch((err) => console.error(err));
+  }, []);
+
+  return (
+
+---NEXT---
+
+(null);
+
+  useEffect(() => {loadUsers();}, []);
+
+  const loadUsers = async () => {
+    try {const u = await adminListUsers();setUsers(u);}
+    catch (err) {toast.error("Erreur au chargement");}
+  };
+
+  const handleToggleBlock = async (id: string, currentBlocked: boolean) => {
+    if (!appUser) return;
+    setBlockPending(id);
+    try {
+      await adminBlockUser(appUser.id, id, !currentBlocked);
+      toast.success(currentBlocked ? "Utilisateur débloqué" : "Utilisateur bloqué");
+      await loadUsers();
+    } catch (e: any) {toast.error(e?.message || "Erreur");} finally
+    {setBlockPending(null);}
+  };
+
+  return (
+
+---NEXT---
+
+(null);
+  const [appUser, setAppUser] = useState
+
+---NEXT---
+
+(null);
+  const [canSkip, setCanSkip] = useState(skipAfter === 0);
+  const [timeLeft, setTimeLeft] = useState(skipAfter);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (skipAfter === 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev
+
+---NEXT---
+
+(null);
+  const [comments, setComments] = useState
+
+---NEXT---
+
+(null);
+  const [currentLevelResolution, setCurrentLevelResolution] = useState
+
+---NEXT---
+
+(null);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    const onPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferred(e as BeforeInstallPromptEvent);
+    };
+    const onInstalled = () => setInstalled(true);
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    if (window.matchMedia("(display-mode: standalone)").matches) setInstalled(true);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onPrompt);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const install = async () => {
+    if (!deferred) return;
+    await deferred.prompt();
+    await deferred.userChoice;
+    setDeferred(null);
+  };
+
+  if (installed) return null;
+
+  if (variant === "card") {
+    return (
+
+---NEXT---
+
+(null);
+  const [isFallbackActive, setIsFallbackActive] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const [levels, setLevels] = useState
+
+---NEXT---
+
+(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchAppUser = useCallback(async (authUser: User) => {
+    try {
+      const email = authUser.email || '';
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (error || !data) {
+        // Row doesn't exist yet → create it (snake_case columns)
+        const displayName = authUser.user_metadata?.display_name
+          || authUser.user_metadata?.name
+          || email.split('@')[0]
+          || null;
+
+        const isAdminByEmail = ADMIN_EMAILS.includes(email.toLowerCase());
+
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            email,
+            display_name: displayName,
+            plan: 'free',
+            is_admin: isAdminByEmail,
+            blocked: false,
+            age_confirmed: false,
+            free_downloads_used: 0,
+            subscription_ends_at: null,
+          })
+          .select()
+          .single();
+
+        if (newUser) {
+          setAppUser(mapUser(newUser, email));
+        } else {
+          console.error('Failed to create user row:', createError);
+          // Even if DB fails, let the user in with email-based admin check
+          setAppUser({
+            id: authUser.id,
+            email,
+            displayName: email.split('@')[0],
+            plan: 'free',
+            isAdmin: ADMIN_EMAILS.includes(email.toLowerCase()),
+            blocked: false,
+            ageConfirmed: false,
+            freeDownloadsUsed: 0,
+            subscriptionEndsAt: null,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      } else {
+        // Check subscription expiry
+        const now = new Date().toISOString();
+        if (data.plan === 'vip' && data.subscription_ends_at && data.subscription_ends_at
+
+---NEXT---
+
+(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [reactions, setReactions] = useState
+
+---NEXT---
+
+(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pushPending, setPushPending] = useState(false);
+
+  // Remonte automatiquement la page tout en haut à chaque changement d'étape
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
+
+  const selectedPlan = SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId) || SUBSCRIPTION_PLANS[3];
+
+  const handleFileChange = (e: React.ChangeEvent
+
+---NEXT---
+
+(null);
+  const [playbackError, setPlaybackError] = useState
+
+---NEXT---
+
+(null);
+  const [playedAds, setPlayedAds] = useState
+
+---NEXT---
+
+(null);
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState("");
+  const [status, setStatus] = useState
+
+---NEXT---
+
+(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyPending, setReplyPending] = useState(false);
+
+  useEffect(() => {loadTickets();}, []);
+
+  const loadTickets = async () => {
+    try {const t = await adminListTickets();setTickets(t);}
+    catch (err) {toast.error("Erreur");}
+  };
+
+  const handleReply = async () => {
+    if (!selectedTicket || !replyText) return;
+    setReplyPending(true);
+    try {
+      await adminReplyTicket(selectedTicket.id, replyText);
+      toast.success("Réponse envoyée");
+      try {
+        await fetch("https://api.haitiannud.com/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({
+            title: "📩 Réponse à votre ticket",
+            body: `Le support a répondu à : "${selectedTicket.subject}"`,
+            url: "/account", icon: "/logo.jpg", targetUserId: selectedTicket.userId
+          })
+        });
+      } catch (pushErr) {console.warn("Échec push:", pushErr);}
+      setSelectedTicket(null);
+      setReplyText("");
+      await loadTickets();
+    } catch (e: any) {toast.error(e?.message || "Erreur");} finally
+    {setReplyPending(false);}
+  };
+
+  return (
+
+---NEXT---
+
+(null);
+  const [selectedDuration, setSelectedDuration] = useState
+
+---NEXT---
+
+(null);
+  const [session, setSession] = useState
+
+---NEXT---
+
+(null);
+  const [videoUrl, setVideoUrl] = useState
+
+---NEXT---
+
+(null);
+  const hlsRef = useRef
+
+---NEXT---
+
+(null);
+  const lastPlaybackPosition = useRef
+
+---NEXT---
+
+(null);
+  const sessionIdRef = useRef
+
+---NEXT---
+
+(src);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [bufferProgress, setBufferProgress] = useState
+
+---NEXT---
+
+(window as any).t ? (window as any).t(key, options) : key;
+
+export function FloatingSupport({ currentUser }: {currentUser: any;}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [view, setView] = useState
+
+---NEXT---
+
+({ad.language})
+
+---NEXT---
+
+({} as AuthContextType);
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+// Map raw Supabase row (snake_case) → AppUser (camelCase)
+function mapUser(data: any, emailOverride?: string): AppUser {
+  const email = data.email || emailOverride || '';
+  const isAdminByEmail = ADMIN_EMAILS.includes(email.toLowerCase());
+  return {
+    id: data.id,
+    email,
+    displayName: data.display_name || null,
+    plan: data.plan || 'free',
+    isAdmin: data.is_admin === true || isAdminByEmail,
+    blocked: data.blocked === true,
+    ageConfirmed: data.age_confirmed === true,
+    freeDownloadsUsed: data.free_downloads_used || 0,
+    subscriptionEndsAt: data.subscription_ends_at || null,
+    createdAt: data.created_at || new Date().toISOString(),
+  };
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState
+
+---NEXT---
+
+(~{selectedPlan.htg} {t("HTG)")}
+
+---NEXT---
+
+) :
+                sortedPhotos.slice(0, 6).map((photo) => {
+                  const isLocked = photo.isVip && !isUserVip;
+                  return (
+
+---NEXT---
+
+) :
+                sortedVideos.slice(0, 8).map((video) =>
+
+---NEXT---
+
+) :
+            newestVideos && newestVideos.length > 0 ?
+            newestVideos.slice(0, 4).map((video, i) =>
+
+---NEXT---
+
+) :
+            sortedPhotos && sortedPhotos.length > 0 ?
+            sortedPhotos.map((photo, i) => {
+              const isLocked = photo.isVip && !isUserVip;
+              const viewsCount = extractViews(photo);
+
+              return (
+
+---NEXT---
+
+) :
+            sortedVideos && sortedVideos.length > 0 ?
+            sortedVideos.map((video, i) =>
+
+---NEXT---
+
+) : videos && videos.length > 0 ? (
+
+---NEXT---
+
+) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      const maxSize = 5 * 1024 * 1024;
+      if (selectedFile.size > maxSize) {
+        toast.error("Le fichier est trop lourd. Maximum 5 Mo autorisé.");
+        e.target.value = "";
+        return;
+      }
+      const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+      if (!allowedTypes.includes(selectedFile.type)) {
+        toast.error("Format non supporté. Veuillez envoyer une image (JPG, JPEG ou PNG).");
+        e.target.value = "";
+        return;
+      }
+      setFile(selectedFile);
+    }
+  };
+
+  const handleActivatePushBeforeSubmit = async () => {
+    setPushPending(true);
+    try {
+      const ok = await subscribeToPush((appUser as any)?.id);
+      if (ok) {
+        toast.success("Notifications système activées !");
+      } else if (getPushPermission() === "denied") {
+        toast.error("Veuillez autoriser les notifications dans les paramètres de votre navigateur.");
+      } else {
+        toast.error("Échec de la souscription aux notifications.");
+      }
+    } finally {
+      setPushPending(false);
+    }
+  };
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isSignedIn || !appUser) {
+      toast.error("Veuillez vous connecter pour soumettre votre paiement.");
+      return;
+    }
+
+    if (!file) {
+      toast.error("Veuillez téléverser votre reçu de paiement.");
+      return;
+    }
+
+    if (supported && getPushPermission() !== "granted") {
+      toast.error("Action requise : Veuillez activer les notifications système avant d'envoyer.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const uniqueFileName = `${(appUser as any).id}-${Date.now()}.${fileExt}`;
+      const filePath = `${uniqueFileName}`;
+
+      const { error: uploadError } = await supabase.storage.
+      from("vip-proofs").
+      upload(filePath, file, { cacheControl: "3600", upsert: false });
+
+      if (uploadError) throw new Error(`Erreur upload : ${uploadError.message}`);
+
+      const { data: { publicUrl } } = supabase.storage.
+      from("vip-proofs").
+      getPublicUrl(filePath);
+
+      const { error: dbError } = await supabase.from("vip_requests").insert({
+        user_id: (appUser as any).id,
+        user_email: (appUser as any).email,
+        payment_method: paymentMethod,
+        plan_id: selectedPlan.id,
+        plan_name: selectedPlan.name,
+        amount_usd: selectedPlan.priceUsd,
+        duration_days: selectedPlan.days,
+        proof_url: publicUrl,
+        status: "pending"
+      });
+
+      if (dbError) throw dbError;
+
+      try {
+        await fetch("https://api.haitiannud.com/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "🚨 Nouveau reçu VIP reçu !",
+            body: `L'utilisateur ${(appUser as any).email} a payé ${selectedPlan.priceUsd}$ (${selectedPlan.name} - ${selectedPlan.days}j) via ${paymentMethod.toUpperCase()}.`,
+            url: "/admin",
+            icon: "/logo.jpg",
+            targetUserId: "admin"
+          })
+        });
+      } catch (pushErr) {
+        console.error("Échec notification admin:", pushErr);
+      }
+
+      toast.success("Preuve de paiement reçue avec succès !");
+      setStep('success');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Une erreur est survenue lors de l'envoi.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+
+---NEXT---
+
+) {
+  const { error } = await supabase.from('photos').insert({
+    title: photo.title.substring(0, 255),
+    description: photo.description,
+    image_url: photo.imageUrl,
+    category: photo.category,
+    is_vip: photo.isVip,
+    published: photo.published,
+    views: 0,
+  });
+  if (error) throw error;
+}
+
+export async function adminDeletePhoto(id: string) {
+  const { error } = await supabase.from('photos').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Admin Utilisateurs
+export async function adminListUsers(page: number = 1): Promise
+
+---NEXT---
+
+) {
+  const { error } = await supabase.from('videos').insert({
+    title: video.title.substring(0, 255),
+    description: video.description,
+    thumbnail_url: video.thumbnailUrl,
+    video_url: video.videoUrl,
+    category: video.category,
+    duration_sec: video.durationSec,
+    is_vip: video.isVip,
+    published: video.published,
+    views: 0,
+  });
+  if (error) throw error;
+}
+
+export async function adminDeleteVideo(id: string) {
+  const { error } = await supabase.from('videos').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Admin Photos CRUD
+export async function adminListPhotos(page: number = 1): Promise
+
+---NEXT---
+
+))
+        ) : comments.length > 0 ? (
+          comments.map((comment: Comment) => (
+
+---NEXT---
+
+): Promise
+
+---NEXT---
+
+);
+
+  }
+
+  const token = session?.access_token || "";
+
+  return (
+
+---NEXT---
+
+);
+
+  }
+
+  if (!deferred) return null;
+  return (
+
+---NEXT---
+
+);
+
+  }
+
+  if (isLoadingVideo || authLoading) {
+    return (
+
+---NEXT---
+
+);
+
+  }
+
+  if (videoError || !video) {
+    return (
+
+---NEXT---
+
+);
+
+  }
+
+  return (
+
+---NEXT---
+
+);
+
+}
+
+export function Footer() {
+  const { t } = useTranslation();
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  return (
+
+---NEXT---
+
+);
+
+}
+
+export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: {src: string;poster?: string;videoId: string;fallbackSrc?: string;}) {
+  const { t } = useTranslation();
+  // 🛠️ CORRECTION 1 : On récupère i18n
+  const { i18n } = useTranslation();
+  const { appUser } = useAuth();
+  const isVip = appUser?.plan === "vip";
+
+  const videoRef = useRef
+
+---NEXT---
+
+);
+
+}
+
+export function Layout({ children }: LayoutProps) {
+  // On récupère l'utilisateur connecté ici pour passer son statut au composant de support
+  const { appUser } = useAuth();
+
+  return (
+
+---NEXT---
+
+);
+
+}
+
+export function PwaInstallButton({ variant = "compact" }: {variant?: "compact" | "card";}) {const { t } = useTranslation();
+  const [deferred, setDeferred] = useState
+
+---NEXT---
+
+);
+
+}
+
+export function Watch() {
+  const { id } = useParams
+
+---NEXT---
+
+);
+
+}
+
+function BufferingLoader({ progressPct }: {progressPct: number | null;}) {const { t } = useTranslation();
+  return (
+
+---NEXT---
+
+);
+
+}
+
+function EmptyCatalogMessage({ type }: {type: string;}) {const { t } = useTranslation();
+  return (
+
+---NEXT---
+
+);
+
+}
+
+function FacebookIcon() {
+  return (
+
+---NEXT---
+
+);
+
+}
+
+function InstagramIcon() {
+  return (
+
+---NEXT---
+
+);
+
+}
+
+function PushNotificationCard({ userId }: {userId?: string;}) {
+  const { t } = useTranslation();
+  const [permission, setPermission] = useState
+
+---NEXT---
+
+);
+
+}
+
+function StatCard({ title, value, icon: Icon, color = "text-primary" }: {title: string;value: number | string;icon: LucideIcon;color?: string;}) {const { t } = useTranslation();
+  return (
+
+---NEXT---
+
+);
+
+}
+
+function TelegramIcon() {
+  return (
+
+---NEXT---
+
+);
+
+}
+
+function WhatsAppIcon() {
+  return (
+
+---NEXT---
+
+);
+  }
+
+  // Double sécurité : si pas connecté ou pas autorisé
+  const userRole = (appUser as any)?.role;
+  const userEmail = (appUser as any)?.email;
+  if (!isSignedIn || (userRole !== 'admin' && !(userEmail && ADMIN_EMAILS.includes(userEmail)))) {
+    return null;
+  }
+
+  // 3. Fonction pour lancer le live
+  const handleStartLive = async () => {
+    setActionLoading(true);
+    const currentPlaybackId = "hOHyJBsghEMe9mVy6lX7hecK1lBitndcOtMO9uttXtw";
+
+    const { error } = await supabase
+      .from('app_settings')
+      .update({ value: currentPlaybackId })
+      .eq('id', 'live_playback_id');
+
+    if (!error) {
+      setPlaybackId(currentPlaybackId);
+      setIsActive(true);
+    }
+    setActionLoading(false);
+  };
+
+  // 4. Fonction pour couper le live
+  const handleStopLive = async () => {
+    setActionLoading(true);
+    const { error } = await supabase
+      .from('app_settings')
+      .update({ value: null })
+      .eq('id', 'live_playback_id');
+
+    if (!error) {
+      setPlaybackId('');
+      setIsActive(false);
+    }
+    setActionLoading(false);
+  };
+
+  return (
+
+---NEXT---
+
+)}
+                {isTyping &&
+
+---NEXT---
+
+- Skip:
+
+---NEXT---
+
+/5 vidéos —
+
+---NEXT---
+
+0 ? conn.downlink : null;
+}
+
+function findBestLevelIndex(levels: QualityLevel[], targetHeight: number): number {
+  if (levels.length === 0) return -1;
+  const sortedDesc = [...levels].sort((a, b) => b.height - a.height);
+  for (const lvl of sortedDesc) {
+    if ((lvl.height || 0)
+
+---NEXT---
+
+0 ? currentAge : 1);
+
+      // En mode test, on affiche toujours l'animation
+      if (TEST_MODE) {
+        setIsVisible(true);
+        triggerConfetti();
+      } else {
+        const hasClosedToday = localStorage.getItem(`anniversary_dismissed_${year}_${date}`);
+        if (!hasClosedToday) {
+          setIsVisible(true);
+          triggerConfetti();
+        }
+      }
+    }
+  }, []);
+
+  const triggerConfetti = () => {
+    const duration = 3 * 1000;
+    const end = Date.now() + duration;
+
+    const frame = () => {
+      confetti({
+        particleCount: 5,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#eab308', '#ec4899', '#3b82f6', '#10b981']
+      });
+      confetti({
+        particleCount: 5,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#eab308', '#ec4899', '#3b82f6', '#10b981']
+      });
+
+      if (Date.now()
+
+---NEXT---
+
+0) {
+        video.currentTime = lastPlaybackPosition.current;
+        video.play().catch(() => {});
+      }
+    }
+
+    const handleWaiting = () => setIsBuffering(true);
+    const handlePlaying = () => {
+      setIsBuffering(false);
+      setPlaybackError(null);
+    };
+    const handleCanPlay = () => setIsBuffering(false);
+    const handleProgress = () => updateProgressFromVideo();
+    const handleError = () => {
+      triggerMp4Fallback("Erreur lors du chargement de la vidéo.", !navigator.onLine);
+      setIsBuffering(false);
+    };
+
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("canplay", handleCanPlay);
+    video.addEventListener("progress", handleProgress);
+    video.addEventListener("error", handleError);
+
+    return () => {
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("canplay", handleCanPlay);
+      video.removeEventListener("progress", handleProgress);
+      video.removeEventListener("error", handleError);
+      cleanupHls();
+    };
+  }, [activeSrc, streamType, retryKey, cleanupHls, triggerMp4Fallback, updateProgressFromVideo]);
+
+  const handleVideoTimeUpdate = () => {
+    const video = videoRef.current;
+    if (!video || currentAd || isVip) return;
+
+    const currentTime = video.currentTime;
+    const videoDuration = video.duration;
+    const midRollTrigger = videoDuration > 120 ? videoDuration / 2 : 120;
+
+    const pendingMidRolls = ads.filter((a) => a.adType === 'mid-roll' && !playedAds.has(a.id));
+    if (pendingMidRolls.length > 0) {
+      const targetAd = pendingMidRolls[0];
+      const triggerTime = targetAd.triggerSeconds > 0 ? targetAd.triggerSeconds : midRollTrigger;
+
+      if (currentTime >= triggerTime && currentTime
+
+---NEXT---
+
+2. Si vous résidez en Haïti (Dépôt / Transfert)
+
+---NEXT---
+
+:
+
+            activeTab === "photo-vip" &&
+
+---NEXT---
+
+:
+
+            activeTab === "video-vip" &&
+
+---NEXT---
+
+:
+
+            messages.map((m) =>
+
+---NEXT---
+
+:
+                  tickets && tickets.length > 0 ?
+                  tickets.map((ticket) =>
+
+---NEXT---
+
+:
+              mode === "signin" ?
+              "Se connecter" :
+
+              "Créer mon compte"
+              }
+
+---NEXT---
+
+:
+            messages.length === 0 ?
+
+---NEXT---
+
+:
+            video.isVip && !isUserVip ?
+
+---NEXT---
+
+:
+            video.videoUrl ?
+
+---NEXT---
+
+:
+      videos.length === 0 ?
+
+---NEXT---
+
+: "Actif"}
+
+---NEXT---
+
+: (
+
+        /* FORMULAIRE CLASSIQUE CONNEXION / INSCRIPTION */
+
+---NEXT---
+
+;
+
+  if (!isAdmin) {
+    return (
+
+---NEXT---
+
+;
+  refreshUser: () => Promise
+
+---NEXT---
+
+;
+  resetPassword: (email: string) => Promise
+
+---NEXT---
+
+;
+  signOut: () => Promise
+
+---NEXT---
+
+;
+  signUp: (email: string, password: string, displayName?: string) => Promise
+
+---NEXT---
+
+;
+  updatePassword: (password: string) => Promise
+
+---NEXT---
+
+;
+  userChoice: Promise
+
+---NEXT---
+
+;
+  }
+
+  const handleSupportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject || !message || !appUser?.id) return;
+    setTicketPending(true);
+    try {
+      await createTicket(appUser.id, subject, message);
+      setSubject("");
+      setMessage("");
+      toast.success("Message envoyé au support");
+      const updated = await listMyTickets(appUser.id);
+      setTickets(updated);
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur d'envoi");
+    } finally {
+      setTicketPending(false);
+    }
+  };
+
+  const referralBase = `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/g, "")}`;
+  const referralLink = appUser?.id ? `${referralBase}/?ref=${appUser.id}` : referralBase;
+  const isFree = appUser?.plan !== "vip";
+
+  const copyReferral = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setCopied(true);
+      toast.success("Lien copié");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Impossible de copier");
+    }
+  };
+
+  const shareReferral = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Haïtien Nud Média",
+          text: "Rejoins-moi sur HAITIAN NUD MEDIA",
+          url: referralLink
+        });
+      } catch {}
+    } else {
+      copyReferral();
+    }
+  };
+
+  const saveDisplayName = async () => {
+    if (!displayName.trim() || !appUser?.id) return;
+    setSavingName(true);
+    try {
+      // Plus d'import dynamique, on utilise le supabase importé en haut
+      const { error } = await supabase.
+      from("users").
+      update({ display_name: displayName.trim() }).
+      eq("id", appUser.id);
+      if (error) throw error;
+      await refreshUser();
+      toast.success("Nom mis à jour");
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur");
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    window.location.href = import.meta.env.BASE_URL || "/";
+  };
+
+  return (
+
+---NEXT---
+
+;
+  }
+
+  useEffect(() => {
+    async function fetchLiveSettings() {
+      const { data } = await supabase.
+      from("app_settings").
+      select("value").
+      eq("id", "live_playback_id").
+      single();
+
+      if (data && data.value) {
+        setPlaybackId(data.value);
+        setIsActive(true);
+      } else {
+        setIsActive(false);
+        setPlaybackId(null);
+      }
+    }
+
+    fetchLiveSettings();
+
+    const settingsSubscription = supabase.
+    channel("public:app_settings").
+    on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "app_settings", filter: "id=eq.live_playback_id" },
+      (payload) => {
+        const newValue = payload.new.value;
+        if (newValue) {
+          setPlaybackId(newValue);
+          setIsActive(true);
+          toast.success("Le live commence !");
+        } else {
+          setIsActive(false);
+          setPlaybackId(null);
+          toast.info("Le live s'est terminé.");
+        }
+      }
+    ).
+    subscribe();
+
+    const liveChannel = supabase.channel("live_interactions", {
+      config: { broadcast: { self: false } }
+    });
+
+    liveChannel.
+    on("broadcast", { event: "reaction" }, ({ payload }) => {
+      triggerLocalReaction(payload.emoji);
+    }).
+    on("broadcast", { event: "comment" }, ({ payload }) => {
+      setMessages((prev) => [...prev, payload]);
+    }).
+    subscribe();
+
+    return () => {
+      supabase.removeChannel(settingsSubscription);
+      supabase.removeChannel(liveChannel);
+    };
+  }, []);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const triggerLocalReaction = (emoji: string) => {
+    if (!isActive) return;
+    const id = Date.now() + Math.random();
+    const left = Math.random() * 60 + 20;
+    setReactions((prev) => [...prev, { id, emoji, left }]);
+    setTimeout(() => {
+      setReactions((prev) => prev.filter((r) => r.id !== id));
+    }, 2000);
+  };
+
+  const sendReaction = (emoji: string) => {
+    if (!isActive) {
+      toast.error("Le live doit être actif pour envoyer des réactions.");
+      return;
+    }
+    triggerLocalReaction(emoji);
+    supabase.channel("live_interactions").send({
+      type: "broadcast",
+      event: "reaction",
+      payload: { emoji }
+    });
+  };
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isActive) {
+      toast.error("Le chat est disponible uniquement lorsque le live est actif.");
+      return;
+    }
+    if (!inputText.trim()) return;
+
+    const newMessage: ChatMessage = {
+      id: Date.now().toString(),
+      user: appUser?.displayName || "Anonyme",
+      text: inputText.trim()
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+    supabase.channel("live_interactions").send({
+      type: "broadcast",
+      event: "comment",
+      payload: newMessage
+    });
+
+    setInputText("");
+  };
+
+  return (
+
+---NEXT---
+
+;
+}
+
+const AuthContext = createContext
+
+---NEXT---
+
+;
+}
+
+function HaitianNudLogo() {const { t } = useTranslation();
+  return (
+
+---NEXT---
+
+>(new Set());
+
+  const streamType = useMemo(() => activeSrc.includes(".m3u8") ? "hls" : "mp4", [activeSrc]);
+
+  useEffect(() => {
+    setActiveSrc(src);
+    setIsFallbackActive(false);
+    setCurrentQualityIndex(-1);
+    setLevels([]);
+  }, [src]);
+
+  // Chargement des pubs (sauf si VIP)
+  useEffect(() => {
+    if (!videoId || isVip) return;
+
+    // 🛠️ CORRECTION 1 (suite) : Utilisation de i18n.language au lieu de t('common.lang_code')
+    const langCode = i18n.language.split('-')[0] || "fr";
+
+    getVideoAds(videoId, langCode).then((list) => {
+      setAds(list);
+      const preRolls = list.filter((a) => a.adType === 'pre-roll');
+      if (preRolls.length > 0) {
+        const randomPreRoll = preRolls[Math.floor(Math.random() * preRolls.length)];
+        setCurrentAd(randomPreRoll);
+        setPlayedAds(new Set([randomPreRoll.id]));
+      }
+    });
+  }, [videoId, isVip, i18n.language]);
+
+  const cleanupHls = useCallback(() => {
+    if (hlsRef.current) {
+      hlsRef.current.stopLoad();
+      hlsRef.current.detachMedia();
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+  }, []);
+
+  const triggerMp4Fallback = useCallback((reason: string, isNetwork = false) => {
+    const video = videoRef.current;
+    if (video) lastPlaybackPosition.current = video.currentTime || 0;
+
+    const targetMp4 = fallbackSrc || deriveMp4Fallback(src);
+    if (targetMp4 && targetMp4 !== activeSrc) {
+      cleanupHls();
+      setIsFallbackActive(true);
+      setActiveSrc(targetMp4);
+      setPlaybackError(null);
+    } else {
+      setPlaybackError({
+        message: !navigator.onLine ? "Vous semblez hors ligne. Vérifiez votre connexion." : reason,
+        isNetwork: isNetwork || !navigator.onLine
+      });
+      cleanupHls();
+    }
+  }, [fallbackSrc, src, activeSrc, cleanupHls]);
+
+  const updateProgressFromVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.duration || Number.isNaN(video.duration)) return;
+    const current = video.currentTime;
+    const buffered = video.buffered;
+    for (let i = 0; i
+
+---NEXT---
+
+>({});
+
+  useEffect(() => {loadRequests();}, []);
+
+  const loadRequests = async () => {
+    try {const data = await adminListVipRequests();setRequests(data);}
+    catch (err) {toast.error("Impossible de charger les reçus VIP");}
+  };
+
+  const handleAction = async (r: VipRequest, action: "approved" | "rejected") => {
+    setProcessingId(r.id);
+    const duration = parseInt(selectedDuration[r.id] || String(r.durationDays || 30), 10);
+    try {
+      await adminProcessVipRequest(r.id, r.userId, action, duration);
+      toast.success(action === "approved" ? `VIP activé (${duration} jours) !` : "Demande rejetée");
+      try {
+        await fetch("https://api.haitiannud.com/api/push/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({
+            title: action === "approved" ? "👑 Votre accès VIP est Actif !" : "❌ Reçu VIP non validé",
+            body: action === "approved" ? `Félicitations ! Votre abonnement VIP (${duration} jours) a été validé.` : "Le reçu envoyé a été refusé.",
+            url: "/vip", icon: "/logo.jpg", targetUserId: r.userId
+          })
+        });
+      } catch (pushErr) {console.warn("Échec push:", pushErr);}
+      await loadRequests();
+    } catch (err: any) {toast.error(err?.message || "Erreur");} finally
+    {setProcessingId(null);}
+  };
+
+  return (
+
+---NEXT---
+
+@dg_haitian_nud
+
+---NEXT---
+
+@www.haitiannud.com
+
+---NEXT---
+
+Accès :
+
+---NEXT---
+
+Accès Refusé
+
+---NEXT---
+
+Accédez à tout le contenu premium, téléchargements illimités et sans publicités. Soutenez les créateurs haïtiens.
+
+---NEXT---
+
+Actions
+
+---NEXT---
+
+Activation...
+
+---NEXT---
+
+Activer le flux sur le site
+
+---NEXT---
+
+Activer les notifications système
+
+---NEXT---
+
+Activer maintenant
+
+---NEXT---
+
+Activer pour recevoir les alertes
+
+---NEXT---
+
+Activez vos notifications pour être alerté dès que votre accès VIP est validé et ne manquer aucune nouvelle vidéo !
+
+---NEXT---
+
+Activées
+
+---NEXT---
+
+Admin
+
+---NEXT---
+
+Ajouter manuellement
+
+---NEXT---
+
+Ajouter une photo
+
+---NEXT---
+
+Alertes
+
+---NEXT---
+
+Alertes nouveautés
+
+---NEXT---
+
+Aller à la connexion
+
+---NEXT---
+
+Aller à la page de connexion
+
+---NEXT---
+
+Année
+
+---NEXT---
+
+Aperçu
+
+---NEXT---
+
+Application Mobile
+
+---NEXT---
+
+Assistant virtuel
+
+---NEXT---
+
+Aucun direct en cours
+
+---NEXT---
+
+Aucun élément trouvé dans la catégorie des
+
+---NEXT---
+
+Aucune demande envoyée.
+
+---NEXT---
+
+Aucune nouvelle vidéo pour le moment.
+
+---NEXT---
+
+Aucune vidéo consultée récemment.
+
+---NEXT---
+
+Aucune vidéo disponible.
+
+---NEXT---
+
+Autorisation bloquée dans le navigateur.
+
+---NEXT---
+
+Autorisez les notifications dans les réglages de votre navigateur.
+
+---NEXT---
+
+Avertissement
+
+---NEXT---
+
+Bannière
+
+---NEXT---
+
+Bloqué
+
+---NEXT---
+
+CATALOGUE EXCLUSIF
+
+---NEXT---
+
+Catégorie finale :
+
+---NEXT---
+
+Ce site peut contenir du contenu mature. Vous devez avoir 18 ans ou plus pour entrer.
+
+---NEXT---
+
+Cette vidéo exclusive est réservée aux membres VIP. Devenez Premium pour débloquer tout le catalogue instantanément.
+
+---NEXT---
+
+Chargement du flux...
+
+---NEXT---
+
+Chat en direct
+
+---NEXT---
+
+Chaîne WhatsApp
+
+---NEXT---
+
+Choisissez un nouveau mot de passe sécurisé.
+
+---NEXT---
+
+Choisissez votre formule VIP
+
+---NEXT---
+
+Choisissez votre langue / Chwazi lang ou / Elige tu idioma
+
+---NEXT---
+
+Choose your language
+
+---NEXT---
+
+Cliquez sur le lien de confirmation.
+
+---NEXT---
+
+Connectez-vous pour vous abonner
+
+---NEXT---
+
+Connexion interrompue
+
+---NEXT---
+
+Console de Streaming Pro
+
+---NEXT---
+
+Consultez votre boîte de réception e-mail.
+
+---NEXT---
+
+Contacter un humain
+
+---NEXT---
+
+Contactez-nous directement sur Telegram pour procéder au paiement.
+
+---NEXT---
+
+Contenu VIP Exclusif
+
+---NEXT---
+
+Contenus récents & populaires
+
+---NEXT---
+
+Copier le lien
+
+---NEXT---
+
+Dafca Saint Vill
+
+---NEXT---
+
+Date
+
+---NEXT---
+
+Demandes VIP
+
+---NEXT---
+
+Description
+
+---NEXT---
+
+Devenir Membre VIP
+
+---NEXT---
+
+Devenir VIP pour débloquer
+
+---NEXT---
+
+Devenir créatrice ou actrice de live
+
+---NEXT---
+
+Direct
+
+---NEXT---
+
+Disponible offline
+
+---NEXT---
+
+Durée
+
+---NEXT---
+
+Durée (sec)
+
+---NEXT---
+
+Durée :
+
+---NEXT---
+
+Débloquer
+
+---NEXT---
+
+Déclencher à (sec)
+
+---NEXT---
+
+Découvrez les contenus les plus exclusifs et récents de la plateforme en haute définition.
+
+---NEXT---
+
+Découvrir les offres
+
+---NEXT---
+
+Décrivez votre problème en détail...
+
+---NEXT---
+
+Déposez le MP4 ici...
+
+---NEXT---
+
+Désactivées
+
+---NEXT---
+
+Email
+
+---NEXT---
+
+Email envoyé !
+
+---NEXT---
+
+En savoir plus
+
+---NEXT---
+
+English
+
+---NEXT---
+
+Enregistrement...
+
+---NEXT---
+
+Enregistrer la vidéo
+
+---NEXT---
+
+Entrez votre email pour recevoir un lien de réinitialisation.
+
+---NEXT---
+
+Envie de faire des streams & monétiser ton contenu ?
+
+---NEXT---
+
+Envoi...
+
+---NEXT---
+
+Envoyer la demande
+
+---NEXT---
+
+Envoyer le lien de réinitialisation
+
+---NEXT---
+
+Envoyer un Push
+
+---NEXT---
+
+Envoyer un message...
+
+---NEXT---
+
+Envoyer à tous
+
+---NEXT---
+
+Espace Membre Premium
+
+---NEXT---
+
+Espace Privé VIP
+
+---NEXT---
+
+Español
+
+---NEXT---
+
+Explorer le catalogue privé
+
+---NEXT---
+
+Fermer
+
+---NEXT---
+
+Fichier :
+
+---NEXT---
+
+Fichier vidéo (MP4)
+
+---NEXT---
+
+Formule :
+
+---NEXT---
+
+Formule choisie :
+
+---NEXT---
+
+Français
+
+---NEXT---
+
+Galerie Photo
+
+---NEXT---
+
+Galerie Photo Privée
+
+---NEXT---
+
+Galerie photo
+
+---NEXT---
+
+Galerie vidéo
+
+---NEXT---
+
+Gestion des Publicités
+
+---NEXT---
+
+Gestion des Vidéos
+
+---NEXT---
+
+Glissez un MP4 ou cliquez
+
+---NEXT---
+
+HAITIAN NUD
+
+---NEXT---
+
+HTG /
+
+---NEXT---
+
+HTG)
+
+---NEXT---
+
+Haitian Nud fête ses
+
+---NEXT---
+
+Haïti (+509)
+
+---NEXT---
+
+Historique de lecture
+
+---NEXT---
+
+Infos
+
+---NEXT---
+
+Inscription
+
+---NEXT---
+
+Installer
+
+---NEXT---
+
+Interrompre la diffusion
+
+---NEXT---
+
+Je suis mineur(e)
+
+---NEXT---
+
+Joyeux Anniversaire !
+
+---NEXT---
+
+Konekte oswa kreye yon kont pou w ka gade videyo sa a.
+
+---NEXT---
+
+Kreyòl
+
+---NEXT---
+
+Kreyòl Ayisyen
+
+---NEXT---
+
+Lancer la conversion HLS
+
+---NEXT---
+
+Langue de la pub
+
+---NEXT---
+
+Le chat en direct est verrouillé.
+
+---NEXT---
+
+Le flux est actuellement hors ligne
+
+---NEXT---
+
+Les commentaires (anonymes ou non) doivent rester respectueux. Tout propos illégal,\n            haineux, discriminatoire ou menaçant sera supprimé et peut entraîner la suspension du\n            compte. Les comportements visant à mettre en cause la sécurité de mineurs sont\n            signalés aux autorités compétentes.
+
+---NEXT---
+
+Lien
+
+---NEXT---
+
+Lien (En savoir plus)
+
+---NEXT---
+
+Live hors-ligne...
+
+---NEXT---
+
+Légal
+
+---NEXT---
+
+MP4 (Secours)
+
+---NEXT---
+
+Membres VIP
+
+---NEXT---
+
+Merci de faire partie de notre communauté !
+
+---NEXT---
+
+Mes Demandes
+
+---NEXT---
+
+Messages
+
+---NEXT---
+
+Messages & tickets
+
+---NEXT---
+
+Mid-roll
+
+---NEXT---
+
+Mise à jour...
+
+---NEXT---
+
+Montant :
+
+---NEXT---
+
+Mot de passe mis à jour !
+
+---NEXT---
+
+Mot de passe oublié ?
+
+---NEXT---
+
+Méthode
+
+---NEXT---
+
+NatCash
+
+---NEXT---
+
+NatCash :
+
+---NEXT---
+
+Nom du compte :
+
+---NEXT---
+
+Notifications Push
+
+---NEXT---
+
+Nouveau mot de passe
+
+---NEXT---
+
+Nouvelle Photo
+
+---NEXT---
+
+Nouvelle Vidéo
+
+---NEXT---
+
+Nouvelles vidéos
+
+---NEXT---
+
+Numéro NatCash :
+
+---NEXT---
+
+Offline
+
+---NEXT---
+
+Offre
+
+---NEXT---
+
+Original
+
+---NEXT---
+
+Oublié ?
+
+---NEXT---
+
+PUBLICITÉ
+
+---NEXT---
+
+Parrainez vos proches
+
+---NEXT---
+
+Partager
+
+---NEXT---
+
+Partager le lien
+
+---NEXT---
+
+Partagez Haïtien Nud Média avec vos amis pour leur faire découvrir la plateforme.
+
+---NEXT---
+
+Passer dans
+
+---NEXT---
+
+Passer la pub
+
+---NEXT---
+
+Patientez...
+
+---NEXT---
+
+Photos
+
+---NEXT---
+
+Photos Premium
+
+---NEXT---
+
+Photos VIP
+
+---NEXT---
+
+Plus vues
+
+---NEXT---
+
+Posez votre question
+
+---NEXT---
+
+Pre-roll
+
+---NEXT---
+
+Preuve
+
+---NEXT---
+
+Prix par jour :
+
+---NEXT---
+
+Problème de lecture
+
+---NEXT---
+
+Profil
+
+---NEXT---
+
+Promise
+
+---NEXT---
+
+Promo VIP
+
+---NEXT---
+
+Publier
+
+---NEXT---
+
+Publié
+
+---NEXT---
+
+Pubs
+
+---NEXT---
+
+Pubs existantes
+
+---NEXT---
+
+Quota de Téléchargements
+
+---NEXT---
+
+Rechercher
+
+---NEXT---
+
+Recommandé
+
+---NEXT---
+
+Regarder maintenant
+
+---NEXT---
+
+Rejoindre nos communautés
+
+---NEXT---
+
+Rejwenn
+
+---NEXT---
+
+Retour au chat
+
+---NEXT---
+
+Retour à la connexion
+
+---NEXT---
+
+Retourner au Catalogue Public
+
+---NEXT---
+
+Revenez ici et connectez-vous pour profiter du contenu !
+
+---NEXT---
+
+Reçu
+
+---NEXT---
+
+Récentes
+
+---NEXT---
+
+Réessayer
+
+---NEXT---
+
+Réessayer la lecture
+
+---NEXT---
+
+Réinitialiser le mot de passe
+
+---NEXT---
+
+Répondre
+
+---NEXT---
+
+Réservé VIP
+
+---NEXT---
+
+Réservé aux adultes (18+). Mineurs interdits.
+
+---NEXT---
+
+Résolution
+
+---NEXT---
+
+Se connecter
+
+---NEXT---
+
+Site réservé à un public adulte (18 ans et plus).
+
+---NEXT---
+
+Skip après (sec)
+
+---NEXT---
+
+Soyez le premier à envoyer un message !
+
+---NEXT---
+
+Statut
+
+---NEXT---
+
+Statut Abonnement
+
+---NEXT---
+
+Studio Live
+
+---NEXT---
+
+Sujet...
+
+---NEXT---
+
+Support :
+
+---NEXT---
+
+Support en ligne
+
+---NEXT---
+
+Suppr
+
+---NEXT---
+
+Sélectionnez un ticket
+
+---NEXT---
+
+Table
+
+---NEXT---
+
+TapTap Send
+
+---NEXT---
+
+Titre
+
+---NEXT---
+
+Titre de la campagne
+
+---NEXT---
+
+Ton pseudo
+
+---NEXT---
+
+Tous les contenus mettant en scène des personnes sont publiés avec le consentement\n            écrit des intéressé·e·s, qui sont toutes majeures.
+
+---NEXT---
+
+Tout le contenu
+
+---NEXT---
+
+Traitement...
+
+---NEXT---
+
+Traité
+
+---NEXT---
+
+Transmettre le reçu
+
+---NEXT---
+
+Type de pub
+
+---NEXT---
+
+Téléchargement...
+
+---NEXT---
+
+Télécharger
+
+---NEXT---
+
+Téléchargez des vidéos pour les regarder sans connexion internet. Maximum 5 vidéos.
+
+---NEXT---
+
+URL .mp4
+
+---NEXT---
+
+URL Miniature
+
+---NEXT---
+
+URL Vidéo (HLS Master)
+
+---NEXT---
+
+URL de la Photo
+
+---NEXT---
+
+Un dernier geste !
+
+---NEXT---
+
+Un lien de réinitialisation a été envoyé à votre adresse email.
+
+---NEXT---
+
+Une question ? Écrivez-nous.
+
+---NEXT---
+
+Uploader & Convertir
+
+---NEXT---
+
+Uploader la pub
+
+---NEXT---
+
+Usine à Vidéo (MP4 → HLS)
+
+---NEXT---
+
+Utilisateurs
+
+---NEXT---
+
+VIP pour le moment.
+
+---NEXT---
+
+Validation VIP
+
+---NEXT---
+
+Validation...
+
+---NEXT---
+
+Vider
+
+---NEXT---
+
+Vidéo Premium
+
+---NEXT---
+
+Vidéo de Fond (Accueil)
+
+---NEXT---
+
+Vidéo prête !
+
+---NEXT---
+
+Vidéos
+
+---NEXT---
+
+Vidéos Exclusives
+
+---NEXT---
+
+Vidéos VIP
+
+---NEXT---
+
+Vitesse
+
+---NEXT---
+
+Voir tout
+
+---NEXT---
+
+Votre Abonnement VIP est Actif
+
+---NEXT---
+
+Votre Espace VIP
+
+---NEXT---
+
+Votre Réponse
+
+---NEXT---
+
+Votre abonnement est actuellement actif sur ce compte.
+
+---NEXT---
+
+Votre message a bien été transmis !
+
+---NEXT---
+
+Votre message...
+
+---NEXT---
+
+Votre mot de passe a été réinitialisé avec succès.
+
+---NEXT---
+
+Votre preuve de paiement pour la formule
+
+---NEXT---
+
+Vous allez être redirigé vers la page de connexion.
+
+---NEXT---
+
+Vous devez vous connecter à votre compte et détenir un pass VIP pour accéder à cet espace exclusif.
+
+---NEXT---
+
+Vous préférez un autre moyen de paiement ?
+
+---NEXT---
+
+Voye zen pa Telegram
+
+---NEXT---
+
+Voye zen pa WhatsApp
+
+---NEXT---
+
+Vues
+
+---NEXT---
+
+Vérification des autorisations...
+
+---NEXT---
+
+Vérification...
+
+---NEXT---
+
+Vérifiez votre boîte de réception et cliquez sur le lien reçu.
+
+---NEXT---
+
+a été transmise aux administrateurs.
+
+---NEXT---
+
+a.height - b.height)[0].id;
+}
+
+function deriveMp4Fallback(hlsUrl: string): string | null {
+  if (!hlsUrl) return null;
+  if (hlsUrl.includes(".m3u8")) {
+    return hlsUrl.replace(/\.m3u8(\?.*)?$/i, ".mp4$1");
+  }
+  return null;
+}
+
+function VideoErrorOverlay({ message, isNetworkError, onRetry }: {message: string;isNetworkError: boolean;onRetry: () => void;}) {const { t } = useTranslation();
+  return (
+
+---NEXT---
+
+account.active_sub
+
+---NEXT---
+
+account.become_vip_now
+
+---NEXT---
+
+account.contact_support
+
+---NEXT---
+
+account.display_name
+
+---NEXT---
+
+account.expires_at
+
+---NEXT---
+
+account.free_downloads_limit
+
+---NEXT---
+
+account.free_member
+
+---NEXT---
+
+account.free_plan_msg
+
+---NEXT---
+
+account.push_not_supported
+
+---NEXT---
+
+account.quota_remaining
+
+---NEXT---
+
+auth.confirm_password
+
+---NEXT---
+
+auth.new_password
+
+---NEXT---
+
+button]:hidden">
+
+---NEXT---
+
+changeLanguage("en")} className="h-12 text-base">
+            {t("🇺🇸 English")}
+
+---NEXT---
+
+changeLanguage("es")} className="h-12 text-base">
+            {t("🇪🇸 Español")}
+
+---NEXT---
+
+changeLanguage("fr")} className="h-12 text-base">
+            {t("🇫🇷 Français")}
+
+---NEXT---
+
+changeLanguage("ht")} className="h-12 text-base">
+            {t("🇭🇹 Kreyòl")}
+
+---NEXT---
+
+changeQuality(-1)}
+            className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between hover:bg-white/10 ${
+            currentQualityIndex === -1 ? "text-primary font-bold" : "text-zinc-200"}`
+            }>
+
+---NEXT---
+
+changeQuality(lvl.id)}
+            className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between hover:bg-white/10 ${
+            currentQualityIndex === lvl.id ? "text-primary font-bold" : "text-zinc-200"}`
+            }>
+
+---NEXT---
+
+changeSpeed(s)}
+            className={`w-full text-left px-2 py-1.5 rounded flex items-center justify-between hover:bg-white/10 ${
+            playbackSpeed === s ? "text-primary font-bold" : "text-zinc-200"}`
+            }>
+
+---NEXT---
+
+clearInterval(timer);
+  }, [skipAfter]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !adUrl) return;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hlsRef.current = hls;
+      hls.loadSource(adUrl);
+      hls.attachMedia(video);
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = adUrl;
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [adUrl]);
+
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+    if (!video || !video.duration) return;
+    setProgress(video.currentTime / video.duration * 100);
+  };
+
+  return (
+
+---NEXT---
+
+comme destination.
+
+---NEXT---
+
+common.error_loading
+
+---NEXT---
+
+common.lang_code
+
+---NEXT---
+
+downloads.browse_videos
+
+---NEXT---
+
+downloads.my_downloads
+
+---NEXT---
+
+downloads.no_downloads
+
+---NEXT---
+
+dépôt ou un transfert direct
+
+---NEXT---
+
+e.stopPropagation()}>
+
+---NEXT---
+
+envoyées ·
+
+---NEXT---
+
+ex: Kompa, Rasin...
+
+---NEXT---
+
+expirées ·
+
+---NEXT---
+
+footer.adults_only
+
+---NEXT---
+
+footer.distribution_channels
+
+---NEXT---
+
+footer.join_group
+
+---NEXT---
+
+footer.legal_notice
+
+---NEXT---
+
+footer.privacy_policy
+
+---NEXT---
+
+footer.rights_reserved
+
+---NEXT---
+
+footer.send_zen_telegram
+
+---NEXT---
+
+footer.send_zen_whatsapp
+
+---NEXT---
+
+handleAction(r, 'approved')}>
+
+---NEXT---
+
+handleAction(r, 'rejected')}>
+
+---NEXT---
+
+handleDelete(p.id)} disabled={deletePending === p.id} className="text-destructive">
+
+---NEXT---
+
+handleDelete(v.id)} disabled={deletePending === v.id} className="text-destructive">
+
+---NEXT---
+
+handleDelete(video.id)}>
+
+---NEXT---
+
+handlePhotoClick(photo)}
+                      className="group relative rounded-xl overflow-hidden border border-border bg-card cursor-pointer">
+
+---NEXT---
+
+handlePhotoClick(photo)}
+                  className="group relative rounded-xl overflow-hidden border border-border bg-card cursor-pointer animate-in fade-in zoom-in-95 duration-500"
+                  style={{ animationDelay: `${i % 3 * 100}ms`, animationFillMode: 'both' }}>
+
+---NEXT---
+
+handlePlay(video)}>
+
+---NEXT---
+
+handleToggleBlock(u.id, u.blocked)} disabled={blockPending === u.id} className={u.blocked ? "text-green-500" : "text-destructive"}>{u.blocked ? t("Débloquer") : "Bloquer"}
+
+---NEXT---
+
+hls.startLoad(), 1000 * networkRecoveryAttempts.current);
+            } else {
+              triggerMp4Fallback("Impossible de joindre le flux HLS. Basculement MP4.", true);
+            }
+          } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            mediaRecoveryAttempts.current += 1;
+            if (mediaRecoveryAttempts.current
+
+---NEXT---
+
+home.exclusive_vip_pass
+
+---NEXT---
+
+home.new_on_platform
+
+---NEXT---
+
+import("@/pages/watch").then(m => ({ default: m.Watch })));
+const Admin = lazy(() => import("@/pages/admin").then(m => ({ default: m.Admin })));
+const Live = lazy(() => import("@/pages/live").then(m => ({ default: m.Live })));
+const AdminLive = lazy(() => import("@/pages/admin-live").then(m => ({ default: m.AdminLive })));
+
+// 🎉 Composant d'animation de fête
+import { AnniversaryOverlay } from "@/components/anniversary-overlay";
+// 🌐 Modal de choix de langue
+import { LanguageModal } from "@/components/language-modal";
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function ScrollToTop() {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location]);
+
+  return null;
+}
+
+// 🌐 Détection IP pure JavaScript
+function initIpLocation() {
+  if (!localStorage.getItem("i18nextLng") && !localStorage.getItem("auto-lang")) {
+    fetch("https://ipapi.co/json/")
+      .then((res) => res.json())
+      .then((data) => {
+        const country = data.country_code;
+        let targetLang = "fr";
+
+        if (country === "HT") {
+          targetLang = "ht"; 
+        } else if (["US", "CA", "GB"].includes(country)) {
+          targetLang = "en";
+        } else if (["ES", "DO", "MX", "AR"].includes(country)) {
+          targetLang = "es";
+        }
+
+        localStorage.setItem("auto-lang", targetLang);
+        i18n.changeLanguage(targetLang);
+      })
+      .catch(() => {
+        localStorage.setItem("auto-lang", "fr");
+        i18n.changeLanguage("fr");
+      });
+  }
+}
+
+function dismissPreloader() {
+  const preloader = document.getElementById("app-preloader");
+  if (preloader) {
+    preloader.classList.add("fade-out");
+    setTimeout(() => {
+      preloader.remove();
+    }, 550);
+  }
+}
+
+function App() {
+  const [location] = useLocation();
+  const [isReady, setIsReady] = useState(false);
+  
+  useEffect(() => {
+    (window as any).t = (key: string, options?: any) => i18n.t(key, options);
+    initIpLocation();
+
+    const timer = setTimeout(() => {
+      setIsReady(true);
+      dismissPreloader();
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+
+---NEXT---
+
+jours)
+
+---NEXT---
+
+legal.age_confirmation
+
+---NEXT---
+
+legal.comments_behavior
+
+---NEXT---
+
+legal.condition_1
+
+---NEXT---
+
+legal.condition_2
+
+---NEXT---
+
+legal.condition_3
+
+---NEXT---
+
+legal.content_property
+
+---NEXT---
+
+legal.forbidden_minors
+
+---NEXT---
+
+legal.if_minor
+
+---NEXT---
+
+legal.privacy_cookies
+
+---NEXT---
+
+legal.report_contact
+
+---NEXT---
+
+legal.vip_payments
+
+---NEXT---
+
+legal.warning_title
+
+---NEXT---
+
+nav.become_vip
+
+---NEXT---
+
+nav.live_stream
+
+---NEXT---
+
+nav.my_account
+
+---NEXT---
+
+new Set(prev).add(targetAd.id));
+      }
+    }
+  };
+
+  const handleRetry = () => {
+    setActiveSrc(src);
+    setIsFallbackActive(false);
+    setPlaybackError(null);
+    setIsBuffering(true);
+    setRetryKey((prev) => prev + 1);
+  };
+
+  return (
+
+---NEXT---
+
+plans.action_required
+
+---NEXT---
+
+plans.file_limits
+
+---NEXT---
+
+plans.how_to_pay
+
+---NEXT---
+
+plans.payment_method_used
+
+---NEXT---
+
+plans.premium_active
+
+---NEXT---
+
+plans.screenshot_proof
+
+---NEXT---
+
+plans.thank_you
+
+---NEXT---
+
+plans.welcome_vip
+
+---NEXT---
+
+requise.
+
+---NEXT---
+
+search.no_results
+
+---NEXT---
+
+search.no_results_desc
+
+---NEXT---
+
+sendReaction(emoji)}>
+                
+                  {emoji}
+
+---NEXT---
+
+setActiveTab("all-vip")}
+          className="rounded-full gap-2">
+          {t("Tout le contenu")}
+
+---NEXT---
+
+setActiveTab("photo-vip")}
+          className="rounded-full gap-2">
+
+---NEXT---
+
+setActiveTab("video-vip")}
+          className="rounded-full gap-2">
+
+---NEXT---
+
+setActiveTab(tab.id)}
+                  className={`rounded-full px-3.5 h-8 text-xs font-medium transition-all gap-1.5 ${
+                  active ?
+                  "bg-primary text-white shadow-sm hover:bg-primary/90" :
+                  "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"}`
+                  }>
+
+---NEXT---
+
+setBody(e.target.value)} rows={3} />
+
+---NEXT---
+
+setCommentBody(e.target.value)}
+              />
+
+---NEXT---
+
+setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pl-10 pr-10"
+                required
+                minLength={6} />
+
+---NEXT---
+
+setContentType(e.target.value)} />
+
+---NEXT---
+
+setDisplayName(e.target.value)}
+                  placeholder={t("Ton pseudo")}
+                  className="pl-10 h-11 rounded-xl bg-background/50 border-border/80 focus:border-primary"
+                  required={mode === "signup"} />
+
+---NEXT---
+
+setDisplayName(e.target.value)} className="h-9 text-xs bg-muted/20" />
+
+---NEXT---
+
+setEmail(e.target.value)}
+                  placeholder={t("votre@email.com")}
+                  className="pl-10 h-11 rounded-xl bg-background/50 border-border/80 focus:border-primary"
+                  required />
+
+---NEXT---
+
+setFile(e.target.files?.[0] || null)} className="mt-2" disabled={status !== "idle"} />
+          {status !== "idle" &&
+
+---NEXT---
+
+setFile(null)} className="mt-2 text-xs w-full">Annuler
+
+---NEXT---
+
+setForm({ ...form, clickUrl: e.target.value })} />
+
+---NEXT---
+
+setForm({ ...form, language: v })}>
+
+---NEXT---
+
+setForm({ ...form, resolution: v })}>
+
+---NEXT---
+
+setForm({ ...form, skip: Number(e.target.value) })} />
+
+---NEXT---
+
+setForm({ ...form, title: e.target.value })} />
+
+---NEXT---
+
+setForm({ ...form, trigger: Number(e.target.value) })} />
+
+---NEXT---
+
+setForm({ ...form, type: v })}>
+
+---NEXT---
+
+setFormData({ ...formData, description: e.target.value })} />
+
+---NEXT---
+
+setFormData({ ...formData, durationSec: Number(e.target.value) })} />
+
+---NEXT---
+
+setFormData({ ...formData, imageUrl: e.target.value })} />
+
+---NEXT---
+
+setFormData({ ...formData, isVip: c })} />
+
+---NEXT---
+
+setFormData({ ...formData, published: c })} />
+
+---NEXT---
+
+setFormData({ ...formData, thumbnailUrl: e.target.value })} />
+
+---NEXT---
+
+setFormData({ ...formData, title: e.target.value })} />
+
+---NEXT---
+
+setFormData({ ...formData, videoUrl: e.target.value })} />
+
+---NEXT---
+
+setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder={t("Écrivez un message...")}
+              className="bg-background" />
+
+---NEXT---
+
+setInputText(e.target.value)}
+              disabled={!isActive}
+              maxLength={150}
+              className="bg-background rounded-xl text-xs h-10 border-border/80 focus:border-primary" />
+
+---NEXT---
+
+setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg hover:text-primary transition-colors">
+
+---NEXT---
+
+setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg text-red-500 font-semibold hover:text-red-600 transition-colors">
+
+---NEXT---
+
+setIsMenuOpen(false)}>
+
+---NEXT---
+
+setIsMuted(!isMuted)}>
+              
+                {isMuted ?
+
+---NEXT---
+
+setIsOpen(false)}>
+
+---NEXT---
+
+setIsOpen(true)}
+        className="h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-2xl hover:bg-primary/90 transition-all transform hover:scale-105 flex items-center justify-center">
+
+---NEXT---
+
+setLocation("/")}
+              className="text-xs text-muted-foreground hover:text-foreground rounded-xl">
+
+---NEXT---
+
+setLocation("/")}
+              className="w-full text-muted-foreground hover:text-foreground rounded-xl">
+
+---NEXT---
+
+setLocation("/")} variant="outline" className="w-full py-5 rounded-xl text-xs font-semibold">
+            {t("Retourner au Catalogue Public")}
+
+---NEXT---
+
+setLocation("/")}>{t('watch.back_home')}
+
+---NEXT---
+
+setLocation("/forgot-password")}
+                  className="text-[11px] text-primary hover:underline font-medium">
+                      {t("Oublié ?")}
+
+---NEXT---
+
+setLocation("/login"), 3000);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+
+---NEXT---
+
+setLocation("/login")}
+            className="text-muted-foreground">
+
+---NEXT---
+
+setLocation("/login")} className="w-full">
+              {t("Aller à la connexion")}
+
+---NEXT---
+
+setLocation("/login")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
+
+---NEXT---
+
+setLocation("/plans")}
+                className="bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 backdrop-blur-md h-12 rounded-xl font-semibold transition-all hover:scale-105 w-full sm:w-auto">
+
+---NEXT---
+
+setLocation("/plans")} className="bg-primary text-primary-foreground font-bold shrink-0">
+                {t("Découvrir les offres")}
+
+---NEXT---
+
+setLocation("/vip-catalog")}
+                className="bg-primary hover:bg-primary/90 text-white font-bold px-8 h-12 rounded-xl shadow-[0_0_30px_rgba(30,94,255,0.5)] transition-all hover:scale-105 w-full sm:w-auto">
+
+---NEXT---
+
+setLocation("/vip-catalog")} className="w-full py-6 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl gap-2 shadow-lg">
+                {t("Explorer le catalogue privé")}
+
+---NEXT---
+
+setMessage(e.target.value)} className="text-xs bg-muted/20 resize-none" />
+
+---NEXT---
+
+setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10 pr-10 h-11 rounded-xl bg-background/50 border-border/80 focus:border-primary"
+                  required
+                  minLength={6} />
+
+---NEXT---
+
+setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pl-10 pr-10"
+                required
+                minLength={6} />
+
+---NEXT---
+
+setPaymentMethod(v)} className="grid grid-cols-1 gap-3">
+
+---NEXT---
+
+setQuery(e.target.value)}
+          />
+
+---NEXT---
+
+setReplyText(e.target.value)} rows={5} />
+
+---NEXT---
+
+setSelectedDuration({ ...selectedDuration, [r.id]: val })}>
+
+---NEXT---
+
+setSelectedPhoto(null)}
+            className="absolute -top-10 right-0 text-white hover:text-primary transition-colors flex items-center gap-1 font-bold">
+
+---NEXT---
+
+setSelectedPhoto(null)}>
+
+---NEXT---
+
+setSelectedPlanId(p.id)}
+                  className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
+                  isSelected ?
+                  "border-yellow-500 bg-yellow-500/10 shadow-lg scale-[1.02]" :
+                  "border-border bg-card/50 hover:border-primary/40"}`
+                  }>
+                  
+                      {p.popular &&
+
+---NEXT---
+
+setSelectedTicket(t)} className={`p-4 border rounded-lg cursor-pointer hover:bg-accent ${selectedTicket?.id === t.id ? 'border-primary' : 'border-border'}`}>
+
+---NEXT---
+
+setShowConfirmPassword(!showConfirmPassword)}>
+                
+                  {showConfirmPassword ?
+
+---NEXT---
+
+setShowPassword(!showPassword)}>
+                
+                  {showPassword ?
+
+---NEXT---
+
+setShowPassword(!showPassword)}>
+                  
+                    {showPassword ?
+
+---NEXT---
+
+setShowSettingsMenu(!showSettingsMenu)}
+        className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-sm text-white/80 hover:text-white border border-white/10 transition-all shadow-md">
+
+---NEXT---
+
+setSortBy("recent")}
+              className={`h-7 px-2.5 text-[11px] rounded-full font-medium transition-all ${
+              sortBy === "recent" ?
+              "bg-background text-foreground shadow-xs" :
+              "text-muted-foreground hover:text-foreground"}`
+              }>
+              {t("Récentes")}
+
+---NEXT---
+
+setSortBy("views")}
+              className={`h-7 px-2.5 text-[11px] rounded-full font-medium transition-all ${
+              sortBy === "views" ?
+              "bg-background text-foreground shadow-xs" :
+              "text-muted-foreground hover:text-foreground"}`
+              }>
+              {t("Plus vues")}
+
+---NEXT---
+
+setStatus("idle")} className="mt-2">{t("Réessayer")}
+
+---NEXT---
+
+setStep('info')} className="text-xs text-muted-foreground hover:text-foreground">
+              {t("← Changer de formule")}
+
+---NEXT---
+
+setStep('payment')} className="w-full py-6 text-base font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl shadow-lg gap-2">
+                    {t("S'abonner avec la formule")} {selectedPlan.name} ({selectedPlan.priceUsd}$)
+
+---NEXT---
+
+setSubject(e.target.value)}
+                className="bg-background"
+                required />
+
+---NEXT---
+
+setSubject(e.target.value)} className="h-9 text-xs bg-muted/20" />
+
+---NEXT---
+
+setTicketMessage(e.target.value)}
+                className="bg-background resize-none"
+                required />
+
+---NEXT---
+
+setTitle(e.target.value)} />
+
+---NEXT---
+
+setUrl(e.target.value)} placeholder="/" />
+
+---NEXT---
+
+setUrl(e.target.value)} placeholder={t("URL .mp4")} className="flex-1" />
+
+---NEXT---
+
+setView(view === 'chat' ? 'ticket' : 'chat')}>
+
+---NEXT---
+
+utilisés
+
+---NEXT---
+
+void;
+  anonymous: boolean;
+  setAnonymous: (val: boolean) => void;
+  commentPending: boolean;
+  handleComment: (e: React.FormEvent) => void;
+}
+
+export function CommentsSection({
+  comments, isLoadingComments, isSignedIn, appUser,
+  commentBody, setCommentBody, anonymous, setAnonymous,
+  commentPending, handleComment
+}: CommentsSectionProps) {
+  const { t } = useTranslation();
+
+  return (
+
+---NEXT---
+
+void;
+  streamType: "mp4" | "hls";
+  levels: QualityLevel[];
+  currentQualityIndex: number;
+  autoTargetHeight: number | null;
+  changeQuality: (idx: number) => void;
+  playbackSpeed: number;
+  changeSpeed: (speed: number) => void;
+}
+
+export function PlayerSettings({
+  showSettingsMenu, setShowSettingsMenu, streamType, levels,
+  currentQualityIndex, autoTargetHeight, changeQuality,
+  playbackSpeed, changeSpeed
+}: PlayerSettingsProps) {const { t } = useTranslation();
+  return (
+
+---NEXT---
+
+void;
+}
+
+export function AdOverlay({ adUrl, clickUrl, skipAfter, onComplete }: AdOverlayProps) {const { t } = useTranslation();
+  const videoRef = useRef
+
+---NEXT---
+
+void;token: string;}) {const { t } = useTranslation();
+  const [file, setFile] = useState
+
+---NEXT---
+
+votre@email.com
+
+---NEXT---
+
+watch.add_comment
+
+---NEXT---
+
+watch.back_home
+
+---NEXT---
+
+watch.comment_btn
+
+---NEXT---
+
+watch.first_comment
+
+---NEXT---
+
+watch.invalid_id
+
+---NEXT---
+
+watch.invalid_url
+
+---NEXT---
+
+watch.login_to_discuss
+
+---NEXT---
+
+watch.no_similar_videos
+
+---NEXT---
+
+watch.no_video_link
+
+---NEXT---
+
+watch.post_anonymous
+
+---NEXT---
+
+watch.private_space
+
+---NEXT---
+
+watch.restricted_content
+
+---NEXT---
+
+watch.same_category
+
+---NEXT---
+
+watch.watch_offline
+
+---NEXT---
+
+{
+                  setEmail(e.target.value);
+                  setError(null);
+                }}
+                placeholder={t("votre@email.com")}
+                className="pl-10"
+                required />
+
+---NEXT---
+
+{
+                  setUploadOpen(false);
+                  setFormData({ ...formData, videoUrl: url });
+                  setOpen(true);
+                  toast.success("URL HLS prête ! Complétez les informations.");
+                }} />
+
+---NEXT---
+
+{
+                setSignupSuccess(false);
+                setMode("signin");
+                setFormError(null);
+              }}
+              className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-md transition-transform active:scale-[0.98]">
+
+---NEXT---
+
+{
+              if (!isSignedIn) {
+                e.preventDefault();
+                setLocation("/login");
+              }
+            }}
+            className={`relative flex flex-col items-center justify-center flex-1 h-full rounded-xl transition-all duration-200 ${
+              location === '/live' 
+                ? 'text-red-500 font-bold' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+
+---NEXT---
+
+{
+              if (!isSignedIn) {
+                e.preventDefault();
+                setLocation("/login");
+              }
+            }}
+            className={`relative flex flex-col items-center justify-center flex-1 h-full rounded-xl transition-all duration-200 ${
+              location.startsWith('/account') || location.startsWith('/login') 
+                ? 'text-primary font-semibold' 
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+
+---NEXT---
+
+{
+              setSent(false);
+              setEmail("");
+              setError(null);
+            }}>
+              {t("Renvoyer l'email")}
+
+---NEXT---
+
+{
+          setCurrentAd(null);
+          videoRef.current?.play().catch(() => {});
+        }} />
+
+      }
+
+---NEXT---
+
+{
+          setShowSettingsMenu(false);
+          if (!hlsRef.current) return;
+          if (idx === -1) {
+            localStorage.removeItem(QUALITY_OVERRIDE_KEY);
+            hlsRef.current.currentLevel = -1;
+            setCurrentQualityIndex(-1);
+          } else {
+            hlsRef.current.currentLevel = idx;
+            setCurrentQualityIndex(idx);
+
+            // 🛠️ CORRECTION 2 : Sauvegarde de la qualité manuelle
+            const selected = levels[idx];
+            if (selected?.height) {
+              localStorage.setItem(QUALITY_OVERRIDE_KEY, String(selected.height));
+            }
+          }
+        }}
+        playbackSpeed={playbackSpeed}
+        changeSpeed={(speed) => {
+          setPlaybackSpeed(speed);
+          if (videoRef.current) videoRef.current.playbackRate = speed;
+          setShowSettingsMenu(false);
+        }} />
+      
+
+      {isBuffering && !playbackError &&
+
+---NEXT---
+
+{
+          try {
+            const ok = await subscribeToPush(appUser?.id);
+            if (ok) {
+              setShowBanner(false);
+              toast.success("Notifications activées avec succès !");
+            } else {
+              toast.error("Veuillez accepter l'autorisation du navigateur.");
+            }
+          } catch (err) {
+            console.error("Erreur d'activation push banner:", err);
+          }
+        }}
+        className="bg-black/20 hover:bg-black/40 text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide transition-all ml-2 border border-white/20 active:scale-95">
+        {t("Activer maintenant")}
+
+---NEXT---
+
+{
+        setDisplayText(FULL_TEXT.substring(0, displayText.length + 1));
+      }, 120);
+    } else if (!isDeleting && displayText.length === FULL_TEXT.length) {
+      timer = setTimeout(() => {
+        setIsDeleting(true);
+      }, 3500);
+    } else if (isDeleting && displayText.length > 0) {
+      timer = setTimeout(() => {
+        setDisplayText(FULL_TEXT.substring(0, displayText.length - 1));
+      }, 60);
+    } else if (isDeleting && displayText.length === 0) {
+      setIsDeleting(false);
+    }
+
+    return () => clearTimeout(timer);
+  }, [displayText, isDeleting]);
+
+  // Tri des vidéos
+  const sortedVideos = useMemo(() => {
+    if (!allVideos) return [];
+    let list = [...allVideos];
+
+    if (sortBy === "views") {
+      return list.sort((a, b) => extractViews(b) - extractViews(a));
+    }
+
+    return list.sort((a, b) => {
+      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
+      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [allVideos, sortBy]);
+
+  // Tri des photos
+  const sortedPhotos = useMemo(() => {
+    if (!photos) return [];
+    let list = [...photos];
+
+    if (sortBy === "views") {
+      return list.sort((a, b) => extractViews(b) - extractViews(a));
+    }
+
+    return list.sort((a, b) => {
+      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
+      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [photos, sortBy]);
+
+  // Nouveautés vidéo
+  const newestVideos = useMemo(() => {
+    if (!allVideos) return [];
+    return [...allVideos].sort((a, b) => {
+      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
+      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
+      return dateB - dateA;
+    });
+  }, [allVideos]);
+
+  const handlePhotoClick = async (photo: Photo) => {
+    if (photo.isVip && !isUserVip) {
+      setLocation("/plans");
+      return;
+    }
+
+    const updatedViews = extractViews(photo) + 1;
+    const updatedPhoto = { ...photo, views: updatedViews };
+
+    setSelectedPhoto(updatedPhoto);
+
+    setPhotos((prev) =>
+    prev.map((p) => p.id === photo.id ? updatedPhoto : p)
+    );
+
+    try {
+      await registerPhotoView(photo.id);
+    } catch (err) {
+      console.error("Erreur lors de l'enregistrement de la vue photo:", err);
+    }
+  };
+
+  const haitianPart = displayText.substring(0, 8);
+  const nudPart = displayText.substring(8);
+
+  return (
+
+---NEXT---
+
+{
+    // Si l'utilisateur n'a pas encore choisi de langue manuellement
+    const savedLang = localStorage.getItem("i18nextLng");
+    const hasChosen = localStorage.getItem("has_chosen_language");
+
+    if (!hasChosen) {
+      // On ne l'affiche que si i18n a fini de charger et n'est pas vide
+      if (savedLang) {
+        setOpen(true);
+      }
+    }
+  }, []);
+
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    localStorage.setItem("has_chosen_language", "true");
+    setOpen(false);
+  };
+
+  return (
+
+---NEXT---
+
+{
+    await signOut();
+    window.location.href = basePath || "/";
+  };
+
+  return (
+    /* 🌐 Ajout de la classe "skiptranslate" si nécessaire, mais ici on laisse Google agir de force avec l'arbre du DOM rafraîchi */
+
+---NEXT---
+
+{
+    const checkAccess = () => {
+      console.log("Vérification Admin - appUser:", appUser);
+
+      if (isSignedIn) {
+        const userRole = (appUser as any)?.role;
+        const userEmail = (appUser as any)?.email;
+
+        // Sécurité par rôle OU par liste d'emails autorisés
+        if (userRole === 'admin' || (userEmail && ADMIN_EMAILS.includes(userEmail))) {
+          setIsChecking(false); // Accès accordé
+        } else {
+          console.warn("Accès refusé : rôle ou email non autorisé", { userRole, userEmail });
+          setLocation('/');
+        }
+      } else {
+        setLocation('/');
+      }
+    };
+
+    const timer = setTimeout(() => {
+      checkAccess();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [isSignedIn, appUser, setLocation]);
+
+  // 2. Récupérer l'état du live depuis Supabase au chargement
+  useEffect(() => {
+    if (isSignedIn && !isChecking) {
+      async function fetchLiveStatus() {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('id', 'live_playback_id')
+          .single();
+
+        if (!error && data && data.value) {
+          setPlaybackId(data.value);
+          setIsActive(true);
+        }
+      }
+      fetchLiveStatus();
+    }
+  }, [isSignedIn, isChecking]);
+
+  // Écran d'attente local pendant la vérification
+  if (isChecking) {
+    return (
+
+---NEXT---
+
+{
+    const init = async () => {
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        setSession(s);
+        setUser(s?.user ?? null);
+        if (s?.user) {
+          await fetchAppUser(s.user);
+        }
+      } catch (err) {
+        console.error('Failed to initialize auth:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    init();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, s) => {
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        await fetchAppUser(s.user);
+      } else {
+        setAppUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, [fetchAppUser]);
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error };
+    } catch (err) {
+      return { error: err };
+    }
+  };
+
+  const signUp = async (email: string, password: string, displayName?: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          // ⚠️  IMPORTANT: Désactiver "Confirm email" dans Supabase
+          //    Authentication > Providers > Email > Confirm email = OFF
+          //    Sinon l'utilisateur ne peut pas se connecter immédiatement
+          data: {
+            display_name: displayName || email.split('@')[0],
+          },
+        },
+      });
+      return { data, error };
+    } catch (err) {
+      return { data: null, error: err };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setAppUser(null);
+      setSession(null);
+    } catch (err) {
+      console.error('Failed to sign out:', err);
+    }
+  };
+
+  const refreshUser = async () => {
+    if (user) {
+      await fetchAppUser(user);
+    }
+  };
+
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      return { error };
+    } catch (err) {
+      return { error: err };
+    }
+  };
+
+  const updatePassword = async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      return { error };
+    } catch (err) {
+      return { error: err };
+    }
+  };
+
+  const isAdmin = appUser?.isAdmin ?? false;
+  const isSignedIn = !!user;
+
+  return (
+
+---NEXT---
+
+{
+    const isConfirmed = localStorage.getItem("haitian_nud_age_confirmed") === "true";
+    if (!isConfirmed && !new URLSearchParams(window.location.search).has("skipAge")) {
+      setOpen(true);
+    } else {
+      localStorage.setItem("haitian_nud_age_confirmed", "true");
+    }
+  }, []);
+
+  const handleConfirm = async () => {
+    localStorage.setItem("haitian_nud_age_confirmed", "true");
+    setOpen(false);
+    if (isSignedIn && user && !appUser?.ageConfirmed) {
+      setConfirming(true);
+      try {
+        await confirmAge(user.id);
+        await refreshUser();
+      } catch {
+
+
+
+        // silently ignore
+      } finally {setConfirming(false);}}
+  };
+
+  const handleReject = () => {
+    window.location.href = "https://google.com";
+  };
+
+  return (
+
+---NEXT---
+
+{
+    const now = new Date();
+    const month = now.getMonth(); // 0 = Janvier, 7 = Août
+    const date = now.getDate(); // Jour du mois (1 à 31)
+    const year = now.getFullYear();
+
+    const isFirstWeekOfAugust = month === 7 && date >= 1 && date
+
+---NEXT---
+
+{
+    const now = new Date();
+    localStorage.setItem(`anniversary_dismissed_${now.getFullYear()}_${now.getDate()}`, 'true');
+    setIsVisible(false);
+  };
+
+  if (!isVisible) return null;
+
+  return (
+
+---NEXT---
+
+{
+    const swPath = `${import.meta.env.BASE_URL}sw.js`;
+    navigator.serviceWorker.register(swPath)
+      .then(registration => {
+        console.log('Service Worker registered successfully:', registration);
+      })
+      .catch(err => {
+        // Service Worker is optional - app works without it
+        console.warn('Service Worker registration failed (non-fatal):', err);
+      });
+  });
+}
+
+const rootElement = document.getElementById("root");
+if (!rootElement) {
+  throw new Error('Root element not found! Check index.html');
+}
+
+const root = createRoot(rootElement);
+root.render(
+
+---NEXT---
+
+{
+    const video = videoRef.current;
+    if (!video || !activeSrc) return;
+
+    setPlaybackError(null);
+    setIsBuffering(true);
+    setBufferProgress(null);
+    setCurrentLevelResolution(null);
+    mediaRecoveryAttempts.current = 0;
+    networkRecoveryAttempts.current = 0;
+
+    cleanupHls();
+
+    if (streamType === "hls") {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 60,
+          maxBufferLength: 30
+        });
+        hlsRef.current = hls;
+
+        hls.loadSource(activeSrc);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
+          setIsBuffering(false);
+          if (data.levels && data.levels.length > 0) {
+            const parsedLevels: QualityLevel[] = data.levels.map((lvl, index) => ({
+              id: index,
+              label: lvl.height ? `${lvl.height}p` : `${Math.round(lvl.bitrate / 1000)}k`,
+              height: lvl.height || 0,
+              bitrate: lvl.bitrate
+            }));
+            setLevels(parsedLevels);
+
+            const mbps = readBandwidthMbps();
+            if (mbps !== null) {
+              const targetHeight = getTargetHeightForBandwidth(mbps);
+              const idx = findBestLevelIndex(parsedLevels, targetHeight);
+              hls.currentLevel = idx;
+              setAutoTargetHeight(targetHeight);
+            }
+
+            const first = data.levels[0];
+            if (first.height) setCurrentLevelResolution(`${first.height}p`);
+          }
+          if (lastPlaybackPosition.current > 0) {
+            video.currentTime = lastPlaybackPosition.current;
+            video.play().catch(() => {});
+          }
+        });
+
+        hls.on(Hls.Events.LEVEL_SWITCHED, (_event, data) => {
+          const currentLevel = hls.levels[data.level];
+          if (currentLevel?.height) setCurrentLevelResolution(`${currentLevel.height}p`);
+        });
+
+        hls.on(Hls.Events.BUFFER_APPENDED, () => updateProgressFromVideo());
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (!data.fatal) return;
+          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            networkRecoveryAttempts.current += 1;
+            if (networkRecoveryAttempts.current
+
+---NEXT---
+
+{
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+    if (password.length
+
+---NEXT---
+
+{
+    i18n.changeLanguage(lang);
+  };
+
+  return (
+
+---NEXT---
+
+{
+    if (isSignedIn && supported) {
+      getCurrentSubscription().then((sub) => {
+        if (!sub && getPushPermission() !== "denied") {
+          setShowBanner(true);
+        }
+      });
+    }
+  }, [isSignedIn, supported]);
+
+  if (!showBanner) return null;
+
+  return (
+
+---NEXT---
+
+{
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+export async function downloadAndSaveVideo(
+  videoId: string,
+  videoUrl: string,
+  title: string,
+  description: string,
+  thumbnailUrl: string,
+  durationSec: number,
+  category: string,
+  onProgress?: (loaded: number, total: number) => void
+): Promise
+
+---NEXT---
+
+{
+  const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
+  const { data, error } = await supabase
+    .from('photos')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
+  if (error) throw error;
+  return (data || []).map(toPublicPhoto);
+}
+
+export async function adminCreatePhoto(photo: Omit
+
+---NEXT---
+
+{
+  const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
+  const { data, error } = await supabase
+    .from('tickets')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
+  if (error) throw error;
+  return (data || []).map((t: any) => ({
+    id: t.id,
+    userId: t.user_id,
+    subject: t.subject,
+    message: t.message,
+    reply: t.reply,
+    status: t.status,
+    createdAt: t.created_at,
+  }));
+}
+
+export async function adminReplyTicket(id: string, reply: string) {
+  const { error } = await supabase.from('tickets').update({ reply: reply.substring(0, 2000), status: 'answered' }).eq('id', id);
+  if (error) throw error;
+}
+
+// Confirmation d'âge
+export async function confirmAge(userId: string) {
+  const { error } = await supabase.from('users').update({ age_confirmed: true }).eq('id', userId);
+  if (error) throw error;
+}
+
+// Bannière d'accueil
+export async function getBannerVideo(): Promise
+
+---NEXT---
+
+{
+  const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
+  if (error) throw error;
+  return (data || []).map((u: any) => ({
+    id: u.id,
+    email: u.email,
+    displayName: u.display_name,
+    plan: u.plan,
+    blocked: u.blocked,
+    isAdmin: u.is_admin,
+    ageConfirmed: u.age_confirmed,
+    createdAt: u.created_at,
+    subscriptionEndsAt: u.subscription_ends_at,
+  }));
+}
+
+export async function adminBlockUser(currentUserId: string, targetUserId: string, blocked: boolean) {
+  if (currentUserId === targetUserId) {
+    throw new Error('Cannot block yourself');
+  }
+  const { error } = await supabase.from('users').update({ blocked }).eq('id', targetUserId);
+  if (error) throw error;
+}
+
+// Admin Tickets
+export async function adminListTickets(page: number = 1): Promise
+
+---NEXT---
+
+{
+  const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
+  const { data, error } = await supabase
+    .from('videos')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
+  if (error) throw error;
+  return (data || []).map(toPublicVideo);
+}
+
+export async function adminCreateVideo(video: Omit
+
+---NEXT---
+
+{
+  const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
+  const { data, error } = await supabase
+    .from('vip_requests')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
+  
+  if (error) throw error;
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    userId: r.user_id,
+    userEmail: r.user_email,
+    paymentMethod: r.payment_method,
+    proofUrl: r.proof_url,
+    planName: r.plan_name || 'Formule Unique',
+    amountUsd: r.amount_usd || 20,
+    durationDays: r.duration_days || 30,
+    status: r.status,
+    createdAt: r.created_at,
+  }));
+}
+
+export async function adminProcessVipRequest(
+  requestId: string, 
+  userId: string, 
+  action: 'approved' | 'rejected', 
+  daysDuration: number = 30
+) {
+  const { error: requestError } = await supabase
+    .from('vip_requests')
+    .update({ status: action })
+    .eq('id', requestId);
+
+  if (requestError) throw requestError;
+
+  if (action === 'approved') {
+    const subscriptionEndsAt = new Date();
+    subscriptionEndsAt.setDate(subscriptionEndsAt.getDate() + daysDuration);
+
+    const { error: userError } = await supabase
+      .from('users')
+      .update({
+        plan: 'vip',
+        subscription_ends_at: subscriptionEndsAt.toISOString()
+      })
+      .eq('id', userId);
+
+    if (userError) throw userError;
+  }
+}
+
+// ====================================================
+// PUBLICITÉS
+// ====================================================
+
+export async function getVideoAds(videoId: string, lang: string = "fr"): Promise
+
+---NEXT---
+
+{
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*')
+    .eq('video_id', videoId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((c: any) => ({
+    id: c.id,
+    videoId: c.video_id,
+    userId: c.user_id,
+    body: c.body,
+    anonymous: c.anonymous,
+    displayName: c.display_name || 'Utilisateur',
+    createdAt: c.created_at,
+  }));
+}
+
+export async function createComment(
+  videoId: string,
+  userId: string,
+  body: string,
+  anonymous: boolean,
+  displayName: string
+) {
+  const maxLength = 500;
+  if (body.length > maxLength) {
+    throw new Error(`Comment cannot exceed ${maxLength} characters`);
+  }
+  const { error } = await supabase.from('comments').insert({
+    video_id: videoId,
+    user_id: userId,
+    body: body.trim(),
+    anonymous,
+    display_name: (displayName || 'Utilisateur').substring(0, 100),
+  });
+  if (error) throw error;
+}
+
+// ====================================================
+// TICKETS DE SUPPORT (UTILISATEUR)
+// ====================================================
+
+export async function listMyTickets(userId: string): Promise
+
+---NEXT---
+
+{
+  const { data, error } = await supabase
+    .from('tickets')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map((t: any) => ({
+    id: t.id,
+    userId: t.user_id,
+    subject: t.subject,
+    message: t.message,
+    reply: t.reply,
+    status: t.status,
+    createdAt: t.created_at,
+  }));
+}
+
+export async function createTicket(userId: string, subject: string, message: string) {
+  const { error } = await supabase.from('tickets').insert({
+    user_id: userId,
+    subject: subject.substring(0, 200),
+    message: message.substring(0, 2000),
+    status: 'open',
+  });
+  if (error) throw error;
+}
+
+// ====================================================
+// FONCTIONS ADMINISTRATION
+// ====================================================
+
+export async function getAdminStats(): Promise
+
+---NEXT---
+
+{
+  const { data, error } = await supabase
+    .from('videos')
+    .select('*')
+    .eq('published', true)
+    .order('views', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (error) throw error;
+  return (data || []).map(toPublicVideo);
+}
+
+export async function getVideo(id: string): Promise
+
+---NEXT---
+
+{
+  const { data, error } = await supabase.from('videos').select('*').eq('id', id).single();
+  if (error) return null;
+  return toPublicVideo(data);
+}
+
+export async function registerView(videoId: string) {
+  try {
+    const { error } = await supabase.rpc('increment_video_views', { video_id: videoId });
+    if (error) {
+      const { data: vid } = await supabase.from('videos').select('views').eq('id', videoId).single();
+      if (vid) {
+        const currentViews = vid.views ?? 0;
+        await supabase
+          .from('videos')
+          .update({ views: currentViews + 1 })
+          .eq('id', videoId);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to register video view:', err);
+  }
+}
+
+export async function requestDownload(
+  videoId: string,
+  userId: string,
+  isVip: boolean,
+  freeDownloadsUsed: number
+): Promise
+
+---NEXT---
+
+{
+  const { data: video } = await supabase.from('videos').select('*').eq('id', videoId).single();
+  if (!video) throw new Error('Video not found');
+  if (video.is_vip && !isVip) {
+    throw new Error('vip_required');
+  }
+
+  // Les membres VIP ont des téléchargements illimités : aucun quota, aucun incrément.
+  if (isVip) {
+    await supabase.from('downloads').insert({ user_id: userId, video_id: videoId });
+    return { url: video.video_url || video.videoUrl, remaining: -1 };
+  }
+
+  // Membres free : quota limité à FREE_DOWNLOAD_LIMIT téléchargements.
+  if (freeDownloadsUsed >= FREE_DOWNLOAD_LIMIT) {
+    throw new Error('quota_exceeded');
+  }
+  await supabase.from('users').update({ free_downloads_used: freeDownloadsUsed + 1 }).eq('id', userId);
+  await supabase.from('downloads').insert({ user_id: userId, video_id: videoId });
+  const remaining = FREE_DOWNLOAD_LIMIT - (freeDownloadsUsed + 1);
+  return { url: video.video_url || video.videoUrl, remaining };
+}
+
+// ====================================================
+// PHOTOS (PUBLIC)
+// ====================================================
+
+export async function getPhotos(options?: { category?: string }): Promise
+
+---NEXT---
+
+{
+  const { error } = await supabase
+    .from('live_status')
+    .update({
+      is_active: isActive,
+      stream_url: isActive ? streamUrl : null,
+      started_at: isActive ? new Date().toISOString() : null
+    })
+    .eq('id', 1);
+  if (error) throw error;
+  return true;
+}
+
+// ====================================================
+// FONCTIONS DE GESTION DU SYSTÈME VIP
+// ====================================================
+
+export async function adminListVipRequests(page: number = 1): Promise
+
+---NEXT---
+
+{
+  if (!isPushSupported()) return "unsupported";
+  const result = await Notification.requestPermission();
+  return result as PushPermission;
+}
+
+export async function getCurrentSubscription(): Promise
+
+---NEXT---
+
+{
+  if (!isPushSupported()) return false;
+
+  const permission = await requestPushPermission();
+  if (permission !== "granted") return false;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+
+    // Unsubscribe any existing
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) await existing.unsubscribe();
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as ArrayBuffer,
+    });
+
+    const subJson = sub.toJSON();
+    const response = await fetch(`${API_BASE}/api/push/subscribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subscription: subJson, userId }),
+    });
+
+    return response.ok;
+  } catch (err) {
+    console.warn("Push subscribe error:", err);
+    return false;
+  }
+}
+
+export async function unsubscribeFromPush(): Promise
+
+---NEXT---
+
+{
+  if (!isPushSupported()) return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return true;
+
+    await fetch(`${API_BASE}/api/push/unsubscribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    });
+
+    await sub.unsubscribe();
+    return true;
+  } catch (err) {
+    console.warn("Push unsubscribe error:", err);
+    return false;
+  }
+}
+
+export async function sendPushToAll(
+  adminSecret: string,
+  title: string,
+  body: string,
+  url?: string
+): Promise
+
+---NEXT---
+
+{
+  if (!isPushSupported()) return null;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    return await reg.pushManager.getSubscription();
+  } catch {
+    return null;
+  }
+}
+
+export async function subscribeToPush(userId?: string): Promise
+
+---NEXT---
+
+{
+  if (!rawUrl) return "";
+  const safeFilename = (title || "video").replace(/[^a-zA-Z0-9_\-]/g, "_") + ".mp4";
+  return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}&download=true&filename=${encodeURIComponent(safeFilename)}`;
+};
+
+const getProxyVideoUrl = (rawUrl: string | undefined | null): string => {
+  if (!rawUrl) return "";
+  return `${API_BASE_URL}/api/proxy/video?url=${encodeURIComponent(rawUrl)}&download=true`;
+};
+
+function VipGate() {
+  const { t } = useTranslation();
+  return (
+
+---NEXT---
+
+{
+  let query = supabase.from('photos').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
+  if (options?.category) {
+    query = query.eq('category', options.category);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map(toPublicPhoto);
+}
+
+export async function registerPhotoView(photoId: string): Promise
+
+---NEXT---
+
+{
+  let query = supabase.from('videos').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
+
+  if (options?.category) {
+    query = query.eq('category', options.category);
+  }
+  if (options?.q) {
+    query = query.or(`title.ilike.%${options.q}%,description.ilike.%${options.q}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map(toPublicVideo);
+}
+
+export async function getTrendingVideos(): Promise
+
+---NEXT---
+
+{
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+    };
+  });
+}
+
+export async function listOfflineVideos(): Promise
+
+---NEXT---
+
+{
+  try {
+    const db = await openDB();
+    const count = await new Promise
+
+---NEXT---
+
+{
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function saveOfflineVideo(video: Omit
+
+---NEXT---
+
+{
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+    });
+  } catch (err) {
+    console.warn("Offline store not available:", err);
+    toast.error("Le stockage hors-ligne n'est pas disponible sur ce navigateur.");
+    return [];
+  }
+}
+
+export async function getOfflineVideo(id: string): Promise
+
+---NEXT---
+
+{
+  try {
+    const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    const { count: vipCount } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .eq('plan', 'vip')
+      .gt('subscription_ends_at', new Date().toISOString());
+    const { count: videoCount } = await supabase.from('videos').select('*', { count: 'exact', head: true });
+    const { count: photoCount } = await supabase.from('photos').select('*', { count: 'exact', head: true });
+    
+    const { data: totalViewsData } = await supabase.rpc('get_total_views');
+    
+    const { count: downloadCount } = await supabase.from('downloads').select('*', { count: 'exact', head: true });
+    const { count: ticketCount } = await supabase.from('tickets').select('*', { count: 'exact', head: true }).eq('status', 'open');
+
+    return {
+      totalUsers: userCount ?? 0,
+      activeVip: vipCount ?? 0,
+      totalVideos: videoCount ?? 0,
+      totalPhotos: photoCount ?? 0,
+      totalViews: Number(totalViewsData || 0),
+      totalDownloads: downloadCount ?? 0,
+      openTickets: ticketCount ?? 0,
+    };
+  } catch (err) {
+    console.error('Failed to fetch admin stats:', err);
+    return {
+      totalUsers: 0,
+      activeVip: 0,
+      totalVideos: 0,
+      totalPhotos: 0,
+      totalViews: 0,
+      totalDownloads: 0,
+      openTickets: 0,
+    };
+  }
+}
+
+// Admin Vidéos CRUD
+export async function adminListVideos(page: number = 1): Promise
+
+---NEXT---
+
+{
+  try {
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('id', 'home_banner_video')
+      .single();
+    if (error || !data) return '';
+    return data.value;
+  } catch (err) {
+    console.error('Erreur getBannerVideo:', err);
+    return '';
+  }
+}
+
+export async function updateBannerVideo(url: string): Promise
+
+---NEXT---
+
+{
+  try {
+    const { data, error } = await supabase
+      .from('live_status')
+      .select('is_active, stream_url')
+      .eq('id', 1)
+      .single();
+    if (error || !data) return { isActive: false, streamUrl: null };
+    return { isActive: data.is_active, streamUrl: data.stream_url };
+  } catch {
+    return { isActive: false, streamUrl: null };
+  }
+}
+
+export async function updateLiveStatus(isActive: boolean, streamUrl: string | null): Promise
+
+---NEXT---
+
+{
+  try {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ id: 'home_banner_video', value: url.trim(), updated_at: new Date().toISOString() });
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Erreur updateBannerVideo:', err);
+    throw err;
+  }
+}
+
+// ====================================================
+// FONCTIONS DE GESTION DU LIVE
+// ====================================================
+
+export async function getLiveStatus(): Promise
+
+---NEXT---
+
+{
+  try {
+    const { error } = await supabase.rpc('increment_photo_views', { photo_id: photoId });
+    if (error) {
+      const { data: photo } = await supabase.from('photos').select('views').eq('id', photoId).single();
+      if (photo) {
+        const currentViews = photo.views ?? 0;
+        await supabase
+          .from('photos')
+          .update({ views: currentViews + 1 })
+          .eq('id', photoId);
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to register photo view:', err);
+  }
+}
+
+// ====================================================
+// COMMENTAIRES
+// ====================================================
+
+export async function listComments(videoId: string): Promise
+
+---NEXT---
+
+{!done ?
+
+---NEXT---
+
+{!isActive ?
+
+---NEXT---
+
+{!isOpen &&
+
+---NEXT---
+
+{!isSignedIn ?
+
+---NEXT---
+
+{!isSignedIn ? t("Vous devez vous connecter à votre compte et détenir un pass VIP pour accéder à cet espace exclusif.") : t("Cet espace regroupe l'intégralité de nos contenus exclusifs. Vous devez posséder un compte VIP actif pour y accéder.")
+
+          }
+
+---NEXT---
+
+{!isUserVip &&
+
+---NEXT---
+
+{(activeTab === "all-vip" || activeTab === "video-vip") &&
+
+---NEXT---
+
+{(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}
+
+---NEXT---
+
+{(comment.displayName || "U").charAt(0).toUpperCase()}
+
+---NEXT---
+
+{(isFallbackActive || streamType === "hls" && currentLevelResolution) &&
+
+---NEXT---
+
+{(location.startsWith('/account') || location.startsWith('/login')) && (
+
+---NEXT---
+
+{/* ================= HERO BANNER REPENSOUE ================= */}
+
+---NEXT---
+
+{/* ACCUEIL */}
+
+---NEXT---
+
+{/* BOUTONS D'ACTION */}
+
+---NEXT---
+
+{/* Badge HOT / VIP */}
+
+---NEXT---
+
+{/* Banner Recrutement / Telegram */}
+
+---NEXT---
+
+{/* Barre d'onglets de filtrage */}
+
+---NEXT---
+
+{/* Barre de navigation par onglets & tri */}
+
+---NEXT---
+
+{/* Bloc d'erreur visuel */}
+            {formError &&
+
+---NEXT---
+
+{/* Bloc d'erreur visuel si l'e-mail n'est pas présent dans la DB */}
+        {error &&
+
+---NEXT---
+
+{/* Bouton Mute */}
+
+---NEXT---
+
+{/* COMMENTAIRES (via le composant modulaire) */}
+
+---NEXT---
+
+{/* COMPTE */}
+
+---NEXT---
+
+{/* Colonne Chat et Interactions */}
+
+---NEXT---
+
+{/* Colonne Lecteur Vidéo */}
+
+---NEXT---
+
+{/* DETAILS DE LA VIDEO */}
+
+---NEXT---
+
+{/* Demandes existantes */}
+
+---NEXT---
+
+{/* EN DIRECT */}
+
+---NEXT---
+
+{/* Effets de halos lumineux d'arrière-plan */}
+
+---NEXT---
+
+{/* En-tête Chat */}
+
+---NEXT---
+
+{/* Formulaire */}
+
+---NEXT---
+
+{/* Formulaire d'envoi (Désactivé si live inactif) */}
+
+---NEXT---
+
+{/* Grille principale des contenus */}
+
+---NEXT---
+
+{/* Halos de lumière dorée en arrière-plan */}
+
+---NEXT---
+
+{/* Header Profil & Badge Status (Bento Style) */}
+
+---NEXT---
+
+{/* Header avec Logo */}
+
+---NEXT---
+
+{/* Header du catalogue */}
+
+---NEXT---
+
+{/* Instruction paiement */}
+
+---NEXT---
+
+{/* LECTEUR */}
+
+---NEXT---
+
+{/* Langues */}
+
+---NEXT---
+
+{/* Le bouton de chat flottant est ajouté ici, il sera présent sur toutes les pages */}
+
+---NEXT---
+
+{/* Option 1 : Depuis l'étranger (TapTap Send) */}
+
+---NEXT---
+
+{/* Option 2 : Depuis Haïti (Dépôt ou Transfert) */}
+
+---NEXT---
+
+{/* Option 3 : Autre méthode via Telegram */}
+
+---NEXT---
+
+{/* Overlay Badges */}
+
+---NEXT---
+
+{/* Parrainage */}
+          {isFree &&
+
+---NEXT---
+
+{/* Profil */}
+
+---NEXT---
+
+{/* Raccourcis Administrateur */}
+              {(isAdmin || appUser?.email === LIVE_ADMIN_EMAIL) &&
+
+---NEXT---
+
+{/* Route 404 (Traduite) */}
+
+---NEXT---
+
+{/* SIDEBAR (VIDEOS SIMILAIRES) */}
+
+---NEXT---
+
+{/* Segmented control / Switcher */}
+
+---NEXT---
+
+{/* Statut Offre */}
+
+---NEXT---
+
+{/* TAB 1: Subscription */}
+
+---NEXT---
+
+{/* TAB 2: History */}
+
+---NEXT---
+
+{/* TAB 3: Settings */}
+
+---NEXT---
+
+{/* TAB 4: Support */}
+
+---NEXT---
+
+{/* Tabs Navigation */}
+
+---NEXT---
+
+{/* TÉLÉCHARGEMENTS */}
+
+---NEXT---
+
+{/* Téléchargements */}
+
+---NEXT---
+
+{/* VIP (BOUTON STAR ANIME & ATTIRANT) */}
+
+---NEXT---
+
+{/* Zone des messages */}
+
+---NEXT---
+
+{/* ÉCRAN APRÈS INSCRIPTION RÉUSSIE */}
+        {signupSuccess ?
+
+---NEXT---
+
+{/* Émojis réactifs (Désactivés si live inactif) */}
+
+---NEXT---
+
+{/* 🌐 Choix de la langue (s'affiche au 1er lancement) */}
+
+---NEXT---
+
+{/* 🎉 Animation d'anniversaire */}
+
+---NEXT---
+
+{Array.from({ length: 3 }).map((_, i) =>
+
+---NEXT---
+
+{Array.from({ length: 4 }).map((_, i) =>
+
+---NEXT---
+
+{COMMUNITY_LINKS.map((link) =>
+
+---NEXT---
+
+{Math.floor(vid.durationSec / 60)}:{(vid.durationSec % 60).toString().padStart(2, "0")}
+
+---NEXT---
+
+{Math.floor(video.durationSec / 60)}:{(video.durationSec % 60).toString().padStart(2, "0")}
+
+---NEXT---
+
+{Math.floor(video.durationSec / 60)}:{(video.durationSec % 60).toString().padStart(2, '0')}
+
+---NEXT---
+
+{SUBSCRIPTION_PLANS.map((p) => {
+              const isSelected = selectedPlanId === p.id;
+              return (
+
+---NEXT---
+
+{TABS.map((tab) => {
+              const Icon = tab.icon;
+              const active = tab.id === activeTab;
+              return (
+
+---NEXT---
+
+{YEARS.map((y) =>
+
+---NEXT---
+
+{["❤️", "🔥", "😂", "👑"].map((emoji) =>
+
+---NEXT---
+
+{[...levels].sort((a, b) => a.height - b.height).map((lvl) =>
+
+---NEXT---
+
+{[0.75, 1, 1.25, 1.5, 2].map((s) =>
+
+---NEXT---
+
+{[7, 10, 15, 30, 40, 105, 365].map((d) =>
+
+---NEXT---
+
+{activeTab === "all" &&
+
+---NEXT---
+
+{activeTab === "all" && t("Contenus récents & populaires")}
+              {activeTab === "video" && t("Galerie vidéo")}
+              {activeTab === "photo" && t("Galerie photo")}
+
+---NEXT---
+
+{activeTab === "all-vip" && vipPhotos.length > 0 &&
+
+---NEXT---
+
+{activeTab === "all-vip" && vipVideos.length > 0 &&
+
+---NEXT---
+
+{activeTab === "photo" &&
+
+---NEXT---
+
+{ad.ad_type} - {ad.resolution} {t("- Skip:")} {ad.skip_after}s
+
+---NEXT---
+
+{ad.title}
+
+---NEXT---
+
+{ads.map((ad) =>
+
+---NEXT---
+
+{appUser?.displayName || "Utilisateur"}
+
+---NEXT---
+
+{appUser?.email}
+
+---NEXT---
+
+{appUser?.plan === "vip" ?
+
+---NEXT---
+
+{appUser?.plan === "vip" ? "∞" : 3 - (appUser?.freeDownloadsUsed || 0)}
+
+---NEXT---
+
+{appUser?.subscriptionEndsAt ? format(new Date(appUser.subscriptionEndsAt), "dd MMMM yyyy", { locale: fr }) : "À vie"}
+
+---NEXT---
+
+{autoTargetHeight ? `Auto (${autoTargetHeight}p)` : "Auto (Débit)"}
+
+---NEXT---
+
+{await supabase.from('video_ads').delete().eq('id', ad.id);loadAds();}}>Suppr
+
+---NEXT---
+
+{bannerVideoUrl ?
+
+---NEXT---
+
+{buildCategory() || "—"}
+
+---NEXT---
+
+{canSkip ?
+
+---NEXT---
+
+{children}
+
+---NEXT---
+
+{clearWatchHistory();setHistory([]);}} className="text-destructive h-8 text-xs">
+
+---NEXT---
+
+{clickUrl &&
+
+---NEXT---
+
+{comment.anonymous ? t("watch.anonymous") : (comment.displayName || t("watch.user"))}
+
+---NEXT---
+
+{comment.body}
+
+---NEXT---
+
+{confirming ? t("Validation...") : t("J'ai 18 ans ou plus")}
+
+---NEXT---
+
+{copied ?
+
+---NEXT---
+
+{createPending ? t("Enregistrement...") : t("Enregistrer la vidéo")}
+
+---NEXT---
+
+{createPending ? t("Envoi...") : "Ajouter"}
+
+---NEXT---
+
+{currentAd &&
+
+---NEXT---
+
+{currentLevelResolution}
+
+---NEXT---
+
+{currentQualityIndex === -1 &&
+
+---NEXT---
+
+{currentQualityIndex === lvl.id &&
+
+---NEXT---
+
+{debouncedQuery 
+            ? `Résultats pour "${debouncedQuery}"` 
+            : "Toutes les vidéos"}
+
+---NEXT---
+
+{deferred &&
+
+---NEXT---
+
+{deferred ? t("Ajoutez Haitian nud à votre écran d'accueil.") : t("Sur iPhone : Partager → \"Sur l'écran d'accueil\". Sur Android : menu → \"Installer l'application\".")
+
+            }
+
+---NEXT---
+
+{done ?
+
+---NEXT---
+
+{done ? t("Mot de passe mis à jour !") : t("Nouveau mot de passe")}
+
+---NEXT---
+
+{done ? t("Vous allez être redirigé vers la page de connexion.") : t("Choisissez un nouveau mot de passe sécurisé.")
+
+            }
+
+---NEXT---
+
+{downloadPending ?
+
+---NEXT---
+
+{d} Jours
+
+---NEXT---
+
+{email}
+
+---NEXT---
+
+{error}
+
+---NEXT---
+
+{extractViews(selectedPhoto).toLocaleString()} vues
+
+---NEXT---
+
+{file ? file.name : "Cliquez pour choisir un fichier"}
+
+---NEXT---
+
+{file.name}
+
+---NEXT---
+
+{formError === "User already registered" ? "Cet e-mail possède déjà un compte." : formError}
+
+---NEXT---
+
+{format(new Date(h.watchedAt), "dd MMM yyyy à HH:mm", { locale: fr })}
+
+---NEXT---
+
+{format(new Date(r.createdAt), "dd MMM yyyy", { locale: fr })}
+
+---NEXT---
+
+{format(new Date(ticket.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
+
+---NEXT---
+
+{format(new Date(u.createdAt), "dd/MM/yyyy")}
+
+---NEXT---
+
+{formatBytes(video.sizeBytes)}
+
+---NEXT---
+
+{formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: fr })}
+
+---NEXT---
+
+{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true, locale: fr })}
+
+---NEXT---
+
+{getBannerVideo().then((res) => setUrl(res)).catch(console.error);}, []);
+
+  const handleSave = async () => {
+    setPending(true);
+    try {await updateBannerVideo(url);toast.success("Mise à jour !");}
+    catch (e) {toast.error("Erreur");} finally
+    {setPending(false);}
+  };
+
+  const handleClear = async () => {
+    if (!confirm("Retirer la vidéo de fond ?")) return;
+    setPending(true);
+    try {await updateBannerVideo("");setUrl("");toast.success("Réinitialisé");}
+    catch (e) {toast.error("Erreur");} finally
+    {setPending(false);}
+  };
+
+  return (
+
+---NEXT---
+
+{getPushPermission() === "denied" ?
+
+---NEXT---
+
+{h.title}
+
+---NEXT---
+
+{haitianPart}
+
+---NEXT---
+
+{handleLogout();setIsMenuOpen(false);}}>
+
+---NEXT---
+
+{history.length === 0 ?
+
+---NEXT---
+
+{history.length > 0 &&
+
+---NEXT---
+
+{history.map((h) =>
+
+---NEXT---
+
+{i18n.t('404.back_home', { defaultValue: "Aller à l'accueil" })}
+
+---NEXT---
+
+{i18n.t('404.description', { defaultValue: "La page que tu cherches n'existe pas. Retourne à l'accueil." })}
+
+---NEXT---
+
+{i18n.t('404.title', { defaultValue: "Page introuvable" })}
+
+---NEXT---
+
+{isActive && (
+
+---NEXT---
+
+{isActive && playbackId ?
+
+---NEXT---
+
+{isActive && playbackId ? (
+
+---NEXT---
+
+{isActive ? (
+
+---NEXT---
+
+{isAdmin &&
+
+---NEXT---
+
+{isDragActive ? t("Déposez le MP4 ici...") : t("Glissez un MP4 ou cliquez")}
+
+---NEXT---
+
+{isFallbackActive &&
+
+---NEXT---
+
+{isLoading ?
+
+---NEXT---
+
+{isLoading ? (
+
+---NEXT---
+
+{isLoadingComments ? (
+          Array.from({ length: 3 }).map((_, i) => (
+
+---NEXT---
+
+{isLoadingPhotos ?
+                Array.from({ length: 3 }).map((_, i) =>
+
+---NEXT---
+
+{isLoadingPhotos ?
+            Array.from({ length: 6 }).map((_, i) =>
+
+---NEXT---
+
+{isLoadingTickets ?
+
+---NEXT---
+
+{isLoadingVideos ?
+                Array.from({ length: 4 }).map((_, i) =>
+
+---NEXT---
+
+{isLoadingVideos ?
+            Array.from({ length: 4 }).map((_, i) =>
+
+---NEXT---
+
+{isLoadingVideos ?
+            Array.from({ length: 8 }).map((_, i) =>
+
+---NEXT---
+
+{isLocked &&
+
+---NEXT---
+
+{isNetworkError ?
+
+---NEXT---
+
+{isNetworkError ? t("Connexion interrompue") : t("Problème de lecture")}
+
+---NEXT---
+
+{isOfflineAvailable ?
+
+---NEXT---
+
+{isSelected &&
+
+---NEXT---
+
+{isSignedIn &&
+
+---NEXT---
+
+{isSignedIn && (!video.isVip || isUserVip) &&
+
+---NEXT---
+
+{isSignedIn ?
+
+---NEXT---
+
+{isSignedIn ? (
+
+---NEXT---
+
+{isSubmitting ? "Sécurisation & Envoi..." : `Envoyer ma preuve (${selectedPlan.priceUsd}$)`}
+
+---NEXT---
+
+{isUserVip ? t("Merci pour votre confiance ! Vous disposez actuellement d'un accès illimité et sécurisé à l'ensemble de la plateforme.") : t("Profitez d'un accès illimité aux vidéos et photos HD selon la durée de votre choix.")
+
+
+            }
+
+---NEXT---
+
+{isUserVip ? t("Votre Abonnement VIP est Actif") : t("Choisissez votre formule VIP")}
+
+---NEXT---
+
+{isVipActive && (
+
+---NEXT---
+
+{likesCount > 0 ? likesCount.toLocaleString() : "J'aime"}
+
+---NEXT---
+
+{link.desc}
+
+---NEXT---
+
+{link.label}
+
+---NEXT---
+
+{loading ?
+
+---NEXT---
+
+{loading ? t("Mise à jour...") : t("Réinitialiser le mot de passe")}
+
+---NEXT---
+
+{loading ? t("Vérification...") : t("Envoyer le lien de réinitialisation")}
+
+---NEXT---
+
+{location === '/' && (
+
+---NEXT---
+
+{location === '/downloads' && (
+
+---NEXT---
+
+{location === '/live' && (
+
+---NEXT---
+
+{lvl.label}
+
+---NEXT---
+
+{m.content}
+
+---NEXT---
+
+{m.text}
+
+---NEXT---
+
+{m.user.charAt(0).toUpperCase()}
+
+---NEXT---
+
+{m.user}
+
+---NEXT---
+
+{messages.map((m, i) =>
+
+---NEXT---
+
+{message}
+
+---NEXT---
+
+{mode === "signin" &&
+
+---NEXT---
+
+{mode === "signup" &&
+
+---NEXT---
+
+{nudPart}
+
+---NEXT---
+
+{offlineDownloading ?
+
+---NEXT---
+
+{p.category}
+
+---NEXT---
+
+{p.dailyRate}
+
+---NEXT---
+
+{p.days} jours
+
+---NEXT---
+
+{p.isVip ? "Oui" : "Non"}
+
+---NEXT---
+
+{p.name}
+
+---NEXT---
+
+{p.priceUsd}$
+
+---NEXT---
+
+{p.title}
+
+---NEXT---
+
+{p.views || 0}
+
+---NEXT---
+
+{pending ? "..." : "Enregistrer"}
+
+---NEXT---
+
+{permission === "denied" &&
+
+---NEXT---
+
+{photo.category}
+
+---NEXT---
+
+{photo.title}
+
+---NEXT---
+
+{photo.views}
+
+---NEXT---
+
+{photos.map((p) =>
+
+---NEXT---
+
+{playbackSpeed === s &&
+
+---NEXT---
+
+{progressPct !== null && progressPct > 0 && progressPct
+
+---NEXT---
+
+{progressPct}%
+
+---NEXT---
+
+{progress}%
+
+---NEXT---
+
+{pushPending ? t("Activation...") : t("Activer les notifications système")}
+
+---NEXT---
+
+{r.emoji}
+
+---NEXT---
+
+{r.paymentMethod}
+
+---NEXT---
+
+{r.planName} ({r.amountUsd}$)
+
+---NEXT---
+
+{r.status === 'pending' ?
+
+---NEXT---
+
+{r.status}
+
+---NEXT---
+
+{r.userEmail}
+
+---NEXT---
+
+{reactions.map((r) =>
+
+---NEXT---
+
+{relatedVideos.length > 0 ? (
+          relatedVideos.map((vid) => (
+
+---NEXT---
+
+{replyPending ? t("Envoi...") : "Envoyer"}
+
+---NEXT---
+
+{requests.map((r) =>
+
+---NEXT---
+
+{result &&
+
+---NEXT---
+
+{s === 1 ? "Normal (1x)" : `${s}x`}
+
+---NEXT---
+
+{selectedPhoto &&
+
+---NEXT---
+
+{selectedPhoto.category}
+
+---NEXT---
+
+{selectedPhoto.title}
+
+---NEXT---
+
+{selectedPlan.days} jours
+
+---NEXT---
+
+{selectedPlan.htg} HTG
+
+---NEXT---
+
+{selectedPlan.name} ({selectedPlan.days} {t("jours)")}
+
+---NEXT---
+
+{selectedPlan.name} ({selectedPlan.priceUsd}{t("$ USD / ~")}{selectedPlan.htg} {t("HTG /")} {selectedPlan.days} {t("jours)")}
+
+---NEXT---
+
+{selectedPlan.priceUsd} {t("$ USD")}
+
+---NEXT---
+
+{selectedPlan.priceUsd}{t("$ USD")}
+
+---NEXT---
+
+{selectedTicket ?
+
+---NEXT---
+
+{selectedTicket.message}
+
+---NEXT---
+
+{sending ? t("Envoi...") : t("Envoyer à tous")}
+
+---NEXT---
+
+{sent ?
+
+---NEXT---
+
+{sent ? t("Email envoyé !") : t("Mot de passe oublié ?")}
+
+---NEXT---
+
+{sent ? t("Un lien de réinitialisation a été envoyé à votre adresse email.") : t("Entrez votre email pour recevoir un lien de réinitialisation.")
+
+            }
+
+---NEXT---
+
+{setMode("signin");setFormError(null);}}
+              className={`flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-xl transition-all duration-200 ${
+              mode === "signin" ?
+              "bg-background text-foreground shadow-sm" :
+              "text-muted-foreground hover:text-foreground"}`
+              }>
+
+---NEXT---
+
+{setMode("signup");setFormError(null);}}
+              className={`flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-xl transition-all duration-200 ${
+              mode === "signup" ?
+              "bg-background text-foreground shadow-sm" :
+              "text-muted-foreground hover:text-foreground"}`
+              }>
+
+---NEXT---
+
+{showSettingsMenu &&
+
+---NEXT---
+
+{signupSuccess ?
+            "Vérification de votre adresse e-mail" :
+            mode === "signin" ?
+            "Bienvenue ! Connectez-vous à votre compte" :
+            "Rejoignez la communauté en quelques clics"
+            }
+
+---NEXT---
+
+{status === "idle" && !file &&
+
+---NEXT---
+
+{status === "idle" ? t("Uploader la pub") : t("Traitement...")}
+
+---NEXT---
+
+{step === 'info' &&
+
+---NEXT---
+
+{streamType === "hls" && levels.length > 0 &&
+
+---NEXT---
+
+{streamType === "mp4" &&
+
+---NEXT---
+
+{subscribed ?
+
+---NEXT---
+
+{subscribed ? t("Activées") : t("Désactivées")}
+
+---NEXT---
+
+{subscribed ? t("Alertes nouveautés") : t("Activer pour recevoir les alertes")}
+
+---NEXT---
+
+{supported && getPushPermission() !== "granted" ?
+
+---NEXT---
+
+{t("1. Si vous résidez à l'Étranger (TapTap Send)")}
+
+---NEXT---
+
+{t("2. Si vous résidez en Haïti (Dépôt / Transfert)")}
+
+---NEXT---
+
+{t("@dg_haitian_nud")}
+
+---NEXT---
+
+{t("@www.haitiannud.com")}
+
+---NEXT---
+
+{t("Accès :")}
+
+---NEXT---
+
+{t("Accès Refusé")}
+
+---NEXT---
+
+{t("Accédez à tout le contenu premium, téléchargements illimités et sans publicités. Soutenez les créateurs haïtiens.")}
+
+---NEXT---
+
+{t("Activer le flux sur le site")}
+
+---NEXT---
+
+{t("Activez vos notifications pour être alerté dès que votre accès VIP est validé et ne manquer aucune nouvelle vidéo !")}
+
+---NEXT---
+
+{t("Ajouter manuellement")}
+
+---NEXT---
+
+{t("Ajouter une photo")}
+
+---NEXT---
+
+{t("Aller à la page de connexion")}
+
+---NEXT---
+
+{t("Année")}
+
+---NEXT---
+
+{t("Aperçu")}
+
+---NEXT---
+
+{t("Application Mobile")}
+
+---NEXT---
+
+{t("Aucun direct en cours")}
+
+---NEXT---
+
+{t("Aucun élément trouvé dans la catégorie des")} {type} {t("VIP pour le moment.")}
+
+---NEXT---
+
+{t("Aucune demande envoyée.")}
+
+---NEXT---
+
+{t("Aucune nouvelle vidéo pour le moment.")}
+
+---NEXT---
+
+{t("Aucune photo disponible pour l'instant.")}
+
+---NEXT---
+
+{t("Aucune vidéo consultée récemment.")}
+
+---NEXT---
+
+{t("Aucune vidéo disponible.")}
+
+---NEXT---
+
+{t("Autorisation bloquée dans le navigateur.")}
+
+---NEXT---
+
+{t("Autorisez les notifications dans les réglages de votre navigateur.")}
+
+---NEXT---
+
+{t("Autorisez les notifications système pour débloquer l'envoi.")}
+
+---NEXT---
+
+{t("Bannière")}
+
+---NEXT---
+
+{t("Bloqué")}
+
+---NEXT---
+
+{t("CATALOGUE EXCLUSIF")}
+
+---NEXT---
+
+{t("Catégorie finale :")}
+
+---NEXT---
+
+{t("Ce site peut contenir du contenu mature. Vous devez avoir 18 ans ou plus pour entrer.")}
+
+---NEXT---
+
+{t("Cette vidéo exclusive est réservée aux membres VIP. Devenez Premium pour débloquer tout le catalogue instantanément.")}
+
+---NEXT---
+
+{t("Chargement du flux...")}
+
+---NEXT---
+
+{t("Chat en direct")}
+
+---NEXT---
+
+{t("Chaîne WhatsApp")}
+
+---NEXT---
+
+{t("Choisissez la langue de l'interface pour personnaliser votre navigation.")}
+
+---NEXT---
+
+{t("Choisissez votre langue / Chwazi lang ou / Elige tu idioma")}
+
+---NEXT---
+
+{t("Choose your language")}
+
+---NEXT---
+
+{t("Cliquez sur le lien de confirmation.")}
+
+---NEXT---
+
+{t("Configurez votre logiciel d'envoi et lancez le direct.")}
+
+---NEXT---
+
+{t("Connectez-vous pour vous abonner")}
+
+---NEXT---
+
+{t("Console de Streaming Pro")}
+
+---NEXT---
+
+{t("Consultez votre boîte de réception e-mail.")}
+
+---NEXT---
+
+{t("Contactez-nous directement sur Telegram pour procéder au paiement.")}
+
+---NEXT---
+
+{t("Contenu VIP Exclusif")}
+
+---NEXT---
+
+{t("Copier le lien")}
+
+---NEXT---
+
+{t("Dafca Saint Vill")}
+
+---NEXT---
+
+{t("Demandes VIP")}
+
+---NEXT---
+
+{t("Devenir Membre VIP")}
+
+---NEXT---
+
+{t("Devenir VIP pour débloquer")}
+
+---NEXT---
+
+{t("Devenir créatrice ou actrice de live")}
+
+---NEXT---
+
+{t("Disponible offline")}
+
+---NEXT---
+
+{t("Durée (sec)")}
+
+---NEXT---
+
+{t("Durée :")}
+
+---NEXT---
+
+{t("Durée")}
+
+---NEXT---
+
+{t("Déclencher à (sec)")}
+
+---NEXT---
+
+{t("Découvrez les contenus les plus exclusifs et récents de la plateforme en haute définition.")}
+
+---NEXT---
+
+{t("En entrant sur le site, vous déclarez sur l'honneur :")}
+
+---NEXT---
+
+{t("En savoir plus")}
+
+---NEXT---
+
+{t("En train d'écrire...")}
+
+---NEXT---
+
+{t("Envie de faire des streams & monétiser ton contenu ?")}
+
+---NEXT---
+
+{t("Envoyer la demande")}
+
+---NEXT---
+
+{t("Envoyer un Push")}
+
+---NEXT---
+
+{t("Espace Membre Premium")}
+
+---NEXT---
+
+{t("Espace Privé VIP")}
+
+---NEXT---
+
+{t("Español")}
+
+---NEXT---
+
+{t("Fichier :")}
+
+---NEXT---
+
+{t("Fichier vidéo (MP4)")}
+
+---NEXT---
+
+{t("Formule :")} {selectedPlan.name}
+
+---NEXT---
+
+{t("Formule choisie :")}
+
+---NEXT---
+
+{t("Français")}
+
+---NEXT---
+
+{t("Galerie Photo Privée")}
+
+---NEXT---
+
+{t("Galerie Photo")}
+
+---NEXT---
+
+{t("Gestion des Publicités")}
+
+---NEXT---
+
+{t("Gestion des Vidéos")}
+
+---NEXT---
+
+{t("HAITIAN NUD")}
+
+---NEXT---
+
+{t("Haitian Nud fête ses")} {years} {years > 1 ? 'ans' : 'an'} ! 🥳
+
+---NEXT---
+
+{t("Haïti (+509)")}
+
+---NEXT---
+
+{t("Haïtien Nud Média est un site web pour adultes. Il peut contenir des images, vidéos et\n            textes à caractère mature, sensuel ou explicite, destinés exclusivement à un public\n            majeur. L'accès est")}
+
+---NEXT---
+
+{t("Historique de lecture")}
+
+---NEXT---
+
+{t("Installer l'app")}
+
+---NEXT---
+
+{t("Installer l'application")}
+
+---NEXT---
+
+{t("Installez l'application sur votre écran d'accueil pour un accès plus rapide.")}
+
+---NEXT---
+
+{t("Interrompre la diffusion")}
+
+---NEXT---
+
+{t("Je suis mineur(e)")}
+
+---NEXT---
+
+{t("Joyeux Anniversaire !")}
+
+---NEXT---
+
+{t("Konekte oswa kreye yon kont pou w ka gade videyo sa a.")}
+
+---NEXT---
+
+{t("Kreyòl Ayisyen")}
+
+---NEXT---
+
+{t("Kreyòl")}
+
+---NEXT---
+
+{t("L'équipe vous répondra sous peu.")}
+
+---NEXT---
+
+{t("Lancer la conversion HLS")}
+
+---NEXT---
+
+{t("Langue d'affichage")}
+
+---NEXT---
+
+{t("Langue de la pub")}
+
+---NEXT---
+
+{t("Le chat en direct est verrouillé.")}
+
+---NEXT---
+
+{t("Le flux est actuellement hors ligne")}
+
+---NEXT---
+
+{t("Les abonnements VIP donnent accès à du contenu exclusif, à la lecture sans publicité et\n            aux téléchargements illimités. Les paiements sont effectués via un prestataire sécurisé\n            et sont non remboursables sauf cas prévus par la loi. Vous pouvez résilier à tout\n            moment depuis la page \"Mon Compte\".")}
+
+---NEXT---
+
+{t("Les commentaires (anonymes ou non) doivent rester respectueux. Tout propos illégal,\n            haineux, discriminatoire ou menaçant sera supprimé et peut entraîner la suspension du\n            compte. Les comportements visant à mettre en cause la sécurité de mineurs sont\n            signalés aux autorités compétentes.")}
+
+---NEXT---
+
+{t("Les réactions et messages s'activeront automatiquement dès que le live commencera.")}
+
+---NEXT---
+
+{t("Lien (En savoir plus)")}
+
+---NEXT---
+
+{t("Légal")}
+
+---NEXT---
+
+{t("MP4 (Secours)")}
+
+---NEXT---
+
+{t("Merci de faire partie de notre communauté !")}
+
+---NEXT---
+
+{t("Mes Demandes")}
+
+---NEXT---
+
+{t("Messages & tickets")}
+
+---NEXT---
+
+{t("Montant :")}
+
+---NEXT---
+
+{t("Méthode")}
+
+---NEXT---
+
+{t("NatCash :")}
+
+---NEXT---
+
+{t("Nom du compte :")}
+
+---NEXT---
+
+{t("Nos Formules d'Abonnement")}
+
+---NEXT---
+
+{t("Notifications Push")}
+
+---NEXT---
+
+{t("Nouvelle Photo")}
+
+---NEXT---
+
+{t("Nouvelle Vidéo")}
+
+---NEXT---
+
+{t("Nouvelles vidéos")}
+
+---NEXT---
+
+{t("Numéro NatCash :")}
+
+---NEXT---
+
+{t("PUBLICITÉ")}
+
+---NEXT---
+
+{t("Panneau d'Administration")}
+
+---NEXT---
+
+{t("Parrainez vos proches")}
+
+---NEXT---
+
+{t("Partager le lien")}
+
+---NEXT---
+
+{t("Partagez Haïtien Nud Média avec vos amis pour leur faire découvrir la plateforme.")}
+
+---NEXT---
+
+{t("Passer dans")} {timeLeft}s
+
+---NEXT---
+
+{t("Passer la pub")}
+
+---NEXT---
+
+{t("Patientez...")}
+
+---NEXT---
+
+{t("Photos Premium")}
+
+---NEXT---
+
+{t("Photos VIP")}
+
+---NEXT---
+
+{t("Prix par jour :")}
+
+---NEXT---
+
+{t("Profitez d'un accès illimité et sans restriction à l'ensemble des productions premium de la plateforme.")}
+
+---NEXT---
+
+{t("Publié")}
+
+---NEXT---
+
+{t("Pubs existantes")}
+
+---NEXT---
+
+{t("Quittez immédiatement ce site. Sur l'écran d'accueil, cliquez sur \"Je suis mineur(e)\".\n            Parlez‑en à un adulte de confiance et activez le contrôle parental sur votre appareil.")}
+
+---NEXT---
+
+{t("Quota de Téléchargements")}
+
+---NEXT---
+
+{t("Recommandé")}
+
+---NEXT---
+
+{t("Regarder maintenant")}
+
+---NEXT---
+
+{t("Rejoindre nos communautés")}
+
+---NEXT---
+
+{t("Rejoins l'équipe et deviens créatrice ou actrice de live sur HAITIAN NUD.")}
+
+---NEXT---
+
+{t("Restez à l'affût, une notification sera envoyée dès le démarrage du prochain live !")}
+
+---NEXT---
+
+{t("Retour à la connexion")}
+
+---NEXT---
+
+{t("Revenez ici et connectez-vous pour profiter du contenu !")}
+
+---NEXT---
+
+{t("Réessayer la lecture")}
+
+---NEXT---
+
+{t("Répondre")}
+
+---NEXT---
+
+{t("Réservé VIP")}
+
+---NEXT---
+
+{t("Réservé aux adultes (18+). Mineurs interdits.")}
+
+---NEXT---
+
+{t("Résolution")}
+
+---NEXT---
+
+{t("Se connecter")}
+
+---NEXT---
+
+{t("Site réservé à un public adulte (18 ans et plus).")}
+
+---NEXT---
+
+{t("Skip après (sec)")}
+
+---NEXT---
+
+{t("Soyez le premier à envoyer un message !")}
+
+---NEXT---
+
+{t("Statut Abonnement")}
+
+---NEXT---
+
+{t("Studio Live")}
+
+---NEXT---
+
+{t("Support :")}
+
+---NEXT---
+
+{t("Sélectionnez un ticket")}
+
+---NEXT---
+
+{t("TapTap Send")}
+
+---NEXT---
+
+{t("Titre de la campagne")}
+
+---NEXT---
+
+{t("Tous les contenus diffusés (vidéos, photos, textes, logos) sont protégés par le droit\n            d'auteur et appartiennent à leurs ayants droit respectifs. Toute reproduction,\n            redistribution ou diffusion publique en dehors des fonctionnalités prévues par le site\n            est interdite.")}
+
+---NEXT---
+
+{t("Tous les contenus mettant en scène des personnes sont publiés avec le consentement\n            écrit des intéressé·e·s, qui sont toutes majeures.")}
+
+---NEXT---
+
+{t("Toute personne identifiant un contenu litigieux (mineur, contenu non consenti,\n            atteinte aux droits) peut le signaler via la page \"Support\" depuis \"Mon Compte\". Les\n            signalements sont traités sous 72 h et donnent lieu, le cas échéant, au retrait\n            immédiat du contenu.")}
+
+---NEXT---
+
+{t("Traité")}
+
+---NEXT---
+
+{t("Transmettre le reçu")}
+
+---NEXT---
+
+{t("Type de pub")}
+
+---NEXT---
+
+{t("Téléchargez des vidéos pour les regarder sans connexion internet. Maximum 5 vidéos.")}
+
+---NEXT---
+
+{t("URL Miniature")}
+
+---NEXT---
+
+{t("URL Vidéo (HLS Master)")}
+
+---NEXT---
+
+{t("URL de la Photo")}
+
+---NEXT---
+
+{t("Un dernier geste !")}
+
+---NEXT---
+
+{t("Un e-mail de confirmation vient d'être envoyé à :")}
+
+---NEXT---
+
+{t("Uploader & Convertir")}
+
+---NEXT---
+
+{t("Usine à Vidéo (MP4 → HLS)")}
+
+---NEXT---
+
+{t("Validation VIP")}
+
+---NEXT---
+
+{t("Vidéo Premium")}
+
+---NEXT---
+
+{t("Vidéo de Fond (Accueil)")}
+
+---NEXT---
+
+{t("Vidéo prête !")}
+
+---NEXT---
+
+{t("Vidéos Exclusives")}
+
+---NEXT---
+
+{t("Vidéos VIP")}
+
+---NEXT---
+
+{t("Vidéos")}
+
+---NEXT---
+
+{t("Voir tout")}
+
+---NEXT---
+
+{t("Vos données de connexion (email, identifiant) sont utilisées uniquement pour la gestion\n            de votre compte et de votre abonnement. Aucun contenu visionné n'est partagé avec des\n            tiers. Le site utilise des cookies techniques nécessaires au fonctionnement et à la\n            session.")}
+
+---NEXT---
+
+{t("Votre Espace VIP")}
+
+---NEXT---
+
+{t("Votre Réponse")}
+
+---NEXT---
+
+{t("Votre abonnement est actuellement actif sur ce compte.")}
+
+---NEXT---
+
+{t("Votre message a bien été transmis !")}
+
+---NEXT---
+
+{t("Votre mot de passe a été réinitialisé avec succès.")}
+
+---NEXT---
+
+{t("Votre preuve de paiement pour la formule")}
+
+---NEXT---
+
+{t("Vous n'avez pas les droits d'administration.")}
+
+---NEXT---
+
+{t("Vous préférez un autre moyen de paiement ?")}
+
+---NEXT---
+
+{t("Voye zen pa Telegram")}
+
+---NEXT---
+
+{t("Voye zen pa WhatsApp")}
+
+---NEXT---
+
+{t("Vérification des autorisations...")}
+
+---NEXT---
+
+{t("Vérifiez votre boîte de réception et cliquez sur le lien reçu.")}
+
+---NEXT---
+
+{t("a été transmise aux administrateurs.")}
+
+---NEXT---
+
+{t("comme destination.")}
+
+---NEXT---
+
+{t("d'un montant de")}
+
+---NEXT---
+
+{t("dépôt ou un transfert direct")}
+
+---NEXT---
+
+{t("nav.login")}
+
+---NEXT---
+
+{t("requise.")}
+
+---NEXT---
+
+{t("watch.comment_btn")}
+
+---NEXT---
+
+{t("watch.comments")} ({comments.length || 0})
+
+---NEXT---
+
+{t("watch.first_comment")}
+
+---NEXT---
+
+{t("watch.login_to_discuss")}
+
+---NEXT---
+
+{t("watch.no_similar_videos")}
+
+---NEXT---
+
+{t("watch.post_anonymous")}
+
+---NEXT---
+
+{t("watch.same_category")}
+
+---NEXT---
+
+{t("À chaque première visite, une fenêtre demande de confirmer votre majorité. En cliquant\n            sur \"J'ai 18 ans ou plus\", vous acceptez ces conditions et reconnaissez être seul\n            responsable de votre accès au site.")}
+
+---NEXT---
+
+{t("Écrire sur Telegram")}
+
+---NEXT---
+
+{t("Étapes à suivre :")}
+
+---NEXT---
+
+{t("• Effectuez simplement un")}
+
+---NEXT---
+
+{t("• Envoyez sur le compte NatCash :")}
+
+---NEXT---
+
+{t("• Ouvrez l'application")}
+
+---NEXT---
+
+{t("• Prenez une capture d'écran claire de votre reçu TapTap Send.")}
+
+---NEXT---
+
+{t("• Prenez une capture d'écran ou une photo nette du reçu de confirmation de transfert/dépôt.")}
+
+---NEXT---
+
+{t("• Saisissez le montant exact de la formule :")}
+
+---NEXT---
+
+{t("• Sélectionnez")}
+
+---NEXT---
+
+{t('account.active_sub')}
+
+---NEXT---
+
+{t('account.become_vip_now')}
+
+---NEXT---
+
+{t('account.contact_support')}
+
+---NEXT---
+
+{t('account.display_name')}
+
+---NEXT---
+
+{t('account.email')}
+
+---NEXT---
+
+{t('account.expires_at')}
+
+---NEXT---
+
+{t('account.free_downloads_limit')}
+
+---NEXT---
+
+{t('account.free_member')}
+
+---NEXT---
+
+{t('account.free_plan_msg')}
+
+---NEXT---
+
+{t('account.history')}
+
+---NEXT---
+
+{t('account.plan')}
+
+---NEXT---
+
+{t('account.push_not_supported')}
+
+---NEXT---
+
+{t('account.quota_remaining')}
+
+---NEXT---
+
+{t('account.settings')}
+
+---NEXT---
+
+{t('account.subscription')}
+
+---NEXT---
+
+{t('account.support')}
+
+---NEXT---
+
+{t('auth.confirm_password')}
+
+---NEXT---
+
+{t('auth.new_password')}
+
+---NEXT---
+
+{t('auth.password')}
+
+---NEXT---
+
+{t('auth.username')}
+
+---NEXT---
+
+{t('common.account')}
+
+---NEXT---
+
+{t('common.category')}
+
+---NEXT---
+
+{t('common.close')}
+
+---NEXT---
+
+{t('common.downloads')}
+
+---NEXT---
+
+{t('common.error')}
+
+---NEXT---
+
+{t('common.error')} :
+
+---NEXT---
+
+{t('common.error_loading')}
+
+---NEXT---
+
+{t('common.home')}
+
+---NEXT---
+
+{t('common.live')}
+
+---NEXT---
+
+{t('common.loading')}
+
+---NEXT---
+
+{t('common.message')}
+
+---NEXT---
+
+{t('common.save')}
+
+---NEXT---
+
+{t('common.search')}
+
+---NEXT---
+
+{t('common.subject')}
+
+---NEXT---
+
+{t('common.title')}
+
+---NEXT---
+
+{t('common.vip')}
+
+---NEXT---
+
+{t('downloads.browse_videos')}
+
+---NEXT---
+
+{t('downloads.my_downloads')}
+
+---NEXT---
+
+{t('downloads.no_downloads')}
+
+---NEXT---
+
+{t('footer.adults_only')}
+
+---NEXT---
+
+{t('footer.distribution_channels')}
+
+---NEXT---
+
+{t('footer.join_group')}
+
+---NEXT---
+
+{t('footer.legal_notice')}
+
+---NEXT---
+
+{t('footer.navigation')}
+
+---NEXT---
+
+{t('footer.privacy_policy')}
+
+---NEXT---
+
+{t('footer.rights_reserved')}
+
+---NEXT---
+
+{t('footer.send_zen_telegram')}
+
+---NEXT---
+
+{t('footer.send_zen_whatsapp')}
+
+---NEXT---
+
+{t('home.exclusive_vip_pass')}
+
+---NEXT---
+
+{t('home.new_on_platform')}
+
+---NEXT---
+
+{t('legal.age_confirmation')}
+
+---NEXT---
+
+{t('legal.comments_behavior')}
+
+---NEXT---
+
+{t('legal.condition_1')}
+
+---NEXT---
+
+{t('legal.condition_2')}
+
+---NEXT---
+
+{t('legal.condition_3')}
+
+---NEXT---
+
+{t('legal.content_property')}
+
+---NEXT---
+
+{t('legal.forbidden_minors')}
+
+---NEXT---
+
+{t('legal.if_minor')}
+
+---NEXT---
+
+{t('legal.privacy_cookies')}
+
+---NEXT---
+
+{t('legal.report_contact')}
+
+---NEXT---
+
+{t('legal.terms')}
+
+---NEXT---
+
+{t('legal.vip_payments')}
+
+---NEXT---
+
+{t('legal.warning_title')}
+
+---NEXT---
+
+{t('nav.become_vip')}
+
+---NEXT---
+
+{t('nav.live_stream')}
+
+---NEXT---
+
+{t('nav.login')}
+
+---NEXT---
+
+{t('nav.logout')}
+
+---NEXT---
+
+{t('nav.menu')}
+
+---NEXT---
+
+{t('nav.my_account')}
+
+---NEXT---
+
+{t('plans.action_required')}
+
+---NEXT---
+
+{t('plans.file_limits')}
+
+---NEXT---
+
+{t('plans.how_to_pay')}
+
+---NEXT---
+
+{t('plans.payment_method_used')}
+
+---NEXT---
+
+{t('plans.premium_active')}
+
+---NEXT---
+
+{t('plans.screenshot_proof')}
+
+---NEXT---
+
+{t('plans.thank_you')}
+
+---NEXT---
+
+{t('plans.welcome_vip')}
+
+---NEXT---
+
+{t('search.no_results')}
+
+---NEXT---
+
+{t('search.no_results_desc')}
+
+---NEXT---
+
+{t('watch.back_home')}
+
+---NEXT---
+
+{t('watch.downloading')}
+
+---NEXT---
+
+{t('watch.invalid_id')}
+
+---NEXT---
+
+{t('watch.invalid_url')}
+
+---NEXT---
+
+{t('watch.no_video_link')}
+
+---NEXT---
+
+{t('watch.private_space')}
+
+---NEXT---
+
+{t('watch.restricted_content')}
+
+---NEXT---
+
+{t('watch.watch_offline')}
+
+---NEXT---
+
+{t.message}
+
+---NEXT---
+
+{t.status}
+
+---NEXT---
+
+{t.subject}
+
+---NEXT---
+
+{tab.label}
+
+---NEXT---
+
+{ticket.message}
+
+---NEXT---
+
+{ticket.reply &&
+
+---NEXT---
+
+{ticket.reply}
+
+---NEXT---
+
+{ticket.status === 'open' ? 'Ouvert' : ticket.status === 'answered' ? 'Répondu' : 'Fermé'}
+
+---NEXT---
+
+{ticket.subject}
+
+---NEXT---
+
+{ticketLoading ? 'Envoi...' :
+
+---NEXT---
+
+{ticketPending ? t("Envoi...") : "Envoyer"}
+
+---NEXT---
+
+{ticketSuccess ?
+
+---NEXT---
+
+{tickets.map((t) =>
+
+---NEXT---
+
+{title}
+
+---NEXT---
+
+{u.blocked ?
+
+---NEXT---
+
+{u.email}
+
+---NEXT---
+
+{u.plan.toUpperCase()}
+
+---NEXT---
+
+{url &&
+
+---NEXT---
+
+{users.map((u) =>
+
+---NEXT---
+
+{v.category}
+
+---NEXT---
+
+{v.isVip ? "Oui" : "Non"}
+
+---NEXT---
+
+{v.title}
+
+---NEXT---
+
+{v.views}
+
+---NEXT---
+
+{value}
+
+---NEXT---
+
+{vid.title}
+
+---NEXT---
+
+{vid.views.toLocaleString()} {t("watch.views")}
+
+---NEXT---
+
+{video.category}
+
+---NEXT---
+
+{video.description}
+
+---NEXT---
+
+{video.isVip &&
+
+---NEXT---
+
+{video.title}
+
+---NEXT---
+
+{video.views.toLocaleString()} vues
+
+---NEXT---
+
+{videoError || "Vidéo introuvable"}
+
+---NEXT---
+
+{videos.find((v) => v.id === playingId)?.title}
+
+---NEXT---
+
+{videos.length}{t("/5 vidéos —")} {formatBytes(videos.reduce((s, v) => s + v.sizeBytes, 0))} {t("utilisés")}
+
+---NEXT---
+
+{videos.map((v) =>
+
+---NEXT---
+
+{videos.map((video) =>
+
+---NEXT---
+
+{videos.map((video) => (
+
+---NEXT---
+
+{view === 'chat' &&
+
+---NEXT---
+
+{view === 'chat' ? t("Assistant virtuel") : t("Support en ligne")}
+
+---NEXT---
+
+{view === 'chat' ? t("Posez votre question") : t("Une question ? Écrivez-nous.")}
+
+---NEXT---
+
+{viewerCount}
+
+---NEXT---
+
+{viewsCount.toLocaleString()} {viewsCount > 1 ? 'vues' : 'vue'}
+
+---NEXT---
+
+{vipPhotos.length}
+
+---NEXT---
+
+{vipPhotos.map((photo, i) =>
+
+---NEXT---
+
+{vipVideos.length}
+
+---NEXT---
+
+{vipVideos.map((video) =>
+
+---NEXT---
+
+{y}
+
+---NEXT---
+
+}
+
+                        {photo.isVip && !isLocked &&
+
+---NEXT---
+
+}
+
+            {(activeTab === "all-vip" || activeTab === "photo-vip") &&
+
+---NEXT---
+
+}
+
+            {vipVideos.length === 0 && vipPhotos.length === 0 && activeTab === "all-vip" &&
+
+---NEXT---
+
+}
+
+          {/* Zone des réactions volantes */}
+
+---NEXT---
+
+}
+
+          {activeTab === "all" &&
+
+---NEXT---
+
+}
+
+          {activeTab === "video" &&
+
+---NEXT---
+
+}
+
+          {isUserVip &&
+
+---NEXT---
+
+}
+
+          {view === 'ticket' &&
+
+---NEXT---
+
+}
+
+        {!isUserVip &&
+
+---NEXT---
+
+}
+
+        {!sent ?
+
+---NEXT---
+
+}
+
+      {(status === "uploading" || status === "processing") &&
+
+---NEXT---
+
+}
+
+      {/* Offline Video Player Modal */}
+      {playingId && videoUrl &&
+
+---NEXT---
+
+}
+
+      {file && status === "idle" &&
+
+---NEXT---
+
+}
+
+      {isOpen &&
+
+---NEXT---
+
+}
+
+      {status === "done" &&
+
+---NEXT---
+
+}
+
+      {status === "error" &&
+
+---NEXT---
+
+}
+
+      {step === 'payment' &&
+
+---NEXT---
+
+}
+
+      {step === 'success' &&
+
+---NEXT---
+
+}
+                      {downloadPending ? t("Téléchargement...") : t("Télécharger")}
+
+---NEXT---
+
+}
+                  {(appUser?.email === LIVE_ADMIN_EMAIL || isAdmin) &&
+
+---NEXT---
+
+}
+                {vipPhotos.length > 0 ?
+
+---NEXT---
+
+}
+                {vipVideos.length > 0 ?
+
+---NEXT---
+
+}
+          {streamType === "hls" && currentLevelResolution &&
+
+---NEXT---
+
+}
+      {playbackError &&
+
+---NEXT---
+
+~ {p.htg.toLocaleString()} HTG
+
+---NEXT---
+
+Écrire sur Telegram
+
+---NEXT---
+
+Écrivez un message...
+
+---NEXT---
+
+Étapes à suivre :
+
+---NEXT---
+
+• Effectuez simplement un
+
+---NEXT---
+
+• Envoyez sur le compte NatCash :
+
+---NEXT---
+
+• Saisissez le montant exact de la formule :
+
+---NEXT---
+
+• Sélectionnez
+
+---NEXT---
+
+← Changer de formule
+
+---NEXT---
+
+✅ {result.sent} {t("envoyées ·")} {result.failed} {t("expirées ·")} {result.total} total
+
+---NEXT---
+
+🇪🇸 Español
+
+---NEXT---
+
+🇫🇷 Français
+
+---NEXT---
+
+🇭🇹 Kreyòl
+
+---NEXT---
+
+🇺🇸 English
