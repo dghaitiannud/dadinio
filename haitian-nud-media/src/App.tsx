@@ -30,6 +30,8 @@ const AdminLive = lazy(() => import("@/pages/admin-live").then(m => ({ default: 
 
 // 🎉 Composant d'animation de fête
 import { AnniversaryOverlay } from "@/components/anniversary-overlay";
+// 🌐 Modal de choix de langue
+import { LanguageModal } from "@/components/language-modal";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -43,7 +45,7 @@ function ScrollToTop() {
   return null;
 }
 
-// 🌐 Détection IP pure JavaScript (Pas de Hook, évite l'erreur 321)
+// 🌐 Détection IP pure JavaScript
 function initIpLocation() {
   if (!localStorage.getItem("i18nextLng") && !localStorage.getItem("auto-lang")) {
     fetch("https://ipapi.co/json/")
@@ -53,7 +55,7 @@ function initIpLocation() {
         let targetLang = "fr";
 
         if (country === "HT") {
-          targetLang = "ht"; // Haïti -> Kreyòl d'office
+          targetLang = "ht"; 
         } else if (["US", "CA", "GB"].includes(country)) {
           targetLang = "en";
         } else if (["ES", "DO", "MX", "AR"].includes(country)) {
@@ -84,12 +86,10 @@ function App() {
   const [location] = useLocation();
   const [isReady, setIsReady] = useState(false);
   
-  // 🚀 Initialisation de la détection, masquage de l'animation de chargement et injection globale sécurisée de 't'
   useEffect(() => {
     (window as any).t = (key: string, options?: any) => i18n.t(key, options);
     initIpLocation();
 
-    // Laisse une brève transition pour une animation agréable
     const timer = setTimeout(() => {
       setIsReady(true);
       dismissPreloader();
@@ -105,8 +105,11 @@ function App() {
           <QueryClientProvider client={queryClient}>
             <ScrollToTop /> 
             
-            {/* 🎉 Animation d'anniversaire automatique (1ère semaine d'août) */}
+            {/* 🎉 Animation d'anniversaire */}
             <AnniversaryOverlay />
+
+            {/* 🌐 Choix de la langue (s'affiche au 1er lancement) */}
+            <LanguageModal />
 
             <Layout>
               <div
@@ -115,7 +118,6 @@ function App() {
                   isReady ? "opacity-100" : "opacity-0"
                 }`}
               >
-                {/* ⚡ SUSPENSE : Affiche un loader pendant le chargement des pages lourdes */}
                 <Suspense fallback={
                   <div className="flex h-[80vh] w-full items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -137,16 +139,20 @@ function App() {
                     <Route path="/reset-password" component={ResetPasswordPage} />
                     <Route path="/downloads" component={DownloadsPage} />
                     
-                    {/* Route 404 */}
+                    {/* Route 404 (Traduite) */}
                     <Route>
                       <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 text-center">
                         <div className="mb-4 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
                           404
                         </div>
-                        <h1 className="text-3xl font-serif font-bold">Page introuvable</h1>
-                        <p className="mt-2 max-w-md text-muted-foreground">La page que tu cherches n'existe pas. Retourne à l'accueil.</p>
+                        <h1 className="text-3xl font-serif font-bold">
+                          {i18n.t('404.title', { defaultValue: "Page introuvable" })}
+                        </h1>
+                        <p className="mt-2 max-w-md text-muted-foreground">
+                          {i18n.t('404.description', { defaultValue: "La page que tu cherches n'existe pas. Retourne à l'accueil." })}
+                        </p>
                         <a href={basePath || "/"} className="mt-6 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">
-                          Aller à l'accueil
+                          {i18n.t('404.back_home', { defaultValue: "Aller à l'accueil" })}
                         </a>
                       </div>
                     </Route>

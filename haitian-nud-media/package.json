@@ -8,9 +8,18 @@
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "transcode": "node ./scripts/transcode.js"
+    "transcode": "node ./scripts/transcode.js",
+    "wrap-texts": "node scripts/wrap-texts.js",
+    "wrap-interpolations": "node scripts/wrap-interpolations.js",
+    "add-usetranslation": "node scripts/add-usetranslation.js",
+    "extract-i18n": "i18next-parser",
+    "i18n": "npm run wrap-texts && npm run wrap-interpolations && npm run add-usetranslation && npm run extract-i18n && npm run typecheck"
   },
   "devDependencies": {
+    "@babel/generator": "^7.24.0",
+    "@babel/parser": "^7.24.0",
+    "@babel/traverse": "^7.24.0",
+    "@babel/types": "^7.24.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.4",
     "@radix-ui/react-alert-dialog": "^1.1.7",
@@ -53,6 +62,7 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.23.24",
+    "i18next-parser": "^9.0.2",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.545.0",
     "next-themes": "^0.4.6",
