@@ -18,7 +18,7 @@ export function AlertsTab({ token }: {token: string;}) {
 
   const handleSend = async () => {
     if (!title || !body) {
-    toast.error("Titre et message requis");
+    toast.error(t("Titre et message requis"));
     return;
   }
     setSending(true);
@@ -30,10 +30,10 @@ export function AlertsTab({ token }: {token: string;}) {
         body: JSON.stringify({ title, body, url, icon: "/logo.jpg" })
       });
       const res = await response.json();
-      if (!response.ok) throw new Error(res.error || "Erreur serveur");
+      if (!response.ok) throw new Error(res.error || t("Erreur serveur"));
       setResult(res);
-      toast.success(`${res.sent}/${res.total} envoyées !`);
-    } catch (e: any) {toast.error(e?.message || "Erreur");} finally
+      toast.success(t("{{sent}}/{{total}} envoyées !", { sent: res.sent, total: res.total }));
+    } catch (e: any) {toast.error(e?.message || t("Erreur"));} finally
     {setSending(false);}
   };
 
@@ -44,15 +44,15 @@ export function AlertsTab({ token }: {token: string;}) {
         <CardContent className="space-y-4">
           <div className="space-y-2"><Label>{t('common.title')}</Label><Input value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div className="space-y-2"><Label>{t('common.message')}</Label><Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} /></div>
-          <div className="space-y-2"><Label>Lien</Label><Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="/" /></div>
+          <div className="space-y-2"><Label>{t("Lien")}</Label><Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="/" /></div>
           <Button onClick={handleSend} disabled={sending} className="w-full">{sending ? t("Envoi...") : t("Envoyer à tous")}</Button>
-          {result && <div className="p-3 rounded-lg bg-primary/10 text-sm text-center">✅ {result.sent} {t("envoyées ·")} {result.failed} {t("expirées ·")} {result.total} total</div>}
+          {result && <div className="p-3 rounded-lg bg-primary/10 text-sm text-center">✅ {t("{{sent}} envoyées · {{failed}} expirées · {{total}} au total", { sent: result.sent, failed: result.failed, total: result.total })}</div>}
         </CardContent>
       </Card>
       <Card className="bg-card">
-        <CardHeader><CardTitle className="flex items-center gap-2"><UserCheck className="h-5 w-5 text-primary" /> Infos</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2"><UserCheck className="h-5 w-5 text-primary" /> {t("Infos")}</CardTitle></CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-3">
-          <p>Table <code>push_subscriptions</code> {t("requise.")}</p>
+          <p>{t("Table requise :")} <code>push_subscriptions</code></p>
         </CardContent>
       </Card>
     </div>);

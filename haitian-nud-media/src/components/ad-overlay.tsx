@@ -76,7 +76,7 @@ export function AdOverlay({ adUrl, clickUrl, skipAfter, onComplete }: AdOverlayP
           </Button> :
 
         <div className="px-3 py-1.5 bg-black/80 text-white text-xs font-mono rounded border border-white/20">
-            {t("Passer dans")} {timeLeft}s
+            {t("Passer dans {{seconds}}s", { seconds: timeLeft })}
           </div>
         }
       </div>

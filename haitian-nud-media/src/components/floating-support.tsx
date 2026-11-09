@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from "sonner";
 import { createTicket } from "@/lib/supabase-db";
 import { ADMIN_EMAIL } from "@/lib/supabase";
+import { useTranslation } from "react-i18next";
 
 // ⚠️ SÉCURITÉ : On utilise notre API Node, qui fera le relais vers N8N de manière sécurisée
 const API_CHAT_URL = "https://api.haitiannud.com/api/support/chat";
@@ -15,9 +16,8 @@ interface ChatMsg {
   content: string;
 }
 
-const t = (key: string, options?: any) => (window as any).t ? (window as any).t(key, options) : key;
-
 export function FloatingSupport({ currentUser }: {currentUser: any;}) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'chat' | 'ticket'>('chat');
   const [input, setInput] = useState('');
@@ -29,7 +29,7 @@ export function FloatingSupport({ currentUser }: {currentUser: any;}) {
   const [ticketSuccess, setTicketSuccess] = useState(false);
 
   const [messages, setMessages] = useState<ChatMsg[]>([
-  { role: 'bot', content: 'Bonjour ! Comment puis-je vous aider aujourd\'hui ?' }]
+  { role: 'bot', content: t("Bonjour ! Comment puis-je vous aider aujourd'hui ?") }]
   );
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -70,13 +70,13 @@ export function FloatingSupport({ currentUser }: {currentUser: any;}) {
       if (!res.ok) throw new Error('Erreur réseau');
 
       const data = await res.json();
-      const reply = data.output ?? data.text ?? "Désolé, je n'ai pas pu traiter votre demande.";
+      const reply = data.output ?? data.text ?? t("Désolé, je n'ai pas pu traiter votre demande.");
 
       setMessages((prev) => [...prev, { role: 'bot', content: reply }]);
     } catch (err) {
       setMessages((prev) => [
       ...prev,
-      { role: 'bot', content: 'Erreur de connexion. Réessayez dans un instant ou contactez un humain.' }]
+      { role: 'bot', content: t("Erreur de connexion. Réessayez dans un instant ou contactez un humain.") }]
       );
     } finally {
       setIsTyping(false);
@@ -93,11 +93,11 @@ export function FloatingSupport({ currentUser }: {currentUser: any;}) {
       setTicketSuccess(true);
       setSubject('');
       setTicketMessage('');
-      toast.success("Message envoyé au support");
+      toast.success(t("Message envoyé au support"));
       setTimeout(() => setTicketSuccess(false), 4000);
     } catch (err: any) {
       console.error(err);
-      toast.error(err?.message || "Erreur d'envoi");
+      toast.error(err?.message || t("Erreur d'envoi"));
     } finally {
       setTicketLoading(false);
     }
@@ -212,7 +212,7 @@ export function FloatingSupport({ currentUser }: {currentUser: any;}) {
               
                   </div>
                   <Button type="submit" className="w-full flex gap-2" disabled={ticketLoading}>
-                    {ticketLoading ? 'Envoi...' :
+                    {ticketLoading ? t("Envoi...") :
               <>
                         {t("Envoyer la demande")} <Send className="h-4 w-4" />
                       </>

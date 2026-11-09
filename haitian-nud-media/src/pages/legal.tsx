@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 
@@ -18,9 +18,7 @@ export function Legal() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">{t('legal.warning_title')}</h2>
           <p>
-            {t("Haïtien Nud Média est un site web pour adultes. Il peut contenir des images, vidéos et\n            textes à caractère mature, sensuel ou explicite, destinés exclusivement à un public\n            majeur. L'accès est")} 
-
-            <strong>{t('legal.forbidden_minors')}</strong>.
+            <Trans i18nKey="legal.warning_text" components={{ b: <strong /> }} />
           </p>
           <p>
             {t("En entrant sur le site, vous déclarez sur l'honneur :")}
@@ -35,7 +33,7 @@ export function Legal() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">{t('legal.age_confirmation')}</h2>
           <p>
-            {t("À chaque première visite, une fenêtre demande de confirmer votre majorité. En cliquant\n            sur \"J'ai 18 ans ou plus\", vous acceptez ces conditions et reconnaissez être seul\n            responsable de votre accès au site.")}
+            {t("À chaque première visite, une fenêtre demande de confirmer votre majorité. En cliquant sur \"J'ai 18 ans ou plus\", vous acceptez ces conditions et reconnaissez être seul responsable de votre accès au site.")}
           
 
           </p>
@@ -44,13 +42,13 @@ export function Legal() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">{t('legal.content_property')}</h2>
           <p>
-            {t("Tous les contenus diffusés (vidéos, photos, textes, logos) sont protégés par le droit\n            d'auteur et appartiennent à leurs ayants droit respectifs. Toute reproduction,\n            redistribution ou diffusion publique en dehors des fonctionnalités prévues par le site\n            est interdite.")}
+            {t("Tous les contenus diffusés (vidéos, photos, textes, logos) sont protégés par le droit d'auteur et appartiennent à leurs ayants droit respectifs. Toute reproduction, redistribution ou diffusion publique en dehors des fonctionnalités prévues par le site est interdite.")}
           
 
 
           </p>
           <p>
-            {t("Tous les contenus mettant en scène des personnes sont publiés avec le consentement\n            écrit des intéressé·e·s, qui sont toutes majeures.")}
+            {t("Tous les contenus mettant en scène des personnes sont publiés avec le consentement écrit des intéressé·e·s, qui sont toutes majeures.")}
           
           </p>
         </section>
@@ -58,7 +56,7 @@ export function Legal() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">{t('legal.vip_payments')}</h2>
           <p>
-            {t("Les abonnements VIP donnent accès à du contenu exclusif, à la lecture sans publicité et\n            aux téléchargements illimités. Les paiements sont effectués via un prestataire sécurisé\n            et sont non remboursables sauf cas prévus par la loi. Vous pouvez résilier à tout\n            moment depuis la page \"Mon Compte\".")}
+            {t("Les abonnements VIP donnent accès à du contenu exclusif, à la lecture sans publicité et aux téléchargements illimités. Les paiements sont effectués via un prestataire sécurisé et sont non remboursables sauf cas prévus par la loi. Vous pouvez résilier à tout moment depuis la page \"Mon Compte\".")}
           
 
 
@@ -68,7 +66,7 @@ export function Legal() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">{t('legal.privacy_cookies')}</h2>
           <p>
-            {t("Vos données de connexion (email, identifiant) sont utilisées uniquement pour la gestion\n            de votre compte et de votre abonnement. Aucun contenu visionné n'est partagé avec des\n            tiers. Le site utilise des cookies techniques nécessaires au fonctionnement et à la\n            session.")}
+            {t("Vos données de connexion (email, identifiant) sont utilisées uniquement pour la gestion de votre compte et de votre abonnement. Aucun contenu visionné n'est partagé avec des tiers. Le site utilise des cookies techniques nécessaires au fonctionnement et à la session.")}
           
 
 
@@ -78,7 +76,7 @@ export function Legal() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">{t('legal.comments_behavior')}</h2>
           <p>
-            {t("Les commentaires (anonymes ou non) doivent rester respectueux. Tout propos illégal,\n            haineux, discriminatoire ou menaçant sera supprimé et peut entraîner la suspension du\n            compte. Les comportements visant à mettre en cause la sécurité de mineurs sont\n            signalés aux autorités compétentes.")}
+            {t("Les commentaires (anonymes ou non) doivent rester respectueux. Tout propos illégal, haineux, discriminatoire ou menaçant sera supprimé et peut entraîner la suspension du compte. Les comportements visant à mettre en cause la sécurité de mineurs sont signalés aux autorités compétentes.")}
           
 
 
@@ -88,7 +86,7 @@ export function Legal() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">{t('legal.report_contact')}</h2>
           <p>
-            {t("Toute personne identifiant un contenu litigieux (mineur, contenu non consenti,\n            atteinte aux droits) peut le signaler via la page \"Support\" depuis \"Mon Compte\". Les\n            signalements sont traités sous 72 h et donnent lieu, le cas échéant, au retrait\n            immédiat du contenu.")}
+            {t("Toute personne identifiant un contenu litigieux (mineur, contenu non consenti, atteinte aux droits) peut le signaler via la page \"Support\" depuis \"Mon Compte\". Les signalements sont traités sous 72 h et donnent lieu, le cas échéant, au retrait immédiat du contenu.")}
           
 
 
@@ -98,7 +96,7 @@ export function Legal() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-foreground">{t('legal.if_minor')}</h2>
           <p>
-            {t("Quittez immédiatement ce site. Sur l'écran d'accueil, cliquez sur \"Je suis mineur(e)\".\n            Parlez‑en à un adulte de confiance et activez le contrôle parental sur votre appareil.")}
+            {t("Quittez immédiatement ce site. Sur l'écran d'accueil, cliquez sur \"Je suis mineur(e)\". Parlez‑en à un adulte de confiance et activez le contrôle parental sur votre appareil.")}
           
           </p>
         </section>

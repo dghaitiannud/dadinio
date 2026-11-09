@@ -85,7 +85,7 @@ export function Search() {
   return (
     <div className="container mx-auto px-4 py-8 min-h-[80vh]">
       <div className="max-w-2xl mx-auto mb-10 text-center">
-        <h1 className="text-3xl font-serif font-bold mb-6">Rechercher</h1>
+        <h1 className="text-3xl font-serif font-bold mb-6">{t("Rechercher")}</h1>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <SearchIcon className="h-5 w-5 text-muted-foreground" />
@@ -103,8 +103,8 @@ export function Search() {
       <div className="mb-6">
         <h2 className="text-xl font-semibold mb-4">
           {debouncedQuery 
-            ? `Résultats pour "${debouncedQuery}"` 
-            : "Toutes les vidéos"}
+            ? t("Résultats pour \"{{debouncedQuery}}\"", { debouncedQuery }) 
+            : t("Toutes les vidéos")}
         </h2>
         
         {isLoading ? (

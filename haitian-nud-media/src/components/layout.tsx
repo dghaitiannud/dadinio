@@ -43,9 +43,9 @@ function NotificationWarningBanner() {const { t } = useTranslation();
             const ok = await subscribeToPush(appUser?.id);
             if (ok) {
               setShowBanner(false);
-              toast.success("Notifications activées avec succès !");
+              toast.success(t("Notifications activées avec succès !"));
             } else {
-              toast.error("Veuillez accepter l'autorisation du navigateur.");
+              toast.error(t("Veuillez accepter l'autorisation du navigateur."));
             }
           } catch (err) {
             console.error("Erreur d'activation push banner:", err);

@@ -68,11 +68,11 @@ export function Live() {
         if (newValue) {
           setPlaybackId(newValue);
           setIsActive(true);
-          toast.success("Le live commence !");
+          toast.success(t("Le live commence !"));
         } else {
           setIsActive(false);
           setPlaybackId(null);
-          toast.info("Le live s'est terminé.");
+          toast.info(t("Le live s'est terminé."));
         }
       }
     ).
@@ -113,7 +113,7 @@ export function Live() {
 
   const sendReaction = (emoji: string) => {
     if (!isActive) {
-      toast.error("Le live doit être actif pour envoyer des réactions.");
+      toast.error(t("Le live doit être actif pour envoyer des réactions."));
       return;
     }
     triggerLocalReaction(emoji);
@@ -127,7 +127,7 @@ export function Live() {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isActive) {
-      toast.error("Le chat est disponible uniquement lorsque le live est actif.");
+      toast.error(t("Le chat est disponible uniquement lorsque le live est actif."));
       return;
     }
     if (!inputText.trim()) return;
@@ -190,7 +190,7 @@ export function Live() {
               {/* Overlay Badges */}
               <div className="absolute top-4 left-4 flex gap-2 items-center z-10">
                 <span className="bg-red-600 text-white text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider shadow-lg animate-pulse">
-                  <Radio className="h-3.5 w-3.5" /> Direct
+                  <Radio className="h-3.5 w-3.5" /> {t("Direct")}
                 </span>
                 <span className="bg-black/60 text-white text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1.5 backdrop-blur-md border border-white/10">
                   <Users className="h-3.5 w-3.5 text-primary" /> {viewerCount}

@@ -43,10 +43,10 @@ export function LoginPage() {
         } else if (errorObj && typeof errorObj === 'string') {
           setFormError(errorObj);
         } else {
-          toast.success("Demande envoyée");
+          toast.success(t("Demande envoyée"));
           setTimeout(() => {
             if (!isSignedIn) {
-              setFormError("Identifiants incorrects ou adresse e-mail non confirmée.");
+              setFormError(t("Identifiants incorrects ou adresse e-mail non confirmée."));
             } else {
               setLocation("/");
             }
@@ -60,16 +60,16 @@ export function LoginPage() {
           setFormError(errorObj.message);
           toast.error(errorObj.message);
         } else if (result?.data?.user?.identities?.length === 0) {
-          setFormError("Cet e-mail est déjà utilisé par un autre compte.");
+          setFormError(t("Cet e-mail est déjà utilisé par un autre compte."));
           setMode("signin");
         } else {
           setSignupSuccess(true);
-          toast.success("Compte créé avec succès !");
+          toast.success(t("Compte créé avec succès !"));
         }
       }
     } catch (err: any) {
       console.error("Erreur interceptée :", err);
-      const msg = err?.message || err?.error_description || "Une erreur est survenue.";
+      const msg = err?.message || err?.error_description || t("Une erreur est survenue.");
       setFormError(msg);
       toast.error(msg);
     } finally {
@@ -94,10 +94,10 @@ export function LoginPage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("HAITIAN NUD")}</h1>
           <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground">
             {signupSuccess ?
-            "Vérification de votre adresse e-mail" :
+            t("Vérification de votre adresse e-mail") :
             mode === "signin" ?
-            "Bienvenue ! Connectez-vous à votre compte" :
-            "Rejoignez la communauté en quelques clics"
+            t("Bienvenue ! Connectez-vous à votre compte") :
+            t("Rejoignez la communauté en quelques clics")
             }
           </p>
         </div>
@@ -176,7 +176,7 @@ export function LoginPage() {
               "text-muted-foreground hover:text-foreground"}`
               }>
               
-                <UserPlus className="h-3.5 w-3.5" /> Inscription
+                <UserPlus className="h-3.5 w-3.5" /> {t("Inscription")}
               </button>
             </div>
 
@@ -186,7 +186,7 @@ export function LoginPage() {
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <div className="leading-tight">
                   <span className="font-bold">{t('common.error')} : </span>
-                  {formError === "User already registered" ? "Cet e-mail possède déjà un compte." : formError}
+                  {formError === "User already registered" ? t("Cet e-mail possède déjà un compte.") : formError}
                 </div>
               </div>
           }
@@ -270,9 +270,9 @@ export function LoginPage() {
                     <Loader2 className="h-4 w-4 animate-spin" /> {t("Patientez...")}
                   </span> :
               mode === "signin" ?
-              "Se connecter" :
+              t("Se connecter") :
 
-              "Créer mon compte"
+              t("Créer mon compte")
               }
               </Button>
             </form>

@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useDateLocale } from "@/lib/date-locale";
 import { type Comment } from "@/lib/supabase-db";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -29,6 +29,7 @@ export function CommentsSection({
   commentBody, setCommentBody, anonymous, setAnonymous,
   commentPending, handleComment
 }: CommentsSectionProps) {
+  const dateLocale = useDateLocale();
   const { t } = useTranslation();
 
   return (
@@ -99,7 +100,7 @@ export function CommentsSection({
                     {comment.anonymous ? t("watch.anonymous") : (comment.displayName || t("watch.user"))}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: fr })}
+                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: dateLocale })}
                   </span>
                 </div>
                 <p className="text-sm text-foreground/90">{comment.body}</p>

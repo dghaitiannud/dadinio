@@ -216,7 +216,7 @@ export function VipCatalog() {
 function EmptyCatalogMessage({ type }: {type: string;}) {const { t } = useTranslation();
   return (
     <div className="w-full py-24 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-      {t("Aucun élément trouvé dans la catégorie des")} {type} {t("VIP pour le moment.")}
+      {t("Aucun élément trouvé dans la catégorie des {{type}} VIP pour le moment.", { type })}
     </div>);
 
 }

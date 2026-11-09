@@ -11,7 +11,7 @@ export function LanguageSwitcher() {
   return (
     <Select onValueChange={changeLanguage} defaultValue={i18n.language || "fr"}>
       <SelectTrigger className="w-[180px]">
-        <SelectValue placeholder="Langue" />
+        <SelectValue placeholder={t("Langue")} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="fr">{t("Français")}</SelectItem>

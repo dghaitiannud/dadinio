@@ -23,6 +23,11 @@ i18n
   .init({
     resources,
     fallbackLng: 'fr', // Langue par défaut si celle de l'utilisateur n'est pas dispo
+    // Les clés sont des phrases françaises (avec ":" et ".") ou des clés plates "common.title" :
+    // on désactive les séparateurs de namespace / d'objet pour qu'elles soient lues telles quelles.
+    keySeparator: false,
+    nsSeparator: false,
+    load: 'languageOnly',
     interpolation: {
       escapeValue: false // React protège déjà déjà contre les attaques XSS
     },

@@ -30,7 +30,7 @@ export function PhotosTab() {
 
   const loadPhotos = async () => {
     try {const p = await adminListPhotos();setPhotos(p);}
-    catch (err) {toast.error("Erreur de chargement");}
+    catch (err) {toast.error(t("Erreur de chargement"));}
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,22 +38,22 @@ export function PhotosTab() {
     setCreatePending(true);
     try {
       await adminCreatePhoto({ ...formData, category: buildCategory() });
-      toast.success("Photo ajoutée !");
+      toast.success(t("Photo ajoutée !"));
       setOpen(false);
       setFormData({ title: "", description: "", imageUrl: "", isVip: false, published: true });
       await loadPhotos();
-    } catch (err: any) {toast.error(err?.message || "Erreur");} finally
+    } catch (err: any) {toast.error(err?.message || t("Erreur"));} finally
     {setCreatePending(false);}
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Retirer cette photo ?")) return;
+    if (!confirm(t("Retirer cette photo ?"))) return;
     setDeletePending(id);
     try {
       await adminDeletePhoto(id);
       setPhotos((prev) => prev.filter((p) => p.id !== id));
-      toast.success("Photo archivée");
-    } catch (err: any) {toast.error(err?.message || "Erreur");} finally
+      toast.success(t("Photo archivée"));
+    } catch (err: any) {toast.error(err?.message || t("Erreur"));} finally
     {setDeletePending(null);}
   };
 
@@ -66,25 +66,25 @@ export function PhotosTab() {
           <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>{t("Nouvelle Photo")}</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2"><Label>Titre</Label><Input required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} /></div>
+              <div className="space-y-2"><Label>{t("Titre")}</Label><Input required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>{t('common.category')}</Label><Input required value={contentType} onChange={(e) => setContentType(e.target.value)} /></div>
                 <div className="space-y-2"><Label>{t("Année")}</Label><Select value={year} onValueChange={setYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{YEARS.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
               </div>
-              <div className="space-y-2"><Label>Description</Label><Textarea required value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
+              <div className="space-y-2"><Label>{t("Description")}</Label><Textarea required value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} /></div>
               <div className="space-y-2"><Label>{t("URL de la Photo")}</Label><Input required value={formData.imageUrl} onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })} /></div>
               <div className="flex gap-6 mt-2">
                 <div className="flex items-center gap-2"><Switch checked={formData.isVip} onCheckedChange={(c) => setFormData({ ...formData, isVip: c })} /><Label>VIP</Label></div>
-                <div className="flex items-center gap-2"><Switch checked={formData.published} onCheckedChange={(c) => setFormData({ ...formData, published: c })} /><Label>Publier</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={formData.published} onCheckedChange={(c) => setFormData({ ...formData, published: c })} /><Label>{t("Publier")}</Label></div>
               </div>
-              <Button type="submit" disabled={createPending} className="w-full mt-4">{createPending ? t("Envoi...") : "Ajouter"}</Button>
+              <Button type="submit" disabled={createPending} className="w-full mt-4">{createPending ? t("Envoi...") : t("Ajouter")}</Button>
             </form>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
         <Table>
-          <TableHeader><TableRow><TableHead>{t("Aperçu")}</TableHead><TableHead>{t('common.title')}</TableHead><TableHead>{t('common.category')}</TableHead><TableHead>Vues</TableHead><TableHead>{t('common.vip')}</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>{t("Aperçu")}</TableHead><TableHead>{t('common.title')}</TableHead><TableHead>{t('common.category')}</TableHead><TableHead>{t("Vues")}</TableHead><TableHead>{t('common.vip')}</TableHead><TableHead></TableHead></TableRow></TableHeader>
           <TableBody>
             {photos.map((p) =>
             <TableRow key={p.id}>
@@ -92,7 +92,7 @@ export function PhotosTab() {
                 <TableCell className="font-medium">{p.title}</TableCell>
                 <TableCell>{p.category}</TableCell>
                 <TableCell>{p.views || 0}</TableCell>
-                <TableCell>{p.isVip ? "Oui" : "Non"}</TableCell>
+                <TableCell>{p.isVip ? t("Oui") : t("Non")}</TableCell>
                 <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDelete(p.id)} disabled={deletePending === p.id} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
               </TableRow>
             )}

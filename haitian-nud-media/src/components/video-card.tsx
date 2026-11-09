@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import type { Video } from "@/lib/supabase-db";
 import { formatDistanceToNow } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useDateLocale } from "@/lib/date-locale";
 import { Play, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -12,11 +12,12 @@ interface VideoCardProps {
 }
 
 export function VideoCard({ video, className = "" }: VideoCardProps) {
+  const dateLocale = useDateLocale();
   const { t } = useTranslation();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/g, "");
 
   return (
-    <Link href={`/watch/${video.id}`} className={t("group block {{className}}", { className: className })}>
+    <Link href={`/watch/${video.id}`} className={`group block ${className}`}>
       <div className="relative aspect-video rounded-xl overflow-hidden bg-muted mb-3">
         <img
           src={video.thumbnailUrl || `${basePath}/logo.jpg`}
@@ -50,10 +51,10 @@ export function VideoCard({ video, className = "" }: VideoCardProps) {
           <div className="flex items-center text-sm text-muted-foreground mt-1 gap-2">
             <span className="truncate">{video.category}</span>
             <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
-            <span>{video.views.toLocaleString()} vues</span>
+            <span>{t("{{views}} vues", { count: video.views, views: video.views.toLocaleString() })}</span>
             <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
             <span className="whitespace-nowrap">
-              {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true, locale: fr })}
+              {formatDistanceToNow(new Date(video.createdAt), { addSuffix: true, locale: dateLocale })}
             </span>
           </div>
         </div>

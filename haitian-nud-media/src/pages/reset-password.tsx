@@ -22,25 +22,25 @@ export function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
+      toast.error(t("Les mots de passe ne correspondent pas"));
       return;
     }
     if (password.length < 6) {
-      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      toast.error(t("Le mot de passe doit contenir au moins 6 caractères"));
       return;
     }
     setLoading(true);
     try {
       const { error } = await updatePassword(password);
       if (error) {
-        toast.error(error.message || "Erreur lors de la mise à jour");
+        toast.error(error.message || t("Erreur lors de la mise à jour"));
       } else {
         setDone(true);
-        toast.success("Mot de passe mis à jour !");
+        toast.success(t("Mot de passe mis à jour !"));
         setTimeout(() => setLocation("/login"), 3000);
       }
     } catch (err: any) {
-      toast.error(err?.message || "Erreur");
+      toast.error(err?.message || t("Erreur"));
     } finally {
       setLoading(false);
     }

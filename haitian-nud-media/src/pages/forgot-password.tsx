@@ -33,7 +33,7 @@ export function ForgotPasswordPage() {
       const checkResult = await response.json();
 
       if (!response.ok || !checkResult.exists) {
-        setError("Cet e-mail n'existe pas sur la plateforme.");
+        setError(t("Cet e-mail n'existe pas sur la plateforme."));
         setLoading(false);
         return;
       }
@@ -41,14 +41,14 @@ export function ForgotPasswordPage() {
       // 2. Si l'e-mail existe, on procède à l'envoi du lien de réinitialisation via Supabase
       const { error: resetError } = await resetPassword(email);
       if (resetError) {
-        toast.error(resetError.message || "Erreur lors de l'envoi");
+        toast.error(resetError.message || t("Erreur lors de l'envoi"));
       } else {
         setSent(true);
-        toast.success("Email envoyé ! Vérifiez votre boîte de réception.");
+        toast.success(t("Email envoyé ! Vérifiez votre boîte de réception."));
       }
     } catch (err: any) {
-      setError("Impossible de joindre le serveur de sécurité.");
-      toast.error("Erreur de connexion au serveur.");
+      setError(t("Impossible de joindre le serveur de sécurité."));
+      toast.error(t("Erreur de connexion au serveur."));
     } finally {
       setLoading(false);
     }

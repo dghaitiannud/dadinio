@@ -254,7 +254,7 @@ export function Home() {
                   }>
                   
                   <Icon className="h-3.5 w-3.5" />
-                  {tab.label}
+                  {t(tab.label)}
                 </Button>);
 
             })}
@@ -417,7 +417,7 @@ export function Home() {
                             {photo.category}
                           </span>
                           <span className="flex items-center gap-1 font-medium text-foreground/80">
-                            <Eye className="h-3.5 w-3.5 text-primary" /> {viewsCount.toLocaleString()} {viewsCount > 1 ? 'vues' : 'vue'}
+                            <Eye className="h-3.5 w-3.5 text-primary" /> {t("{{views}} vues", { count: viewsCount, views: viewsCount.toLocaleString() })}
                           </span>
                         </div>
                       </div>
@@ -475,7 +475,7 @@ export function Home() {
 
               <div>
                 <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5 text-primary" /> Photos
+                  <ImageIcon className="h-5 w-5 text-primary" /> {t("Photos")}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {isLoadingPhotos ?
@@ -527,7 +527,7 @@ export function Home() {
             onClick={() => setSelectedPhoto(null)}
             className="absolute -top-10 right-0 text-white hover:text-primary transition-colors flex items-center gap-1 font-bold">
             
-              <X className="h-6 w-6" /> Fermer
+              <X className="h-6 w-6" /> {t("Fermer")}
             </button>
             <img
             src={selectedPhoto.imageUrl || (selectedPhoto as any).image_url}
@@ -540,7 +540,7 @@ export function Home() {
                 <span>{selectedPhoto.category}</span>
                 <span>•</span>
                 <span className="flex items-center gap-1 text-white">
-                  <Eye className="h-3.5 w-3.5 text-primary" /> {extractViews(selectedPhoto).toLocaleString()} vues
+                  <Eye className="h-3.5 w-3.5 text-primary" /> {t("{{views}} vues", { count: extractViews(selectedPhoto), views: extractViews(selectedPhoto).toLocaleString() })}
                 </span>
               </p>
             </div>

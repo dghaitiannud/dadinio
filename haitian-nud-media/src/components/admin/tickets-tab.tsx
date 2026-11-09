@@ -15,8 +15,8 @@ export function TicketsTab({ token }: {token: string;}) {const { t } = useTransl
   useEffect(() => {loadTickets();}, []);
 
   const loadTickets = async () => {
-    try {const t = await adminListTickets();setTickets(t);}
-    catch (err) {toast.error("Erreur");}
+    try {const list = await adminListTickets();setTickets(list);}
+    catch (err) {toast.error(t("Erreur"));}
   };
 
   const handleReply = async () => {
@@ -24,7 +24,7 @@ export function TicketsTab({ token }: {token: string;}) {const { t } = useTransl
     setReplyPending(true);
     try {
       await adminReplyTicket(selectedTicket.id, replyText);
-      toast.success("Réponse envoyée");
+      toast.success(t("Réponse envoyée"));
       try {
         await fetch("https://api.haitiannud.com/api/push/send", {
           method: "POST",
@@ -39,7 +39,7 @@ export function TicketsTab({ token }: {token: string;}) {const { t } = useTransl
       setSelectedTicket(null);
       setReplyText("");
       await loadTickets();
-    } catch (e: any) {toast.error(e?.message || "Erreur");} finally
+    } catch (e: any) {toast.error(e?.message || t("Erreur"));} finally
     {setReplyPending(false);}
   };
 
@@ -49,10 +49,10 @@ export function TicketsTab({ token }: {token: string;}) {const { t } = useTransl
         <CardHeader><CardTitle>{t("Messages & tickets")}</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-            {tickets.map((t) =>
-            <div key={t.id} onClick={() => setSelectedTicket(t)} className={`p-4 border rounded-lg cursor-pointer hover:bg-accent ${selectedTicket?.id === t.id ? 'border-primary' : 'border-border'}`}>
-                <div className="flex justify-between"><h4 className="font-semibold">{t.subject}</h4><span className={`text-xs px-2 py-1 rounded ${t.status === 'open' ? 'bg-destructive/20 text-destructive' : 'bg-muted'}`}>{t.status}</span></div>
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{t.message}</p>
+            {tickets.map((tk) =>
+            <div key={tk.id} onClick={() => setSelectedTicket(tk)} className={`p-4 border rounded-lg cursor-pointer hover:bg-accent ${selectedTicket?.id === tk.id ? 'border-primary' : 'border-border'}`}>
+                <div className="flex justify-between"><h4 className="font-semibold">{tk.subject}</h4><span className={`text-xs px-2 py-1 rounded ${tk.status === 'open' ? 'bg-destructive/20 text-destructive' : 'bg-muted'}`}>{tk.status === 'open' ? t("Ouvert") : tk.status === 'answered' ? t("Répondu") : t("Fermé")}</span></div>
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-1">{tk.message}</p>
               </div>
             )}
           </div>
@@ -63,9 +63,9 @@ export function TicketsTab({ token }: {token: string;}) {const { t } = useTransl
         <CardContent>
           {selectedTicket ?
           <div className="space-y-4">
-              <div><Label className="text-muted-foreground">Original</Label><div className="p-3 bg-muted rounded mt-1 text-sm">{selectedTicket.message}</div></div>
+              <div><Label className="text-muted-foreground">{t("Original")}</Label><div className="p-3 bg-muted rounded mt-1 text-sm">{selectedTicket.message}</div></div>
               <div className="space-y-2"><Label>{t("Votre Réponse")}</Label><Textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={5} /></div>
-              <Button onClick={handleReply} disabled={!replyText || replyPending} className="w-full">{replyPending ? t("Envoi...") : "Envoyer"}</Button>
+              <Button onClick={handleReply} disabled={!replyText || replyPending} className="w-full">{replyPending ? t("Envoi...") : t("Envoyer")}</Button>
             </div> :
           <div className="text-center py-12 text-muted-foreground">{t("Sélectionnez un ticket")}</div>}
         </CardContent>

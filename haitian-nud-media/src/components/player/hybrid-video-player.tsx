@@ -171,7 +171,7 @@ export function HybridVideoPlayer({ src, poster, videoId, fallbackSrc }: {src: s
       setPlaybackError(null);
     } else {
       setPlaybackError({
-        message: !navigator.onLine ? "Vous semblez hors ligne. Vérifiez votre connexion." : reason,
+        message: !navigator.onLine ? t("Vous semblez hors ligne. Vérifiez votre connexion.") : reason,
         isNetwork: isNetwork || !navigator.onLine
       });
       cleanupHls();

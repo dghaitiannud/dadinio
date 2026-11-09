@@ -1,4 +1,5 @@
-// Web Push Notifications — frontend helpers
+
+import i18n from "@/i18n";// Web Push Notifications — frontend helpers
 // VAPID public key (safe to expose in client)
 const VAPID_PUBLIC_KEY = "BAM-Ab_FHCm2P3q0n-DmuqdOyQOuwBOR6LAxbGjc4wbsqU6JN1rvsIAtmlbpCN0s62PjXgMlKUAyBxCO9UIE6FM";
 
@@ -115,7 +116,7 @@ export async function sendPushToAll(
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error((err as any).error || "Erreur serveur");
+      throw new Error((err as any).error || i18n.t("Erreur serveur"));
     }
     return await response.json();
   } catch (err) {

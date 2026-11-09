@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useDateLocale } from "@/lib/date-locale";
 import { Shield, Star, Download, LogOut, Ticket, History, Settings as SettingsIcon, Share2, Copy, Check, Bell, BellOff, BellRing, Trash2, Smartphone, Radio, Globe, User, Send } from "lucide-react";
 import { toast } from "sonner";
 import { getWatchHistory, clearWatchHistory, type WatchEntry } from "@/lib/local-store";
@@ -23,6 +23,7 @@ import { supabase, LIVE_ADMIN_EMAIL } from "@/lib/supabase"; // <-- IMPORT STATI
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 export function Account() {
+  const dateLocale = useDateLocale();
   const { t } = useTranslation();
   const { isSignedIn, appUser, signOut, isAdmin, refreshUser } = useAuth();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -65,11 +66,11 @@ export function Account() {
       await createTicket(appUser.id, subject, message);
       setSubject("");
       setMessage("");
-      toast.success("Message envoyé au support");
+      toast.success(t("Message envoyé au support"));
       const updated = await listMyTickets(appUser.id);
       setTickets(updated);
     } catch (err: any) {
-      toast.error(err?.message || "Erreur d'envoi");
+      toast.error(err?.message || t("Erreur d'envoi"));
     } finally {
       setTicketPending(false);
     }
@@ -83,10 +84,10 @@ export function Account() {
     try {
       await navigator.clipboard.writeText(referralLink);
       setCopied(true);
-      toast.success("Lien copié");
+      toast.success(t("Lien copié"));
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("Impossible de copier"));
     }
   };
 
@@ -115,9 +116,9 @@ export function Account() {
       eq("id", appUser.id);
       if (error) throw error;
       await refreshUser();
-      toast.success("Nom mis à jour");
+      toast.success(t("Nom mis à jour"));
     } catch (err: any) {
-      toast.error(err?.message || "Erreur");
+      toast.error(err?.message || t("Erreur"));
     } finally {
       setSavingName(false);
     }
@@ -145,7 +146,7 @@ export function Account() {
 
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-                <h1 className="text-2xl md:text-3xl font-serif font-bold">{appUser?.displayName || "Utilisateur"}</h1>
+                <h1 className="text-2xl md:text-3xl font-serif font-bold">{appUser?.displayName || t("Utilisateur")}</h1>
                 {appUser?.plan === "vip" ?
                 <Badge className="bg-gradient-to-r from-primary to-blue-600 text-white border-0 shadow-sm px-2.5 py-0.5 text-xs font-semibold">
                     <Star className="h-3 w-3 mr-1 fill-current" /> VIP
@@ -246,7 +247,7 @@ export function Account() {
                     <div className="p-3 bg-muted/40 rounded-lg border border-border/60 text-xs flex justify-between items-center">
                       <span className="text-muted-foreground">{t('account.expires_at')}</span>
                       <span className="font-semibold">
-                        {appUser?.subscriptionEndsAt ? format(new Date(appUser.subscriptionEndsAt), "dd MMMM yyyy", { locale: fr }) : "À vie"}
+                        {appUser?.subscriptionEndsAt ? format(new Date(appUser.subscriptionEndsAt), t("date.long"), { locale: dateLocale }) : t("À vie")}
                       </span>
                     </div>
                   </div> :
@@ -320,7 +321,7 @@ export function Account() {
               </CardTitle>
               {history.length > 0 &&
               <Button variant="ghost" size="sm" onClick={() => {clearWatchHistory();setHistory([]);}} className="text-destructive h-8 text-xs">
-                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Vider
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("Vider")}
                 </Button>
               }
             </CardHeader>
@@ -337,7 +338,7 @@ export function Account() {
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-xs line-clamp-1">{h.title}</div>
                         <div className="text-[11px] text-muted-foreground mt-0.5">
-                          {format(new Date(h.watchedAt), "dd MMM yyyy à HH:mm", { locale: fr })}
+                          {format(new Date(h.watchedAt), t("date.datetime"), { locale: dateLocale })}
                         </div>
                       </div>
                     </Link>
@@ -356,7 +357,7 @@ export function Account() {
             <Card className="border-border bg-card shadow-xs">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" /> Profil
+                  <User className="h-4 w-4 text-primary" /> {t("Profil")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -434,7 +435,7 @@ export function Account() {
                     <Textarea id="message" placeholder={t("Votre message...")} rows={4} value={message} onChange={(e) => setMessage(e.target.value)} className="text-xs bg-muted/20 resize-none" />
                   </div>
                   <Button type="submit" disabled={ticketPending || !subject || !message} className="w-full h-9 text-xs font-semibold">
-                    {ticketPending ? t("Envoi...") : "Envoyer"}
+                    {ticketPending ? t("Envoi...") : t("Envoyer")}
                   </Button>
                 </form>
               </CardContent>
@@ -457,7 +458,7 @@ export function Account() {
                         <div className="flex justify-between items-start gap-2">
                           <h4 className="font-semibold text-xs">{ticket.subject}</h4>
                           <Badge variant={ticket.status === 'open' ? 'secondary' : ticket.status === 'answered' ? 'default' : 'outline'} className="text-[10px] px-1.5 py-0">
-                            {ticket.status === 'open' ? 'Ouvert' : ticket.status === 'answered' ? 'Répondu' : 'Fermé'}
+                            {ticket.status === 'open' ? t("Ouvert") : ticket.status === 'answered' ? t("Répondu") : t("Fermé")}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground line-clamp-2">{ticket.message}</p>
@@ -468,7 +469,7 @@ export function Account() {
                           </div>
                     }
                         <div className="text-[10px] text-muted-foreground">
-                          {format(new Date(ticket.createdAt), "dd MMM yyyy à HH:mm", { locale: fr })}
+                          {format(new Date(ticket.createdAt), t("date.datetime"), { locale: dateLocale })}
                         </div>
                       </div>
                   ) :
@@ -510,20 +511,20 @@ function PushNotificationCard({ userId }: {userId?: string;}) {
         if (ok) {
           setSubscribed(false);
           setPermission(getPushPermission());
-          toast.success("Notifications désactivées");
+          toast.success(t("Notifications désactivées"));
         } else {
-          toast.error("Impossible de désactiver");
+          toast.error(t("Impossible de désactiver"));
         }
       } else {
         const ok = await subscribeToPush(userId);
         if (ok) {
           setSubscribed(true);
           setPermission("granted");
-          toast.success("Notifications activées !");
+          toast.success(t("Notifications activées !"));
         } else if (getPushPermission() === "denied") {
-          toast.error("Notifications bloquées dans votre navigateur");
+          toast.error(t("Notifications bloquées dans votre navigateur"));
         } else {
-          toast.error("Impossible d'activer les notifications");
+          toast.error(t("Impossible d'activer les notifications"));
         }
       }
     } finally {

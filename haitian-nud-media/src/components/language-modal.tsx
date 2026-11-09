@@ -42,16 +42,16 @@ export function LanguageModal() {
 
         <div className="grid grid-cols-2 gap-3 mt-6">
           <Button variant={i18n.language.startsWith("fr") ? "default" : "outline"} onClick={() => changeLanguage("fr")} className="h-12 text-base">
-            {t("🇫🇷 Français")}
+            🇫🇷 Français
           </Button>
           <Button variant={i18n.language.startsWith("ht") ? "default" : "outline"} onClick={() => changeLanguage("ht")} className="h-12 text-base">
-            {t("🇭🇹 Kreyòl")}
+            🇭🇹 Kreyòl
           </Button>
           <Button variant={i18n.language.startsWith("en") ? "default" : "outline"} onClick={() => changeLanguage("en")} className="h-12 text-base">
-            {t("🇺🇸 English")}
+            🇺🇸 English
           </Button>
           <Button variant={i18n.language.startsWith("es") ? "default" : "outline"} onClick={() => changeLanguage("es")} className="h-12 text-base">
-            {t("🇪🇸 Español")}
+            🇪🇸 Español
           </Button>
         </div>
       </DialogContent>

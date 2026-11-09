@@ -28,7 +28,7 @@ export function DownloadsPage() {
       const list = await listOfflineVideos();
       setVideos(list);
     } catch (err: any) {
-      toast.error(err?.message || "Erreur de chargement");
+      toast.error(err?.message || t("Erreur de chargement"));
     } finally {
       setLoading(false);
     }
@@ -46,10 +46,10 @@ export function DownloadsPage() {
         setPlayingId(null);
         setVideoUrl(null);
       }
-      toast.success("Vidéo supprimée");
+      toast.success(t("Vidéo supprimée"));
       loadVideos();
     } catch (err: any) {
-      toast.error(err?.message || "Erreur de suppression");
+      toast.error(err?.message || t("Erreur de suppression"));
     }
   };
 
@@ -99,7 +99,7 @@ export function DownloadsPage() {
 
       <>
           <p className="text-sm text-muted-foreground mb-4">
-            {videos.length}{t("/5 vidéos —")} {formatBytes(videos.reduce((s, v) => s + v.sizeBytes, 0))} {t("utilisés")}
+            {t("{{used}}/5 vidéos — {{size}} utilisés", { used: videos.length, size: formatBytes(videos.reduce((s, v) => s + v.sizeBytes, 0)) })}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -124,7 +124,7 @@ export function DownloadsPage() {
                     {formatBytes(video.sizeBytes)}
                   </div>
                   <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 bg-black/80 text-white text-xs rounded">
-                    <WifiOff className="h-3 w-3" /> Offline
+                    <WifiOff className="h-3 w-3" /> {t("Offline")}
                   </div>
                 </div>
                 <CardContent className="p-3">

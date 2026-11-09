@@ -25,14 +25,14 @@ export function AdsTab({ token }: {token: string;}) {const { t } = useTranslatio
 
   const handleUpload = async () => {
     if (!file || !form.title) {
-    toast.error("Titre et fichier requis");
+    toast.error(t("Titre et fichier requis"));
     return;
   }
 
     const jobId = crypto.randomUUID();
     setStatus("uploading");
     setProgress(0);
-    setMessage("Connexion...");
+    setMessage(t("Connexion..."));
 
     const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?token=${token}`);
 
@@ -58,7 +58,7 @@ export function AdsTab({ token }: {token: string;}) {const { t } = useTranslatio
         language: form.language
       });
 
-      toast.success("Pub ajoutée avec succès !");
+      toast.success(t("Pub ajoutée avec succès !"));
       setStatus("idle");
       setFile(null);
       setForm({ title: "", type: "pre-roll", trigger: 0, skip: 5, resolution: "720p", clickUrl: "", language: "fr" });
@@ -87,13 +87,13 @@ export function AdsTab({ token }: {token: string;}) {const { t } = useTranslatio
       if (ev.lengthComputable) {
         const pct = Math.round(ev.loaded / ev.total * 100);
         setProgress(Math.round(pct * 0.1));
-        setMessage(`Envoi... (${pct}%)`);
+        setMessage(t("Envoi... ({{pct}}%)", { pct }));
       }
     };
 
     xhr.onload = () => {
       if (xhr.status !== 200) {
-        toast.error("Erreur lors de l'envoi");
+        toast.error(t("Erreur lors de l'envoi"));
         setStatus("idle");
       }
     };
@@ -150,9 +150,9 @@ export function AdsTab({ token }: {token: string;}) {const { t } = useTranslatio
           <div key={ad.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
               <div>
                 <p className="font-bold text-sm">{ad.title} <span className="text-xs text-muted-foreground">({ad.language})</span></p>
-                <p className="text-xs text-muted-foreground">{ad.ad_type} - {ad.resolution} {t("- Skip:")} {ad.skip_after}s</p>
+                <p className="text-xs text-muted-foreground">{ad.ad_type} - {ad.resolution} - {t("Skip après {{seconds}}s", { seconds: ad.skip_after })}</p>
               </div>
-              <Button variant="destructive" size="sm" onClick={async () => {await supabase.from('video_ads').delete().eq('id', ad.id);loadAds();}}>Suppr</Button>
+              <Button variant="destructive" size="sm" onClick={async () => {await supabase.from('video_ads').delete().eq('id', ad.id);loadAds();}}>{t("Suppr")}</Button>
             </div>
           )}
         </div>

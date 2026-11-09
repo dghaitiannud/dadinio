@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
@@ -58,13 +58,13 @@ export function Plans() {
       const selectedFile = e.target.files[0];
       const maxSize = 5 * 1024 * 1024;
       if (selectedFile.size > maxSize) {
-        toast.error("Le fichier est trop lourd. Maximum 5 Mo autorisé.");
+        toast.error(t("Le fichier est trop lourd. Maximum 5 Mo autorisé."));
         e.target.value = "";
         return;
       }
       const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
       if (!allowedTypes.includes(selectedFile.type)) {
-        toast.error("Format non supporté. Veuillez envoyer une image (JPG, JPEG ou PNG).");
+        toast.error(t("Format non supporté. Veuillez envoyer une image (JPG, JPEG ou PNG)."));
         e.target.value = "";
         return;
       }
@@ -77,11 +77,11 @@ export function Plans() {
     try {
       const ok = await subscribeToPush((appUser as any)?.id);
       if (ok) {
-        toast.success("Notifications système activées !");
+        toast.success(t("Notifications système activées !"));
       } else if (getPushPermission() === "denied") {
-        toast.error("Veuillez autoriser les notifications dans les paramètres de votre navigateur.");
+        toast.error(t("Veuillez autoriser les notifications dans les paramètres de votre navigateur."));
       } else {
-        toast.error("Échec de la souscription aux notifications.");
+        toast.error(t("Échec de la souscription aux notifications."));
       }
     } finally {
       setPushPending(false);
@@ -91,17 +91,17 @@ export function Plans() {
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSignedIn || !appUser) {
-      toast.error("Veuillez vous connecter pour soumettre votre paiement.");
+      toast.error(t("Veuillez vous connecter pour soumettre votre paiement."));
       return;
     }
 
     if (!file) {
-      toast.error("Veuillez téléverser votre reçu de paiement.");
+      toast.error(t("Veuillez téléverser votre reçu de paiement."));
       return;
     }
 
     if (supported && getPushPermission() !== "granted") {
-      toast.error("Action requise : Veuillez activer les notifications système avant d'envoyer.");
+      toast.error(t("Action requise : Veuillez activer les notifications système avant d'envoyer."));
       return;
     }
 
@@ -152,11 +152,11 @@ export function Plans() {
         console.error("Échec notification admin:", pushErr);
       }
 
-      toast.success("Preuve de paiement reçue avec succès !");
+      toast.success(t("Preuve de paiement reçue avec succès !"));
       setStep('success');
     } catch (err: any) {
       console.error(err);
-      toast.error(err?.message || "Une erreur est survenue lors de l'envoi.");
+      toast.error(err?.message || t("Une erreur est survenue lors de l'envoi."));
     } finally {
       setIsSubmitting(false);
     }
@@ -218,7 +218,7 @@ export function Plans() {
                       <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground space-y-1">
                         <div className="flex justify-between">
                           <span>{t("Durée :")}</span>
-                          <span className="font-bold text-foreground">{p.days} jours</span>
+                          <span className="font-bold text-foreground">{t("{{days}} jours", { days: p.days })}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>{t("Prix par jour :")}</span>
@@ -233,7 +233,7 @@ export function Plans() {
               <div className="max-w-md mx-auto text-center pt-4">
                 {isSignedIn ?
             <Button onClick={() => setStep('payment')} className="w-full py-6 text-base font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl shadow-lg gap-2">
-                    {t("S'abonner avec la formule")} {selectedPlan.name} ({selectedPlan.priceUsd}$) <ArrowRight className="h-5 w-5" />
+                    {t("S'abonner avec la formule {{plan}} ({{price}}$)", { plan: selectedPlan.name, price: selectedPlan.priceUsd })} <ArrowRight className="h-5 w-5" />
                   </Button> :
 
             <Button onClick={() => setLocation("/login")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
@@ -272,9 +272,9 @@ export function Plans() {
             <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="flex flex-col justify-between p-3.5 bg-card border border-border rounded-xl hover:border-primary/40 transition-all text-center">
                   <div className="mb-2">
                     <div className="font-semibold text-xs text-foreground">{link.label}</div>
-                    <div className="text-[11px] text-muted-foreground">{link.desc}</div>
+                    <div className="text-[11px] text-muted-foreground">{t(link.desc)}</div>
                   </div>
-                  <Button size="sm" className="w-full h-8 text-xs bg-primary text-white gap-1">Rejwenn</Button>
+                  <Button size="sm" className="w-full h-8 text-xs bg-primary text-white gap-1">{t("Rejoindre")}</Button>
                 </a>
             )}
             </div>
@@ -288,7 +288,7 @@ export function Plans() {
             <div className="border-b pb-4">
               <h2 className="text-2xl font-serif font-bold">{t('plans.how_to_pay')}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {t("Formule choisie :")} <span className="font-bold text-yellow-500">{selectedPlan.name} ({selectedPlan.priceUsd}{t("$ USD / ~")}{selectedPlan.htg} {t("HTG /")} {selectedPlan.days} {t("jours)")}</span>
+                {t("Formule choisie :")} <span className="font-bold text-yellow-500">{t("{{plan}} ({{usd}} $ USD / ~{{htg}} HTG / {{days}} jours)", { plan: selectedPlan.name, usd: selectedPlan.priceUsd, htg: selectedPlan.htg, days: selectedPlan.days })}</span>
               </p>
             </div>
 
@@ -300,9 +300,9 @@ export function Plans() {
                   <Globe className="h-4 w-4" /> {t("1. Si vous résidez à l'Étranger (TapTap Send)")}
                 </h3>
                 <div className="space-y-2 text-xs text-muted-foreground pl-2">
-                  <p>{t("• Ouvrez l'application")} <strong>{t("TapTap Send")}</strong>.</p>
-                  <p>{t("• Sélectionnez")} <strong>{t("Haïti (+509)")}</strong> {t("comme destination.")}</p>
-                  <p>{t("• Saisissez le montant exact de la formule :")} <strong className="text-foreground">{selectedPlan.priceUsd} {t("$ USD")}</strong>.</p>
+                  <p><Trans i18nKey="• Ouvrez l'application <b>TapTap Send</b>." components={{ b: <strong /> }} /></p>
+                  <p><Trans i18nKey="• Sélectionnez <b>Haïti (+509)</b> comme destination." components={{ b: <strong /> }} /></p>
+                  <p><Trans i18nKey="• Saisissez le montant exact de la formule : <b>{{price}} $ USD</b>." values={{ price: selectedPlan.priceUsd }} components={{ b: <strong className="text-foreground" /> }} /></p>
                   <p>{t("• Envoyez sur le compte NatCash :")}</p>
                   <div className="p-3 bg-muted/40 border border-border/60 rounded-lg space-y-1 my-2">
                     <p className="text-xs">{t("Numéro NatCash :")} <span className="font-bold text-foreground font-mono">+509 32 49 24 65</span></p>
@@ -318,7 +318,7 @@ export function Plans() {
                   <MapPin className="h-4 w-4" /> {t("2. Si vous résidez en Haïti (Dépôt / Transfert)")}
                 </h3>
                 <div className="space-y-2 text-xs text-muted-foreground pl-2">
-                  <p>{t("• Effectuez simplement un")} <strong>{t("dépôt ou un transfert direct")}</strong> {t("d'un montant de")} <strong className="text-foreground">{selectedPlan.htg} HTG</strong>.</p>
+                  <p><Trans i18nKey="• Effectuez simplement un <b>dépôt ou un transfert direct</b> d'un montant de <c>{{htg}} HTG</c>." values={{ htg: selectedPlan.htg }} components={{ b: <strong />, c: <strong className="text-foreground" /> }} /></p>
                   <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg space-y-1 my-2">
                     <p className="text-xs">{t("NatCash :")} <span className="font-bold text-emerald-500 font-mono">+509 32 49 24 65</span></p>
                     <p className="text-xs">{t("Nom du compte :")} <span className="font-bold text-foreground">{t("Dafca Saint Vill")}</span></p>
@@ -365,8 +365,8 @@ export function Plans() {
                 <form onSubmit={handlePaymentSubmit} className="space-y-6">
                   <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs space-y-1">
                     <p className="font-bold text-yellow-500">{t("Formule :")} {selectedPlan.name}</p>
-                    <p>{t("Montant :")} <strong>{selectedPlan.priceUsd}{t("$ USD")}</strong> (~{selectedPlan.htg} {t("HTG)")}</p>
-                    <p>{t("Accès :")} <strong>{selectedPlan.days} jours</strong> VIP</p>
+                    <p>{t("Montant :")} <strong>{selectedPlan.priceUsd} $ USD</strong> (~{selectedPlan.htg} HTG)</p>
+                    <p>{t("Accès :")} <strong>{t("{{days}} jours", { days: selectedPlan.days })}</strong> VIP</p>
                   </div>
 
                   <div className="space-y-2">
@@ -384,7 +384,7 @@ export function Plans() {
                     <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-4 bg-background hover:bg-muted/20 transition-all cursor-pointer group">
                       <input type="file" id="proof-file" required accept="image/png, image/jpeg, image/jpg" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                       <FileImage className={`h-8 w-8 mb-2 ${file ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} transition-colors`} />
-                      <p className="text-xs font-medium text-center text-foreground max-w-[200px] truncate">{file ? file.name : "Cliquez pour choisir un fichier"}</p>
+                      <p className="text-xs font-medium text-center text-foreground max-w-[200px] truncate">{file ? file.name : t("Cliquez pour choisir un fichier")}</p>
                       <p className="text-[10px] text-muted-foreground mt-1">{t('plans.file_limits')}</p>
                     </div>
                   </div>
@@ -406,7 +406,7 @@ export function Plans() {
                     </div> :
 
                 <Button type="submit" disabled={isSubmitting || !file} className="w-full py-5 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl mt-4">
-                      {isSubmitting ? "Sécurisation & Envoi..." : `Envoyer ma preuve (${selectedPlan.priceUsd}$)`}
+                      {isSubmitting ? t("Sécurisation & Envoi...") : t("Envoyer ma preuve ({{priceUsd}}$)", { priceUsd: selectedPlan.priceUsd })}
                     </Button>
                 }
                 </form>
@@ -424,7 +424,7 @@ export function Plans() {
           <div className="space-y-2">
             <h2 className="text-3xl font-serif font-bold tracking-tight">{t('plans.thank_you')}</h2>
             <p className="text-sm text-muted-foreground px-4">
-              {t("Votre preuve de paiement pour la formule")} <span className="font-bold text-yellow-500">{selectedPlan.name} ({selectedPlan.days} {t("jours)")}</span> {t("a été transmise aux administrateurs.")}
+              <Trans i18nKey="Votre preuve de paiement pour la formule <b>{{plan}} ({{days}} jours)</b> a été transmise aux administrateurs." values={{ plan: selectedPlan.name, days: selectedPlan.days }} components={{ b: <span className="font-bold text-yellow-500" /> }} />
             </p>
           </div>
           <Button onClick={() => setLocation("/")} variant="outline" className="w-full py-5 rounded-xl text-xs font-semibold">

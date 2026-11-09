@@ -8,7 +8,7 @@ import {
 "@/lib/supabase-db";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useDateLocale } from "@/lib/date-locale";
 import { AlertCircle, Lock, Star, Download, Heart, Share2, Copy, Loader2, WifiOff, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +53,7 @@ function VipGate() {
 }
 
 export function Watch() {
+  const dateLocale = useDateLocale();
   const { id } = useParams<{id: string;}>();
   const { t } = useTranslation();
   const { isSignedIn, user, appUser, isLoading: authLoading } = useAuth();
@@ -136,15 +137,15 @@ export function Watch() {
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      toast.success("Lien copié");
+      toast.success(t("Lien copié"));
     } catch {
-      toast.error("Impossible de copier le lien");
+      toast.error(t("Impossible de copier le lien"));
     }
   };
 
   const handleLike = () => {
     if (!isSignedIn) {
-      toast.error("Ou bezwen konekte pouw ka renmen videyo sa a");
+      toast.error(t("Vous devez être connecté pour aimer cette vidéo"));
       return;
     }
     setIsAnimating(true);
@@ -156,13 +157,13 @@ export function Watch() {
     } else {
       setIsLiked(true);
       setLikesCount((prev) => prev + 1);
-      toast.success("Mèsi pou sipò w !");
+      toast.success(t("Merci pour votre soutien !"));
     }
   };
 
   const handleShare = async () => {
     if (!isSignedIn) {
-      toast.error("Ou bezwen konekte pouw ka pataje videyo sa a");
+      toast.error(t("Vous devez être connecté pour partager cette vidéo"));
       return;
     }
     const url = window.location.href;
@@ -178,16 +179,16 @@ export function Watch() {
   const handleDownload = async () => {
     if (!id || !appUser) return;
     if (!isSignedIn) {
-      toast.error("Fòk ou konekte pou kapab telechaje");
+      toast.error(t("Vous devez être connecté pour télécharger"));
       return;
     }
     if (video?.isVip && !isUserVip) {
-      toast.error("Vidéo VIP Abonnez-vous pour accéder au téléchargement.");
+      toast.error(t("Vidéo VIP Abonnez-vous pour accéder au téléchargement."));
       return;
     }
 
     setDownloadPending(true);
-    const toastId = toast.loading("Démarrage du téléchargement...");
+    const toastId = toast.loading(t("Démarrage du téléchargement..."));
 
     try {
       const res = await requestDownload(id, appUser.id, isUserVip ?? false, appUser.freeDownloadsUsed);
@@ -208,20 +209,20 @@ export function Watch() {
       document.body.removeChild(a);
 
       toast.success(
-        isUserVip ? "Téléchargement lancé dans le navigateur !" : `Téléchargement lancé. ${res.remaining} restant(s).`,
+        isUserVip ? t("Téléchargement lancé dans le navigateur !") : t("Téléchargement lancé. {{remaining}} restant(s).", { remaining: res.remaining }),
         { id: toastId }
       );
     } catch (e: any) {
       if (e.message === 'vip_required') {
-        toast.error("Abonnement VIP requis pour cette vidéo.", { id: toastId });
+        toast.error(t("Abonnement VIP requis pour cette vidéo."), { id: toastId });
       } else if (e.message === 'quota_exceeded') {
-        toast.error("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité.", { id: toastId });
+        toast.error(t("Limite atteinte. Revenez demain ou passez VIP pour un accès illimité."), { id: toastId });
       } else {
         if (video?.videoUrl) {
           window.location.href = getProxyDownloadUrl(video.videoUrl, video?.title);
-          toast.success("Téléchargement démarré.", { id: toastId });
+          toast.success(t("Téléchargement démarré."), { id: toastId });
         } else {
-          toast.error(e?.message || "Erreur lors du lancement du téléchargement", { id: toastId });
+          toast.error(e?.message || t("Erreur lors du lancement du téléchargement"), { id: toastId });
         }
       }
     } finally {
@@ -232,11 +233,11 @@ export function Watch() {
   const handleOfflineDownload = async () => {
     if (!video || !video.videoUrl) return;
     if (!isSignedIn) {
-      toast.error("Fòk ou konekte pou gade offline");
+      toast.error(t("Vous devez être connecté pour regarder hors ligne"));
       return;
     }
     setOfflineDownloading(true);
-    const toastId = toast.loading("Démarrage de la sauvegarde offline...");
+    const toastId = toast.loading(t("Démarrage de la sauvegarde offline..."));
 
     try {
       const proxiedVideoUrl = getProxyVideoUrl(video.videoUrl);
@@ -251,15 +252,15 @@ export function Watch() {
         (loaded, total) => {
           const pct = total > 0 ? Math.round(loaded / total * 100) : 0;
           if (pct % 10 === 0) {
-            toast.loading(`Téléchargement offline : ${pct}%`, { id: toastId });
+            toast.loading(t("Téléchargement offline : {{pct}}%", { pct }), { id: toastId });
           }
         }
       );
-      toast.success("Vidéo disponible offline !", { id: toastId });
+      toast.success(t("Vidéo disponible offline !"), { id: toastId });
       setIsOfflineAvailable(true);
     } catch (e: any) {
       console.error("Erreur Offline :", e);
-      let msg = e?.message || "Erreur de téléchargement offline";
+      let msg = e?.message || t("Erreur de téléchargement offline");
       if (msg.includes("503") || msg.includes("Failed to fetch")) {
         msg = "Connexion lente ou interrompue. Réessayez dans quelques instants.";
       }
@@ -276,11 +277,11 @@ export function Watch() {
     try {
       await createComment(id, appUser.id, commentBody, anonymous, appUser.displayName || appUser.email);
       setCommentBody("");
-      toast.success("Commentaire ajouté");
+      toast.success(t("Commentaire ajouté"));
       const updated = await listComments(id);
       setComments(updated);
     } catch {
-      toast.error("Erreur lors de l'ajout du commentaire");
+      toast.error(t("Erreur lors de l'ajout du commentaire"));
     } finally {
       setCommentPending(false);
     }
@@ -314,7 +315,7 @@ export function Watch() {
       <div className="container mx-auto px-4 py-24 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-serif font-bold mb-2">{t('common.error_loading')}</h2>
-        <p className="text-muted-foreground mb-6">{videoError || "Vidéo introuvable"}</p>
+        <p className="text-muted-foreground mb-6">{videoError || t("Vidéo introuvable")}</p>
         <Link href="/"><Button>{t('watch.back_home')}</Button></Link>
       </div>);
 
@@ -374,9 +375,9 @@ export function Watch() {
                 </div>
                 <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-2 leading-tight">{video.title}</h1>
                 <div className="flex items-center text-sm text-muted-foreground gap-2">
-                  <span>{video.views.toLocaleString()} vues</span>
+                  <span>{t("{{views}} vues", { count: video.views, views: video.views.toLocaleString() })}</span>
                   <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
-                  <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true, locale: fr })}</span>
+                  <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true, locale: dateLocale })}</span>
                 </div>
               </div>
 
@@ -394,11 +395,11 @@ export function Watch() {
                     isLiked ? "fill-red-500 text-red-500" : "text-muted-foreground"}`
                     } />
                   
-                  <span>{likesCount > 0 ? likesCount.toLocaleString() : "J'aime"}</span>
+                  <span>{likesCount > 0 ? likesCount.toLocaleString() : t("J'aime")}</span>
                 </Button>
 
                 <Button variant="secondary" onClick={handleShare} className="rounded-full bg-accent hover:bg-accent/80">
-                  <Share2 className="h-4 w-4 mr-2" /> Partager
+                  <Share2 className="h-4 w-4 mr-2" /> {t("Partager")}
                 </Button>
                 <Button variant="secondary" onClick={copyLink} className="rounded-full bg-accent hover:bg-accent/80">
                   <Copy className="h-4 w-4 mr-2" /> {t("Copier le lien")}

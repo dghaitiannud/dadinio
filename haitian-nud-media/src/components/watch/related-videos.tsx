@@ -31,7 +31,7 @@ export function RelatedVideos({ relatedVideos }: RelatedVideosProps) {
                   {vid.title}
                 </h4>
                 <div className="text-xs text-muted-foreground mt-1">
-                  {vid.views.toLocaleString()} {t("watch.views")}
+                  {t("{{views}} vues", { count: vid.views, views: vid.views.toLocaleString() })}
                 </div>
               </div>
             </Link>

@@ -76,7 +76,7 @@ export function Header() {
             </SheetContent>
           </Sheet>
           <Link href="/" className="flex items-center gap-2">
-            <img src={t("{{basePath}}/logo.jpg", { basePath: basePath })} alt="Logo" className="h-8 w-8 rounded object-cover" />
+            <img src={`${basePath}/logo.jpg`} alt="Logo" className="h-8 w-8 rounded object-cover" />
             <span className="font-serif font-bold text-xl tracking-tight hidden sm:inline-block">
               {t("HAITIAN NUD")}
             </span>

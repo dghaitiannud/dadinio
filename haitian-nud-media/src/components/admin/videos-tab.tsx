@@ -77,7 +77,7 @@ export function VideosTab({ token }: { token: string }) {
       const v = await adminListVideos();
       setVideos(v);
     } catch {
-      toast.error("Erreur de chargement des vidéos");
+      toast.error(t("Erreur de chargement des vidéos"));
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +96,7 @@ export function VideosTab({ token }: { token: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contentType.trim()) {
-      toast.error("Veuillez renseigner une catégorie");
+      toast.error(t("Veuillez renseigner une catégorie"));
       return;
     }
     setCreatePending(true);
@@ -109,26 +109,26 @@ export function VideosTab({ token }: { token: string }) {
         videoUrl: formData.videoUrl.trim(),
         category: buildCategory(),
       });
-      toast.success("Vidéo ajoutée avec succès");
+      toast.success(t("Vidéo ajoutée avec succès"));
       setOpen(false);
       resetForm();
       await loadVideos();
     } catch (e: any) {
-      toast.error(e?.message || "Erreur lors de l'ajout");
+      toast.error(e?.message || t("Erreur lors de l'ajout"));
     } finally {
       setCreatePending(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Supprimer définitivement cette vidéo ?")) return;
+    if (!confirm(t("Supprimer définitivement cette vidéo ?"))) return;
     setDeletePending(id);
     try {
       await adminDeleteVideo(id);
       setVideos((prev) => prev.filter((v) => v.id !== id));
-      toast.success("Vidéo supprimée");
+      toast.success(t("Vidéo supprimée"));
     } catch (e: any) {
-      toast.error(e?.message || "Erreur de suppression");
+      toast.error(e?.message || t("Erreur de suppression"));
     } finally {
       setDeletePending(null);
     }
@@ -154,7 +154,7 @@ export function VideosTab({ token }: { token: string }) {
               {t("Gestion des Vidéos")}
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {videos.length} vidéo{videos.length > 1 ? "s" : ""} au total
+              {t("{{count}} vidéos au total", { count: videos.length })}
             </p>
           </div>
         </div>
@@ -171,7 +171,7 @@ export function VideosTab({ token }: { token: string }) {
               <DialogHeader>
                 <DialogTitle>{t("Usine à Vidéo (MP4 → HLS)")}</DialogTitle>
                 <DialogDescription className="text-xs">
-                  Uploadez un fichier MP4, il sera automatiquement converti en HLS pour le streaming adaptatif.
+                  {t("Uploadez un fichier MP4, il sera automatiquement converti en HLS pour le streaming adaptatif.")}
                 </DialogDescription>
               </DialogHeader>
               <VideoUploader
@@ -180,7 +180,7 @@ export function VideosTab({ token }: { token: string }) {
                   setUploadOpen(false);
                   setFormData((prev) => ({ ...prev, videoUrl: url }));
                   setOpen(true);
-                  toast.success("URL HLS prête ! Complétez les informations.");
+                  toast.success(t("URL HLS prête ! Complétez les informations."));
                 }}
               />
             </DialogContent>
@@ -200,7 +200,7 @@ export function VideosTab({ token }: { token: string }) {
                   {t("Nouvelle Vidéo")}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  Les champs marqués d'un astérisque (*) sont obligatoires.
+                  {t("Les champs marqués d'un astérisque (*) sont obligatoires.")}
                 </DialogDescription>
               </DialogHeader>
 
@@ -213,7 +213,7 @@ export function VideosTab({ token }: { token: string }) {
                   <Input
                     id="video-title"
                     required
-                    placeholder="Ex: Kompa Lakay - Édition 2026"
+                    placeholder={t("Ex: Kompa Lakay - Édition 2026")}
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
@@ -262,18 +262,18 @@ export function VideosTab({ token }: { token: string }) {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="video-description" className="text-sm font-medium">
-                      Description{" "}
+                      {t("Description")}{" "}
                       <span className="text-xs text-muted-foreground font-normal">
-                        (optionnelle)
+                        {t("(optionnelle)")}
                       </span>
                     </Label>
                     <span className="text-[11px] text-muted-foreground tabular-nums">
-                      {formData.description.length} caractères
+                      {t("{{count}} caractères", { count: formData.description.length })}
                     </span>
                   </div>
                   <Textarea
                     id="video-description"
-                    placeholder="Ajoutez une description, des tags, ou toute information utile..."
+                    placeholder={t("Ajoutez une description, des tags, ou toute information utile...")}
                     className="min-h-[100px] resize-y"
                     value={formData.description}
                     onChange={(e) =>
@@ -378,7 +378,7 @@ export function VideosTab({ token }: { token: string }) {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Rechercher par titre ou catégorie..."
+              placeholder={t("Rechercher par titre ou catégorie...")}
               className="pl-9 pr-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -388,7 +388,7 @@ export function VideosTab({ token }: { token: string }) {
                 type="button"
                 onClick={() => setSearchQuery("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-                aria-label="Effacer la recherche"
+                aria-label={t("Effacer la recherche")}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -396,7 +396,7 @@ export function VideosTab({ token }: { token: string }) {
           </div>
           {searchQuery && (
             <span className="text-xs text-muted-foreground">
-              {filteredVideos.length} résultat{filteredVideos.length > 1 ? "s" : ""}
+              {t("{{count}} résultats", { count: filteredVideos.length })}
             </span>
           )}
         </div>
@@ -408,7 +408,7 @@ export function VideosTab({ token }: { token: string }) {
                 <TableRow>
                   <TableHead className="font-semibold">{t("common.title")}</TableHead>
                   <TableHead className="font-semibold">{t("common.category")}</TableHead>
-                  <TableHead className="font-semibold w-24">Vues</TableHead>
+                  <TableHead className="font-semibold w-24">{t("Vues")}</TableHead>
                   <TableHead className="font-semibold w-28">{t("common.vip")}</TableHead>
                   <TableHead className="w-16"></TableHead>
                 </TableRow>
@@ -428,8 +428,8 @@ export function VideosTab({ token }: { token: string }) {
                       <Film className="h-10 w-10 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">
                         {searchQuery
-                          ? "Aucune vidéo ne correspond à votre recherche."
-                          : "Aucune vidéo pour le moment."}
+                          ? t("Aucune vidéo ne correspond à votre recherche.")
+                          : t("Aucune vidéo pour le moment.")}
                       </p>
                     </TableCell>
                   </TableRow>
@@ -456,7 +456,7 @@ export function VideosTab({ token }: { token: string }) {
                             VIP
                           </Badge>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Gratuit</span>
+                          <span className="text-xs text-muted-foreground">{t("Gratuit")}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -466,7 +466,7 @@ export function VideosTab({ token }: { token: string }) {
                           onClick={() => handleDelete(v.id)}
                           disabled={deletePending === v.id}
                           className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-60 group-hover:opacity-100 transition-opacity"
-                          aria-label="Supprimer la vidéo"
+                          aria-label={t("Supprimer la vidéo")}
                         >
                           {deletePending === v.id ? (
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />

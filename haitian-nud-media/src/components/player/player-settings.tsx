@@ -42,7 +42,7 @@ export function PlayerSettings({
             currentQualityIndex === -1 ? "text-primary font-bold" : "text-zinc-200"}`
             }>
             
-                <span>{autoTargetHeight ? `Auto (${autoTargetHeight}p)` : "Auto (Débit)"}</span>
+                <span>{autoTargetHeight ? t("Auto ({{autoTargetHeight}}p)", { autoTargetHeight }) : t("Auto (Débit)")}</span>
                 {currentQualityIndex === -1 && <Check className="h-3 w-3" />}
               </button>
               {[...levels].sort((a, b) => a.height - b.height).map((lvl) =>
@@ -63,7 +63,7 @@ export function PlayerSettings({
         }
           <div>
             <div className="font-semibold text-zinc-400 uppercase text-[10px] px-2 py-1">
-              Vitesse
+              {t("Vitesse")}
             </div>
             {[0.75, 1, 1.25, 1.5, 2].map((s) =>
           <button
@@ -74,7 +74,7 @@ export function PlayerSettings({
             playbackSpeed === s ? "text-primary font-bold" : "text-zinc-200"}`
             }>
             
-                <span>{s === 1 ? "Normal (1x)" : `${s}x`}</span>
+                <span>{s === 1 ? t("Normal (1x)") : `${s}x`}</span>
                 {playbackSpeed === s && <Check className="h-3 w-3" />}
               </button>
           )}

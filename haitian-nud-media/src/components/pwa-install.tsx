@@ -57,7 +57,7 @@ export function PwaInstallButton({ variant = "compact" }: {variant?: "compact" |
         </div>
         {deferred &&
         <Button size="sm" onClick={install} className="bg-primary text-primary-foreground shrink-0">
-            <Download className="h-4 w-4 mr-1" /> Installer
+            <Download className="h-4 w-4 mr-1" /> {t("Installer")}
           </Button>
         }
       </div>);

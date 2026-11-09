@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useDateLocale } from "@/lib/date-locale";
 import { adminListVipRequests, adminProcessVipRequest, type VipRequest } from "@/lib/supabase-db";import { useTranslation } from "react-i18next";
 
-export function VipRequestsTab({ token }: {token: string;}) {const { t } = useTranslation();
+export function VipRequestsTab({ token }: {token: string;}) {
+  const dateLocale = useDateLocale();const { t } = useTranslation();
   const [requests, setRequests] = useState<VipRequest[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<Record<string, string>>({});
@@ -19,7 +20,7 @@ export function VipRequestsTab({ token }: {token: string;}) {const { t } = useTr
 
   const loadRequests = async () => {
     try {const data = await adminListVipRequests();setRequests(data);}
-    catch (err) {toast.error("Impossible de charger les reçus VIP");}
+    catch (err) {toast.error(t("Impossible de charger les reçus VIP"));}
   };
 
   const handleAction = async (r: VipRequest, action: "approved" | "rejected") => {
@@ -27,7 +28,7 @@ export function VipRequestsTab({ token }: {token: string;}) {const { t } = useTr
     const duration = parseInt(selectedDuration[r.id] || String(r.durationDays || 30), 10);
     try {
       await adminProcessVipRequest(r.id, r.userId, action, duration);
-      toast.success(action === "approved" ? `VIP activé (${duration} jours) !` : "Demande rejetée");
+      toast.success(action === "approved" ? t("VIP activé ({{days}} jours) !", { days: duration }) : t("Demande rejetée"));
       try {
         await fetch("https://api.haitiannud.com/api/push/send", {
           method: "POST",
@@ -40,7 +41,7 @@ export function VipRequestsTab({ token }: {token: string;}) {const { t } = useTr
         });
       } catch (pushErr) {console.warn("Échec push:", pushErr);}
       await loadRequests();
-    } catch (err: any) {toast.error(err?.message || "Erreur");} finally
+    } catch (err: any) {toast.error(err?.message || t("Erreur"));} finally
     {setProcessingId(null);}
   };
 
@@ -51,9 +52,9 @@ export function VipRequestsTab({ token }: {token: string;}) {const { t } = useTr
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Email</TableHead><TableHead>Offre</TableHead><TableHead>{t("Méthode")}</TableHead>
-              <TableHead>Preuve</TableHead><TableHead>Date</TableHead><TableHead>Statut</TableHead>
-              <TableHead>{t("Durée")}</TableHead><TableHead className="text-right">Actions</TableHead>
+              <TableHead>{t("Email")}</TableHead><TableHead>{t("Offre")}</TableHead><TableHead>{t("Méthode")}</TableHead>
+              <TableHead>{t("Preuve")}</TableHead><TableHead>{t("Date")}</TableHead><TableHead>{t("Statut")}</TableHead>
+              <TableHead>{t("Durée")}</TableHead><TableHead className="text-right">{t("Actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -68,13 +69,13 @@ export function VipRequestsTab({ token }: {token: string;}) {const { t } = useTr
                     <DialogContent className="max-w-xl"><img src={r.proofUrl} alt={t("Reçu")} className="w-full rounded" /></DialogContent>
                   </Dialog>
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{format(new Date(r.createdAt), "dd MMM yyyy", { locale: fr })}</TableCell>
-                <TableCell><span className={`px-2 py-1 rounded-full text-[11px] uppercase ${r.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : r.status === 'rejected' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-500'}`}>{r.status}</span></TableCell>
+                <TableCell className="text-xs text-muted-foreground">{format(new Date(r.createdAt), t("date.short"), { locale: dateLocale })}</TableCell>
+                <TableCell><span className={`px-2 py-1 rounded-full text-[11px] uppercase ${r.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : r.status === 'rejected' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-500'}`}>{r.status === 'approved' ? t("Approuvée") : r.status === 'rejected' ? t("Rejetée") : t("En attente")}</span></TableCell>
                 <TableCell>
                   {r.status === 'pending' ?
                 <Select value={selectedDuration[r.id] || String(r.durationDays || 30)} onValueChange={(val) => setSelectedDuration({ ...selectedDuration, [r.id]: val })}>
                       <SelectTrigger className="w-24 h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>{[7, 10, 15, 30, 40, 105, 365].map((d) => <SelectItem key={d} value={String(d)}>{d} Jours</SelectItem>)}</SelectContent>
+                      <SelectContent>{[7, 10, 15, 30, 40, 105, 365].map((d) => <SelectItem key={d} value={String(d)}>{t("{{days}} jours", { days: d })}</SelectItem>)}</SelectContent>
                     </Select> :
                 "—"}
                 </TableCell>

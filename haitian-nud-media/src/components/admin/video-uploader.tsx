@@ -20,7 +20,7 @@ export function VideoUploader({ onUploadSuccess, token }: {onUploadSuccess: (url
     const jobId = crypto.randomUUID();
     setStatus("uploading");
     setProgress(0);
-    setMessage("Connexion au serveur...");
+    setMessage(t("Connexion au serveur..."));
 
     const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?token=${token}`);
 
@@ -59,17 +59,17 @@ export function VideoUploader({ onUploadSuccess, token }: {onUploadSuccess: (url
       if (e.lengthComputable) {
         const pct = Math.round(e.loaded / e.total * 100);
         setProgress(Math.round(pct * 0.1));
-        setMessage(`Envoi du fichier... (${pct}%)`);
+        setMessage(t("Envoi du fichier... ({{pct}}%)", { pct }));
       }
     };
 
     xhr.onload = () => {
       if (xhr.status === 200) {
         setStatus("processing");
-        setMessage("Fichier reçu, transcodage en cours...");
+        setMessage(t("Fichier reçu, transcodage en cours..."));
       } else {
         setStatus("error");
-        setMessage("Erreur d'upload (Session invalide)");
+        setMessage(t("Erreur d'upload (Session invalide)"));
       }
     };
     xhr.send(formData);
@@ -89,7 +89,7 @@ export function VideoUploader({ onUploadSuccess, token }: {onUploadSuccess: (url
       <div className="text-center bg-muted/30 p-4 rounded-xl border border-border">
           <p className="text-sm mb-4">{t("Fichier :")} <span className="text-primary font-mono">{file.name}</span></p>
           <Button onClick={handleUpload} className="w-full">{t("Lancer la conversion HLS")}</Button>
-          <Button variant="ghost" onClick={() => setFile(null)} className="mt-2 text-xs w-full">Annuler</Button>
+          <Button variant="ghost" onClick={() => setFile(null)} className="mt-2 text-xs w-full">{t("Annuler")}</Button>
         </div>
       }
 

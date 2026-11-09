@@ -3,6 +3,7 @@
 // Limit: 5 videos max (100MB each = ~500MB limit)
 
 import { toast } from "sonner";
+import i18n from "@/i18n";
 
 const DB_NAME = "haitian-nud-offline";
 const DB_VERSION = 1;
@@ -48,7 +49,7 @@ export async function listOfflineVideos(): Promise<OfflineVideo[]> {
     });
   } catch (err) {
     console.warn("Offline store not available:", err);
-    toast.error("Le stockage hors-ligne n'est pas disponible sur ce navigateur.");
+    toast.error(i18n.t("Le stockage hors-ligne n'est pas disponible sur ce navigateur."));
     return [];
   }
 }
@@ -102,9 +103,9 @@ export async function saveOfflineVideo(video: Omit<OfflineVideo, "downloadedAt" 
   } catch (err: any) {
     // Gestion du quota dépassé (QuotaExceededError)
     if (err.name === "QuotaExceededError" || err.message?.toLowerCase().includes("quota")) {
-      toast.error("Stockage plein, impossible de sauvegarder la vidéo.");
+      toast.error(i18n.t("Stockage plein, impossible de sauvegarder la vidéo."));
     } else {
-      toast.error(err.message || "Erreur lors de la sauvegarde hors-ligne.");
+      toast.error(err.message || i18n.t("Erreur lors de la sauvegarde hors-ligne."));
     }
     throw err; // On relance l'erreur pour que le composant appelant puisse réagir
   }

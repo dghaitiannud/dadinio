@@ -18,7 +18,7 @@ export function UsersTab() {
 
   const loadUsers = async () => {
     try {const u = await adminListUsers();setUsers(u);}
-    catch (err) {toast.error("Erreur au chargement");}
+    catch (err) {toast.error(t("Erreur au chargement"));}
   };
 
   const handleToggleBlock = async (id: string, currentBlocked: boolean) => {
@@ -26,26 +26,26 @@ export function UsersTab() {
     setBlockPending(id);
     try {
       await adminBlockUser(appUser.id, id, !currentBlocked);
-      toast.success(currentBlocked ? "Utilisateur débloqué" : "Utilisateur bloqué");
+      toast.success(currentBlocked ? t("Utilisateur débloqué") : t("Utilisateur bloqué"));
       await loadUsers();
-    } catch (e: any) {toast.error(e?.message || "Erreur");} finally
+    } catch (e: any) {toast.error(e?.message || t("Erreur"));} finally
     {setBlockPending(null);}
   };
 
   return (
     <Card className="bg-card">
-      <CardHeader><CardTitle>Utilisateurs</CardTitle></CardHeader>
+      <CardHeader><CardTitle>{t("Utilisateurs")}</CardTitle></CardHeader>
       <CardContent>
         <Table>
-          <TableHeader><TableRow><TableHead>{t('account.email')}</TableHead><TableHead>{t('account.plan')}</TableHead><TableHead>Date</TableHead><TableHead>Statut</TableHead><TableHead></TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>{t('account.email')}</TableHead><TableHead>{t('account.plan')}</TableHead><TableHead>{t("Date")}</TableHead><TableHead>{t("Statut")}</TableHead><TableHead></TableHead></TableRow></TableHeader>
           <TableBody>
             {users.map((u) =>
             <TableRow key={u.id} className={u.blocked ? "opacity-50" : ""}>
                 <TableCell className="font-medium">{u.email}</TableCell>
                 <TableCell><span className={`px-2 py-1 rounded text-xs ${u.plan === 'vip' ? 'bg-primary text-white' : 'bg-muted'}`}>{u.plan.toUpperCase()}</span></TableCell>
                 <TableCell>{format(new Date(u.createdAt), "dd/MM/yyyy")}</TableCell>
-                <TableCell>{u.blocked ? <span className="text-destructive font-medium">{t("Bloqué")}</span> : "Actif"}</TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => handleToggleBlock(u.id, u.blocked)} disabled={blockPending === u.id} className={u.blocked ? "text-green-500" : "text-destructive"}>{u.blocked ? t("Débloquer") : "Bloquer"}</Button></TableCell>
+                <TableCell>{u.blocked ? <span className="text-destructive font-medium">{t("Bloqué")}</span> : t("Actif")}</TableCell>
+                <TableCell className="text-right"><Button variant="ghost" size="sm" onClick={() => handleToggleBlock(u.id, u.blocked)} disabled={blockPending === u.id} className={u.blocked ? "text-green-500" : "text-destructive"}>{u.blocked ? t("Débloquer") : t("Bloquer")}</Button></TableCell>
               </TableRow>
             )}
           </TableBody>

@@ -61,20 +61,20 @@ export function Footer() {
       <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8">
         <div className="md:col-span-2">
           <Link href="/" className="flex items-center gap-2 mb-4">
-            <img src={t("{{basePath}}/logo.jpg", { basePath: basePath })} alt={t("HAITIAN NUD")} className="h-10 w-10 rounded object-cover" />
+            <img src={`${basePath}/logo.jpg`} alt={t("HAITIAN NUD")} className="h-10 w-10 rounded object-cover" />
             <span className="font-serif font-bold text-2xl tracking-tight">{t("HAITIAN NUD")}</span>
           </Link>
 
           <div className="flex flex-col gap-2 mb-6">
             <a href="https://tiktok.com/@www.haitiannud.com" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="w-full sm:w-auto justify-start gap-2 border-border hover:border-primary/60 hover:bg-primary/5">
-                <TikTokIcon /> {t("@www.haitiannud.com")}
+                <TikTokIcon /> @www.haitiannud.com
               </Button>
             </a>
             
             <a href="https://www.instagram.com/dg_haitian_nud?igsh=azNndHRpaTAxdW54" target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm" className="w-full sm:w-auto justify-start gap-2 border-border hover:border-pink-500/60 hover:bg-pink-500/5 hover:text-pink-400">
-                <InstagramIcon /> {t("@dg_haitian_nud")}
+                <InstagramIcon /> @dg_haitian_nud
               </Button>
             </a>
             
@@ -135,7 +135,7 @@ export function Footer() {
       </div>
 
       <div className="container mx-auto px-4 mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-        <p>{t('footer.rights_reserved')}</p>
+        <p>{t('footer.rights_reserved', { year: new Date().getFullYear() })}</p>
       </div>
     </footer>);
 

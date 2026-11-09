@@ -45,7 +45,7 @@ export function AgeGate() {const { t } = useTranslation();
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-primary text-2xl font-bold">18+</span>
           </div>
-          <DialogTitle className="text-2xl font-serif text-center">Avertissement</DialogTitle>
+          <DialogTitle className="text-2xl font-serif text-center">{t("Avertissement")}</DialogTitle>
           <DialogDescription className="text-center text-base mt-2">
             {t("Réservé aux adultes (18+). Mineurs interdits.")}
             <br /><br />
