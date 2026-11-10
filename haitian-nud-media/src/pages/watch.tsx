@@ -321,6 +321,9 @@ export function Watch() {
 
   }
 
+  // 👇 Calculé une seule fois : la description contient-elle réellement du texte ?
+  const hasDescription = Boolean(video.description?.trim());
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-7xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -362,8 +365,10 @@ export function Watch() {
           </div>
 
           {/* DETAILS DE LA VIDEO */}
-          <div className="mb-6">
-            <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+          {/* Marge extérieure conditionnelle : 24px avec description, 16px sans (pour ne pas créer de vide entre titre et commentaires) */}
+          <div className={hasDescription ? "mb-6" : "mb-4"}>
+            {/* Marge intérieure conditionnelle : espace sous le titre uniquement si la description le suit */}
+            <div className={`flex flex-wrap items-start justify-between gap-4 ${hasDescription ? "mb-4" : ""}`}>
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="secondary" className="bg-accent text-accent-foreground border-border">{video.category}</Badge>
@@ -434,9 +439,12 @@ export function Watch() {
               </div>
             </div>
 
-            <div className="p-4 bg-card border border-border rounded-xl">
-              <p className="text-sm whitespace-pre-wrap">{video.description}</p>
-            </div>
+            {/* SECTION DESCRIPTION — affichée uniquement si la description n'est pas vide */}
+            {hasDescription && (
+              <div className="p-4 bg-card border border-border rounded-xl">
+                <p className="text-sm whitespace-pre-wrap">{video.description}</p>
+              </div>
+            )}
           </div>
 
           {/* COMMENTAIRES (via le composant modulaire) */}
