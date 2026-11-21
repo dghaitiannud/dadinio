@@ -82,7 +82,7 @@ BEGIN
 END;
 $audit$;
 
-REVOKE ALL ON FUNCTION public.audit_trigger_fn() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.audit_trigger_fn() FROM PUBLIC, anon, authenticated;
 
 -- Preserve the one-view-per-hour rule for authenticated visitors while
 -- pinning the SECURITY DEFINER function to a safe search_path.
@@ -125,7 +125,7 @@ BEGIN
 END;
 $new_user$;
 
-REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
 
 -- Keep the existing public view-counter RPC compatible with the frontend,
 -- while fixing its SECURITY DEFINER search_path and qualifying the target table.
@@ -434,7 +434,10 @@ BEGIN
 
   RETURN NEW;
 END;
-$$;
+$;
+
+-- This function is invoked only by the trigger on public.users.
+REVOKE ALL ON FUNCTION public.guard_user_privileged_fields() FROM PUBLIC, anon, authenticated;
 
 -- Replace the legacy trigger so that two independent guards do not
 -- execute with conflicting service-role/admin behavior.
@@ -764,18 +767,24 @@ BEGIN
     -- Preserve the existing live-operator exception without granting global admin.
     EXECUTE 'CREATE POLICY "live_status_live_admin_update" ON public.live_status
       FOR UPDATE TO authenticated
-      USING (EXISTS (
-        SELECT 1 FROM public.users u
-        WHERE u.id = auth.uid()
-          AND lower(u.email) = ''liveadmin@gmail.com''
-          AND COALESCE(u.blocked, FALSE) IS FALSE
-      ))
-      WITH CHECK (EXISTS (
-        SELECT 1 FROM public.users u
-        WHERE u.id = auth.uid()
-          AND lower(u.email) = ''liveadmin@gmail.com''
-          AND COALESCE(u.blocked, FALSE) IS FALSE
-      ))';
+      USING (
+        id = 1
+        AND EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid()
+            AND lower(u.email) = ''liveadmin@gmail.com''
+            AND COALESCE(u.blocked, FALSE) IS FALSE
+        )
+      )
+      WITH CHECK (
+        id = 1
+        AND EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid()
+            AND lower(u.email) = ''liveadmin@gmail.com''
+            AND COALESCE(u.blocked, FALSE) IS FALSE
+        )
+      )';
   END IF;
 
   IF to_regclass('public.app_settings') IS NOT NULL THEN
@@ -1032,6 +1041,9 @@ BEGIN
   END IF;
 END;
 $storage_acl$;
+
+-- Make the newly created/modified views and RPCs visible to PostgREST immediately.
+NOTIFY pgrst, 'reload schema';
 
 COMMIT;
 
