@@ -24,6 +24,55 @@ $$;
 REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 
+-- Harden the existing audit trigger function. The audit table and its
+-- columns are already used by the live audit triggers.
+CREATE OR REPLACE FUNCTION public.audit_trigger_fn()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $audit$
+BEGIN
+  INSERT INTO public.audit_log (table_name, operation, user_id, old_data, new_data)
+  VALUES (
+    TG_TABLE_NAME,
+    TG_OP,
+    auth.uid(),
+    CASE WHEN TG_OP = 'DELETE' THEN row_to_json(OLD)::jsonb ELSE NULL END,
+    CASE WHEN TG_OP IN ('INSERT', 'UPDATE') THEN row_to_json(NEW)::jsonb ELSE NULL END
+  );
+  RETURN COALESCE(NEW, OLD);
+END;
+$audit$;
+
+REVOKE ALL ON FUNCTION public.audit_trigger_fn() FROM PUBLIC;
+
+-- Preserve the one-view-per-hour rule for authenticated visitors while
+-- pinning the SECURITY DEFINER function to a safe search_path.
+CREATE OR REPLACE FUNCTION public.can_insert_view(p_video_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $can_view$
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN TRUE;
+  END IF;
+
+  RETURN NOT EXISTS (
+    SELECT 1
+    FROM public.views
+    WHERE video_id = p_video_id
+      AND user_id = auth.uid()
+      AND created_at > NOW() - INTERVAL '1 hour'
+  );
+END;
+$can_view$;
+
+REVOKE ALL ON FUNCTION public.can_insert_view(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.can_insert_view(UUID) TO anon, authenticated;
+
 -- Keep auth.users profile creation intact, but pin the SECURITY DEFINER
 -- function to a safe search_path.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
