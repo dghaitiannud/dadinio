@@ -816,6 +816,82 @@ BEGIN
 END;
 $optional_grants$;
 
+-- Browser roles do not need sequence privileges on legacy serial IDs.
+-- Remove direct sequence access from PUBLIC/anon/authenticated; trusted
+-- PostgreSQL/service_role operations remain unaffected.
+DO $sequence_acl$
+BEGIN
+  IF to_regclass('public.app_banner_id_seq') IS NOT NULL THEN
+    REVOKE ALL PRIVILEGES ON SEQUENCE public.app_banner_id_seq FROM PUBLIC, anon, authenticated;
+  END IF;
+  IF to_regclass('public.live_status_id_seq') IS NOT NULL THEN
+    REVOKE ALL PRIVILEGES ON SEQUENCE public.live_status_id_seq FROM PUBLIC, anon, authenticated;
+  END IF;
+END;
+$sequence_acl$;
+
+-- VIP payment proofs contain sensitive payment information. Make the bucket
+-- private and remove the global public-read policy plus legacy vip-proofs
+-- policies. The app uploads UUID-prefixed filenames, so ownership is checked
+-- against the first filename segment.
+DO $storage_acl$
+DECLARE
+  policy_record RECORD;
+BEGIN
+  IF to_regclass('storage.objects') IS NOT NULL THEN
+    ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+    FOR policy_record IN
+      SELECT policyname
+      FROM pg_policies
+      WHERE schemaname = 'storage'
+        AND tablename = 'objects'
+        AND (
+          policyname = 'Public Bucket Access'
+          OR COALESCE(qual, '') ILIKE '%vip-proofs%'
+          OR COALESCE(with_check, '') ILIKE '%vip-proofs%'
+        )
+    LOOP
+      EXECUTE format('DROP POLICY %I ON storage.objects', policy_record.policyname);
+    END LOOP;
+
+    UPDATE storage.buckets
+    SET public = FALSE
+    WHERE id = 'vip-proofs';
+
+    CREATE POLICY vip_proofs_upload_own
+    ON storage.objects
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (
+      bucket_id = 'vip-proofs'
+      AND split_part(name, '-', 1) = auth.uid()::text
+    );
+
+    CREATE POLICY vip_proofs_read_own_or_admin
+    ON storage.objects
+    FOR SELECT
+    TO authenticated
+    USING (
+      bucket_id = 'vip-proofs'
+      AND (
+        split_part(name, '-', 1) = auth.uid()::text
+        OR public.is_admin()
+      )
+    );
+
+    CREATE POLICY vip_proofs_admin_delete
+    ON storage.objects
+    FOR DELETE
+    TO authenticated
+    USING (
+      bucket_id = 'vip-proofs'
+      AND public.is_admin()
+    );
+  END IF;
+END;
+$storage_acl$;
+
 COMMIT;
 
 -- After applying, test:
