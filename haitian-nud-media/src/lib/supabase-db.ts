@@ -233,7 +233,7 @@ export async function requestDownload(
 // ====================================================
 
 export async function getPhotos(options?: { category?: string }): Promise<Photo[]> {
-  let query = supabase.from('photos').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
+  let query = supabase.from('photo_catalog').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
   if (options?.category) {
     query = query.eq('category', options.category);
   }
@@ -414,7 +414,7 @@ export async function adminDeleteVideo(id: string) {
 export async function adminListPhotos(page: number = 1): Promise<Photo[]> {
   const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
   const { data, error } = await supabase
-    .from('photos')
+    .from('photo_catalog')
     .select('*')
     .order('created_at', { ascending: false })
     .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
