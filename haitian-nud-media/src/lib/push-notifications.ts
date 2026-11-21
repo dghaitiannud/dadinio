@@ -173,19 +173,17 @@ export async function unsubscribeFromPush(): Promise<boolean> {
 
     const {
       data: { session },
+      error: sessionError,
     } = await supabase.auth.getSession();
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    if (session?.access_token) {
-      headers.Authorization = `Bearer ${session.access_token}`;
-    }
+    if (sessionError || !session?.access_token) return false;
 
     const response = await fetch(`${API_BASE}/api/push/unsubscribe`, {
       method: "POST",
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
       body: JSON.stringify({ endpoint: subscription.endpoint }),
     });
 
