@@ -1,5 +1,9 @@
 -- ========================================================
 -- HAITIAN NUD MÉDIA - SQL COMPLET POUR SUPABASE
+-- LEGACY INITIAL BOOTSTRAP: do not re-run this file on an existing database.
+-- After the first installation, apply supabase-security-hardening.sql once.
+-- The hardening migration removes permissive self-update, push-subscription,
+-- and download policies, and adds server-side VIP/download authorization.
 -- Projet : https://lcfnjxqademkrcocvtlo.supabase.co
 -- Copier-coller TOUT ce bloc dans SQL Editor > Run
 -- ========================================================

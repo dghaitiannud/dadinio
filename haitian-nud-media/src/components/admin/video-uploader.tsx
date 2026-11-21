@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useDropzone } from "react-dropzone";
+import { consumeAuthenticatedSSE } from "@/lib/authenticated-sse";
 import { UploadCloud, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";import { useTranslation } from "react-i18next";
 
@@ -22,27 +23,34 @@ export function VideoUploader({ onUploadSuccess, token }: {onUploadSuccess: (url
     setProgress(0);
     setMessage(t("Connexion au serveur..."));
 
-    const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?token=${token}`);
-
-    es.addEventListener("progress", (e) => {
-      const data = JSON.parse(e.data);
-      setProgress(data.percent);
-      setMessage(data.message);
-      if (data.step === "transcode" || data.step === "upload") setStatus("processing");
-    });
-
-    es.addEventListener("complete", (e) => {
-      const data = JSON.parse(e.data);
-      setStatus("done");
-      es.close();
-      setTimeout(() => onUploadSuccess(data.url), 1500);
-    });
-
-    es.addEventListener("error", (e: any) => {
-      if (e.data) {
-        setMessage(JSON.parse(e.data).message);
+    const streamController = new AbortController();
+    consumeAuthenticatedSSE(
+      `https://api.haitiannud.com/api/upload-progress/${jobId}`,
+      token,
+      (event, rawData) => {
+        const data = rawData ? JSON.parse(rawData) : {};
+        if (event === "progress") {
+          setProgress(data.percent);
+          setMessage(data.message);
+          if (data.step === "transcode" || data.step === "upload") setStatus("processing");
+        } else if (event === "complete") {
+          setStatus("done");
+          streamController.abort();
+          setTimeout(() => onUploadSuccess(data.url), 1500);
+        } else if (event === "error") {
+          setMessage(data.message || t("Erreur lors du traitement"));
+          setStatus("error");
+          streamController.abort();
+        } else if (event === "close") {
+          streamController.abort();
+        }
+      },
+      streamController.signal
+    ).catch((error) => {
+      if (!streamController.signal.aborted) {
+        console.warn("Upload progress stream failed:", error);
         setStatus("error");
-        es.close();
+        setMessage(t("Connexion de progression interrompue"));
       }
     });
 
@@ -68,9 +76,15 @@ export function VideoUploader({ onUploadSuccess, token }: {onUploadSuccess: (url
         setStatus("processing");
         setMessage(t("Fichier reçu, transcodage en cours..."));
       } else {
+        streamController.abort();
         setStatus("error");
         setMessage(t("Erreur d'upload (Session invalide)"));
       }
+    };
+    xhr.onerror = () => {
+      streamController.abort();
+      setStatus("error");
+      setMessage(t("Connexion au serveur impossible"));
     };
     xhr.send(formData);
   };

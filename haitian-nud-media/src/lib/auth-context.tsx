@@ -2,8 +2,6 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { supabase } from './supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-const ADMIN_EMAILS = ['dghaitiannud@gmail.com'];
-
 export interface AppUser {
   id: string;
   email: string;
@@ -42,13 +40,12 @@ export function useAuth() {
 // Map raw Supabase row (snake_case) → AppUser (camelCase)
 function mapUser(data: any, emailOverride?: string): AppUser {
   const email = data.email || emailOverride || '';
-  const isAdminByEmail = ADMIN_EMAILS.includes(email.toLowerCase());
   return {
     id: data.id,
     email,
     displayName: data.display_name || null,
     plan: data.plan || 'free',
-    isAdmin: data.is_admin === true || isAdminByEmail,
+    isAdmin: data.is_admin === true,
     blocked: data.blocked === true,
     ageConfirmed: data.age_confirmed === true,
     freeDownloadsUsed: data.free_downloads_used || 0,
@@ -88,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email,
             display_name: displayName,
             plan: 'free',
-            is_admin: isAdminByEmail,
+            is_admin: false,
             blocked: false,
             age_confirmed: false,
             free_downloads_used: 0,
@@ -107,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email,
             displayName: email.split('@')[0],
             plan: 'free',
-            isAdmin: ADMIN_EMAILS.includes(email.toLowerCase()),
+            isAdmin: false,
             blocked: false,
             ageConfirmed: false,
             freeDownloadsUsed: 0,
@@ -116,29 +113,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } else {
-        // Check subscription expiry
+        // Expiry is enforced by the database download/media checks. Reflect it
+        // locally without letting a browser update its own protected plan field.
         const now = new Date().toISOString();
-        if (data.plan === 'vip' && data.subscription_ends_at && data.subscription_ends_at < now) {
-          const { data: updated } = await supabase
-            .from('users')
-            .update({ plan: 'free' })
-            .eq('id', authUser.id)
-            .select()
-            .single();
-          if (updated) {
-            setAppUser(mapUser(updated, email));
-            return;
-          }
+        if (data.plan === 'vip' && data.subscription_ends_at && data.subscription_ends_at <= now) {
+          setAppUser(mapUser({ ...data, plan: 'free' }, email));
+          return;
         }
-        // Also force is_admin=true in DB for ADMIN_EMAILS if not already set
-        const isAdminByEmail = ADMIN_EMAILS.includes(email.toLowerCase());
-        if (isAdminByEmail && !data.is_admin) {
-          await supabase
-            .from('users')
-            .update({ is_admin: true })
-            .eq('id', authUser.id);
-          data.is_admin = true;
-        }
+
+        // Administrator privileges come only from the protected database profile.
         setAppUser(mapUser(data, email));
       }
     } catch (err) {

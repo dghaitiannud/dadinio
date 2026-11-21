@@ -13,7 +13,7 @@ import {
   Smartphone, Upload, Sparkles, LogIn, ArrowRight, FileImage, Crown, BellRing, ShieldAlert, Check, Globe, MapPin, MessageSquare } from
 "lucide-react";
 
-import { isPushSupported, getPushPermission, subscribeToPush } from "@/lib/push-notifications";
+import { isPushSupported, getPushPermission, subscribeToPush, notifyAdminsOfVipRequest } from "@/lib/push-notifications";
 
 const COMMUNITY_LINKS = [
 { label: "Group WhatsApp 1", url: "https://chat.whatsapp.com/LOPVxj4kg01Eeol3La0oWC?s=cl&p=a&ilr=4&amv=2", desc: "Groupe WhatsApp VIP 1" },
@@ -137,17 +137,10 @@ export function Plans() {
       if (dbError) throw dbError;
 
       try {
-        await fetch("https://api.haitiannud.com/api/push/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: "🚨 Nouveau reçu VIP reçu !",
-            body: `L'utilisateur ${(appUser as any).email} a payé ${selectedPlan.priceUsd}$ (${selectedPlan.name} - ${selectedPlan.days}j) via ${paymentMethod.toUpperCase()}.`,
-            url: "/admin",
-            icon: "/logo.jpg",
-            targetUserId: "admin"
-          })
-        });
+        const notified = await notifyAdminsOfVipRequest();
+        if (!notified) {
+          console.warn("La demande VIP est enregistrée, mais la notification admin n'a pas été envoyée.");
+        }
       } catch (pushErr) {
         console.error("Échec notification admin:", pushErr);
       }
