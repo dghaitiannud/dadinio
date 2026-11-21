@@ -24,6 +24,29 @@ $$;
 REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 
+-- The admin dashboard uses this aggregate. Restrict it to active administrators
+-- and pin the SECURITY DEFINER function to a safe search_path.
+CREATE OR REPLACE FUNCTION public.get_total_views()
+RETURNS BIGINT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $total_views$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'ADMIN_REQUIRED'
+      USING ERRCODE = '42501';
+  END IF;
+
+  RETURN
+    COALESCE((SELECT SUM(views) FROM public.videos), 0)
+    + COALESCE((SELECT SUM(views) FROM public.photos), 0);
+END;
+$total_views$;
+
+REVOKE ALL ON FUNCTION public.get_total_views() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_total_views() TO authenticated;
+
 -- Harden the existing audit trigger function. The audit table and its
 -- columns are already used by the live audit triggers.
 CREATE OR REPLACE FUNCTION public.audit_trigger_fn()
