@@ -24,6 +24,97 @@ $$;
 REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 
+-- Remove any older permissive policies on the core application tables before
+-- recreating a known least-privilege policy set.
+DO $
+DECLARE
+  table_name TEXT;
+  policy_record RECORD;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'users', 'videos', 'comments', 'downloads', 'views',
+    'tickets', 'push_subscriptions'
+  ] LOOP
+    IF to_regclass(format('public.%I', table_name)) IS NOT NULL THEN
+      EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
+      FOR policy_record IN
+        SELECT policyname
+        FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = table_name
+      LOOP
+        EXECUTE format('DROP POLICY %I ON public.%I', policy_record.policyname, table_name);
+      END LOOP;
+    END IF;
+  END LOOP;
+END;
+$;
+
+-- USERS: self read/update (the trigger above restricts which columns may change),
+-- and full access only for an active administrator.
+CREATE POLICY "users_self_read" ON public.users
+FOR SELECT TO authenticated
+USING (id = auth.uid());
+
+CREATE POLICY "users_self_update" ON public.users
+FOR UPDATE TO authenticated
+USING (id = auth.uid())
+WITH CHECK (id = auth.uid());
+
+CREATE POLICY "users_admin_all" ON public.users
+FOR ALL TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+-- VIDEOS: published catalog for everyone; administrator CRUD.
+CREATE POLICY "videos_public_read" ON public.videos
+FOR SELECT TO anon, authenticated
+USING (published IS TRUE);
+
+CREATE POLICY "videos_admin_all" ON public.videos
+FOR ALL TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+-- COMMENTS: public read, owner-only inserts, admin moderation.
+CREATE POLICY "comments_public_read" ON public.comments
+FOR SELECT TO anon, authenticated
+USING (TRUE);
+
+CREATE POLICY "comments_admin_all" ON public.comments
+FOR ALL TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+-- DOWNLOADS: users can read their own download history; inserts are only via RPC.
+CREATE POLICY "downloads_self_read" ON public.downloads
+FOR SELECT TO authenticated
+USING (user_id = auth.uid());
+
+CREATE POLICY "downloads_admin_all" ON public.downloads
+FOR ALL TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+-- VIEWS: public read only; counters are updated through the database RPC.
+CREATE POLICY "views_public_read" ON public.views
+FOR SELECT TO anon, authenticated
+USING (TRUE);
+
+-- TICKETS: user-owned tickets and administrator support access.
+CREATE POLICY "tickets_self_read" ON public.tickets
+FOR SELECT TO authenticated
+USING (user_id = auth.uid());
+
+CREATE POLICY "tickets_self_insert" ON public.tickets
+FOR INSERT TO authenticated
+WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "tickets_admin_all" ON public.tickets
+FOR ALL TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+
 -- Admin status must come from the database, not from an email string supplied by the browser.
 -- Preserve the current configured administrator if their account already exists.
 UPDATE public.users
