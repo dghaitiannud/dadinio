@@ -217,7 +217,10 @@ CREATE POLICY "views_insert_limited" ON public.views
 FOR INSERT TO anon, authenticated
 WITH CHECK (
   public.can_insert_view(video_id)
-  AND (user_id IS NULL OR user_id = auth.uid())
+  AND (
+    (auth.uid() IS NULL AND user_id IS NULL)
+    OR (auth.uid() IS NOT NULL AND user_id = auth.uid())
+  )
 );
 
 -- TICKETS: user-owned tickets and administrator support access.
