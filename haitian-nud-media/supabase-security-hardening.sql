@@ -42,6 +42,24 @@ $views$;
 REVOKE ALL ON FUNCTION public.increment_video_views(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.increment_video_views(UUID) TO anon, authenticated;
 
+-- Keep the photo view counter compatible with the frontend and pin the
+-- SECURITY DEFINER function to a safe schema search path.
+CREATE OR REPLACE FUNCTION public.increment_photo_views(photo_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $photo_views$
+BEGIN
+  UPDATE public.photos
+  SET views = COALESCE(views, 0) + 1
+  WHERE id = photo_id;
+END;
+$photo_views$;
+
+REVOKE ALL ON FUNCTION public.increment_photo_views(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.increment_photo_views(UUID) TO anon, authenticated;
+
 -- Remove any older permissive policies on the core application tables before
 -- recreating a known least-privilege policy set.
 DO $core$
@@ -50,7 +68,7 @@ DECLARE
   policy_record RECORD;
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
-    'users', 'videos', 'comments', 'downloads', 'views',
+    'users', 'videos', 'photos', 'comments', 'downloads', 'views',
     'tickets', 'push_subscriptions'
   ] LOOP
     IF to_regclass(format('public.%I', table_name)) IS NOT NULL THEN
@@ -89,6 +107,17 @@ FOR SELECT TO anon, authenticated
 USING (published IS TRUE);
 
 CREATE POLICY "videos_admin_all" ON public.videos
+FOR ALL TO authenticated
+USING (public.is_admin())
+WITH CHECK (public.is_admin());
+
+-- PHOTOS: published catalog for everyone; admin CRUD is restricted by the
+-- same database-backed administrator predicate.
+CREATE POLICY "photos_public_read" ON public.photos
+FOR SELECT TO anon, authenticated
+USING (published IS TRUE);
+
+CREATE POLICY "photos_admin_all" ON public.photos
 FOR ALL TO authenticated
 USING (public.is_admin())
 WITH CHECK (public.is_admin());
@@ -364,6 +393,72 @@ WHERE v.published IS TRUE OR public.is_admin();
 
 REVOKE ALL ON public.video_catalog FROM PUBLIC;
 GRANT SELECT ON public.video_catalog TO anon, authenticated;
+
+-- Apply the same media-URL protection to photos. Public clients may read safe
+-- metadata, but the raw image_url is exposed only through photo_catalog and
+-- only for non-VIP images or to active VIP members/administrators.
+REVOKE SELECT ON TABLE public.photos FROM PUBLIC, anon, authenticated;
+REVOKE SELECT (image_url) ON TABLE public.photos FROM PUBLIC, anon, authenticated;
+GRANT SELECT (
+  id,
+  title,
+  description,
+  category,
+  views,
+  is_vip,
+  published,
+  created_at
+) ON TABLE public.photos TO anon, authenticated;
+
+-- The frontend's admin tools only need INSERT and DELETE on the base table;
+-- RLS still restricts those operations to administrators.
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.photos FROM PUBLIC, anon, authenticated;
+GRANT INSERT (
+  title,
+  description,
+  image_url,
+  category,
+  is_vip,
+  published,
+  views
+) ON TABLE public.photos TO authenticated;
+GRANT DELETE ON TABLE public.photos TO authenticated;
+
+CREATE OR REPLACE VIEW public.photo_catalog
+WITH (security_barrier = TRUE)
+AS
+SELECT
+  p.id,
+  p.title,
+  p.description,
+  CASE
+    WHEN p.is_vip IS NOT TRUE
+      OR EXISTS (
+        SELECT 1
+        FROM public.users u
+        WHERE u.id = auth.uid()
+          AND COALESCE(u.blocked, FALSE) IS FALSE
+          AND (
+            u.is_admin IS TRUE
+            OR (
+              u.plan = 'vip'
+              AND (u.subscription_ends_at IS NULL OR u.subscription_ends_at > now())
+            )
+          )
+      )
+    THEN p.image_url
+    ELSE NULL
+  END AS image_url,
+  p.category,
+  p.views,
+  p.is_vip,
+  p.published,
+  p.created_at
+FROM public.photos p
+WHERE p.published IS TRUE OR public.is_admin();
+
+REVOKE ALL ON public.photo_catalog FROM PUBLIC;
+GRANT SELECT ON public.photo_catalog TO anon, authenticated;
 
 -- Tables used by newer frontend modules are not present in the legacy bootstrap
 -- files. Harden them when they exist, without assuming they are installed everywhere.
