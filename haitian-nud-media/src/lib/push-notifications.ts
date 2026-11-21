@@ -2,8 +2,37 @@ import { supabase } from "@/lib/supabase";
 
 // Web Push Notifications — frontend helpers.
 // The Node API is the single source of truth for subscriptions and delivery.
-const VAPID_PUBLIC_KEY =
-  "BAM-Ab_FHCm2P3q0n-DmuqdOyQOuwBOR6LAxbGjc4wbsqU6JN1rvsIAtmlbpCN0s62PjXgMlKUAyBxCO9UIE6FM";
+async function fetchVapidPublicKey(): Promise<Uint8Array> {
+  const response = await fetch(`${API_BASE}/api/push/vapid-public-key`, {
+    method: "GET",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to retrieve the push public key");
+  }
+
+  const payload = await response.json();
+  if (typeof payload?.publicKey !== "string" || !payload.publicKey) {
+    throw new Error("Push public key is unavailable");
+  }
+
+  return urlBase64ToUint8Array(payload.publicKey);
+}
+
+function hasMatchingApplicationServerKey(
+  subscription: PushSubscription,
+  expectedKey: Uint8Array
+): boolean {
+  const currentKey = subscription.options.applicationServerKey;
+  if (!currentKey) return false;
+
+  const currentBytes = new Uint8Array(currentKey);
+  return (
+    currentBytes.length === expectedKey.length &&
+    currentBytes.every((byte, index) => byte === expectedKey[index])
+  );
+}
 
 const API_BASE = "https://api.haitiannud.com";
 
@@ -76,16 +105,34 @@ export async function subscribeToPush(_userId?: string): Promise<boolean> {
     if (permission !== "granted") return false;
 
     const registration = await navigator.serviceWorker.ready;
+    const applicationServerKey = await fetchVapidPublicKey();
     let subscription = await registration.pushManager.getSubscription();
     let createdSubscription = false;
 
-    // Reuse an existing endpoint instead of rotating it on every visit.
+    // Keep the current endpoint unless the VAPID public key has been rotated.
+    if (
+      subscription &&
+      !hasMatchingApplicationServerKey(subscription, applicationServerKey)
+    ) {
+      const removalResponse = await fetch(`${API_BASE}/api/push/unsubscribe`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+      });
+
+      if (!removalResponse.ok) return false;
+
+      await subscription.unsubscribe();
+      subscription = null;
+    }
+
     if (!subscription) {
       subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          VAPID_PUBLIC_KEY
-        ) as unknown as ArrayBuffer,
+        applicationServerKey: applicationServerKey as unknown as ArrayBuffer,
       });
       createdSubscription = true;
     }
