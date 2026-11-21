@@ -438,7 +438,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 -- This function is invoked only by the trigger on public.users.
 REVOKE ALL ON FUNCTION public.guard_user_privileged_fields() FROM PUBLIC, anon, authenticated;
