@@ -403,17 +403,20 @@ LANGUAGE plpgsql
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  -- Only the owner executing the trusted download RPC may update the
-  -- quota field. Do not use a custom GUC as an authorization flag: clients
-  -- can set arbitrary two-part custom settings themselves.
-  IF current_user = (
-       SELECT pg_get_userbyid(p.proowner)
-       FROM pg_proc p
-       WHERE p.oid = 'public.request_video_download(uuid)'::regprocedure
-     )
-     OR current_user = 'service_role'
-     OR public.is_admin() THEN
+  -- Only administrators and the trusted backend service may modify protected
+  -- account fields. SECURITY DEFINER ownership is not used as a bypass because
+  -- unrelated definer functions may share the same owner.
+  IF current_user = 'service_role' OR public.is_admin() THEN
     RETURN NEW;
+  END IF;
+
+  -- A user may only increase their own free-download counter by one. This
+  -- cannot unlock downloads or reduce the quota; the trusted RPC remains the
+  -- only way to obtain a download URL.
+  IF NEW.free_downloads_used IS DISTINCT FROM OLD.free_downloads_used
+     AND NEW.free_downloads_used IS DISTINCT FROM COALESCE(OLD.free_downloads_used, 0) + 1 THEN
+    RAISE EXCEPTION 'USER_PRIVILEGED_FIELDS_PROTECTED'
+      USING ERRCODE = '42501';
   END IF;
 
   IF NEW.id IS DISTINCT FROM OLD.id
@@ -422,7 +425,6 @@ BEGIN
      OR NEW.is_admin IS DISTINCT FROM OLD.is_admin
      OR NEW.role IS DISTINCT FROM OLD.role
      OR NEW.blocked IS DISTINCT FROM OLD.blocked
-     OR NEW.free_downloads_used IS DISTINCT FROM OLD.free_downloads_used
      OR NEW.subscription_ends_at IS DISTINCT FROM OLD.subscription_ends_at
      OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
     RAISE EXCEPTION 'USER_PRIVILEGED_FIELDS_PROTECTED'
