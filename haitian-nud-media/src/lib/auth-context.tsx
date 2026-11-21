@@ -70,48 +70,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error || !data) {
-        // Row doesn't exist yet → create it (snake_case columns)
+        // Public profile rows are created by the auth.users database trigger.
+        // The browser intentionally has no INSERT privilege on public.users.
+        // Never restore a missing profile from the client or infer admin rights
+        // from an email address.
+        console.error('User profile row is missing; verify handle_new_user():', error);
+
         const displayName = authUser.user_metadata?.display_name
           || authUser.user_metadata?.name
           || email.split('@')[0]
           || null;
 
-        const isAdminByEmail = ADMIN_EMAILS.includes(email.toLowerCase());
-
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: authUser.id,
-            email,
-            display_name: displayName,
-            plan: 'free',
-            is_admin: false,
-            blocked: false,
-            age_confirmed: false,
-            free_downloads_used: 0,
-            subscription_ends_at: null,
-          })
-          .select()
-          .single();
-
-        if (newUser) {
-          setAppUser(mapUser(newUser, email));
-        } else {
-          console.error('Failed to create user row:', createError);
-          // Even if DB fails, let the user in with email-based admin check
-          setAppUser({
-            id: authUser.id,
-            email,
-            displayName: email.split('@')[0],
-            plan: 'free',
-            isAdmin: false,
-            blocked: false,
-            ageConfirmed: false,
-            freeDownloadsUsed: 0,
-            subscriptionEndsAt: null,
-            createdAt: new Date().toISOString(),
-          });
-        }
+        setAppUser({
+          id: authUser.id,
+          email,
+          displayName,
+          plan: 'free',
+          isAdmin: false,
+          blocked: false,
+          ageConfirmed: false,
+          freeDownloadsUsed: 0,
+          subscriptionEndsAt: null,
+          createdAt: authUser.created_at || new Date().toISOString(),
+        });
       } else {
         // Expiry is enforced by the database download/media checks. Reflect it
         // locally without letting a browser update its own protected plan field.
