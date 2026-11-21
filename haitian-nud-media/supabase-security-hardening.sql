@@ -140,6 +140,7 @@ BEGIN
      OR NEW.email IS DISTINCT FROM OLD.email
      OR NEW.plan IS DISTINCT FROM OLD.plan
      OR NEW.is_admin IS DISTINCT FROM OLD.is_admin
+     OR NEW.role IS DISTINCT FROM OLD.role
      OR NEW.blocked IS DISTINCT FROM OLD.blocked
      OR NEW.free_downloads_used IS DISTINCT FROM OLD.free_downloads_used
      OR NEW.subscription_ends_at IS DISTINCT FROM OLD.subscription_ends_at
