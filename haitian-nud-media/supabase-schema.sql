@@ -1,4 +1,6 @@
--- HAITIAN NUD - Supabase Schema Complet (corrigé)
+-- HAITIAN NUD - Supabase Schema
+-- Initial schema only. Apply supabase-security-hardening.sql after installation.
+-- Do not use this file as an update script on an existing production database.
 -- ====================================================
 -- Exécutez ce script dans le SQL Editor de Supabase
 
