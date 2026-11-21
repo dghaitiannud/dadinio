@@ -547,6 +547,23 @@ export async function updateLiveStatus(isActive: boolean, streamUrl: string | nu
 // FONCTIONS DE GESTION DU SYSTÈME VIP
 // ====================================================
 
+function getVipProofObjectPath(proofReference: string | null | undefined): string {
+  if (!proofReference) return '';
+
+  // New records store the object path directly. Older records stored a public URL.
+  if (!/^https?:\/\//i.test(proofReference)) return proofReference;
+
+  try {
+    const url = new URL(proofReference);
+    const marker = '/storage/v1/object/public/vip-proofs/';
+    const index = url.pathname.indexOf(marker);
+    if (index < 0) return '';
+    return decodeURIComponent(url.pathname.slice(index + marker.length));
+  } catch {
+    return '';
+  }
+}
+
 export async function adminListVipRequests(page: number = 1): Promise<VipRequest[]> {
   const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
   const { data, error } = await supabase
@@ -554,20 +571,44 @@ export async function adminListVipRequests(page: number = 1): Promise<VipRequest
     .select('*')
     .order('created_at', { ascending: false })
     .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
-  
+
   if (error) throw error;
-  return (data || []).map((r: any) => ({
-    id: r.id,
-    userId: r.user_id,
-    userEmail: r.user_email,
-    paymentMethod: r.payment_method,
-    proofUrl: r.proof_url,
-    planName: r.plan_name || 'Formule Unique',
-    amountUsd: r.amount_usd || 20,
-    durationDays: r.duration_days || 30,
-    status: r.status,
-    createdAt: r.created_at,
-  }));
+
+  const rows = data || [];
+  const proofPaths = rows
+    .map((request: any) => getVipProofObjectPath(request.proof_url))
+    .filter((path: string) => path.length > 0);
+  const signedUrlByPath = new Map<string, string>();
+
+  if (proofPaths.length > 0) {
+    const { data: signedFiles, error: signingError } = await supabase.storage
+      .from('vip-proofs')
+      .createSignedUrls(proofPaths, 10 * 60);
+
+    if (signingError) throw signingError;
+
+    for (const file of signedFiles || []) {
+      if (file.path && file.signedUrl) {
+        signedUrlByPath.set(file.path, file.signedUrl);
+      }
+    }
+  }
+
+  return rows.map((r: any) => {
+    const proofPath = getVipProofObjectPath(r.proof_url);
+    return {
+      id: r.id,
+      userId: r.user_id,
+      userEmail: r.user_email,
+      paymentMethod: r.payment_method,
+      proofUrl: signedUrlByPath.get(proofPath) || '',
+      planName: r.plan_name || 'Formule Unique',
+      amountUsd: r.amount_usd || 20,
+      durationDays: r.duration_days || 30,
+      status: r.status,
+      createdAt: r.created_at,
+    };
+  });
 }
 
 export async function adminProcessVipRequest(
