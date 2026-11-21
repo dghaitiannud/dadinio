@@ -90,8 +90,11 @@ export function AdminLive() {
 
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: currentPlaybackId })
-      .eq('id', 'live_playback_id');
+      .upsert({
+        id: 'live_playback_id',
+        value: currentPlaybackId,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
 
     if (!error) {
       setPlaybackId(currentPlaybackId);
@@ -105,8 +108,11 @@ export function AdminLive() {
     setActionLoading(true);
     const { error } = await supabase
       .from('app_settings')
-      .update({ value: null })
-      .eq('id', 'live_playback_id');
+      .upsert({
+        id: 'live_playback_id',
+        value: '',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
 
     if (!error) {
       setPlaybackId('');

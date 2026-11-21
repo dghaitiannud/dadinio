@@ -184,16 +184,7 @@ export async function getVideo(id: string): Promise<Video | null> {
 export async function registerView(videoId: string) {
   try {
     const { error } = await supabase.rpc('increment_video_views', { video_id: videoId });
-    if (error) {
-      const { data: vid } = await supabase.from('videos').select('views').eq('id', videoId).single();
-      if (vid) {
-        const currentViews = vid.views ?? 0;
-        await supabase
-          .from('videos')
-          .update({ views: currentViews + 1 })
-          .eq('id', videoId);
-      }
-    }
+    if (error) throw error;
   } catch (err) {
     console.warn('Failed to register video view:', err);
   }
@@ -233,7 +224,7 @@ export async function requestDownload(
 // ====================================================
 
 export async function getPhotos(options?: { category?: string }): Promise<Photo[]> {
-  let query = supabase.from('photos').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
+  let query = supabase.from('photo_catalog').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
   if (options?.category) {
     query = query.eq('category', options.category);
   }
@@ -245,16 +236,7 @@ export async function getPhotos(options?: { category?: string }): Promise<Photo[
 export async function registerPhotoView(photoId: string): Promise<void> {
   try {
     const { error } = await supabase.rpc('increment_photo_views', { photo_id: photoId });
-    if (error) {
-      const { data: photo } = await supabase.from('photos').select('views').eq('id', photoId).single();
-      if (photo) {
-        const currentViews = photo.views ?? 0;
-        await supabase
-          .from('photos')
-          .update({ views: currentViews + 1 })
-          .eq('id', photoId);
-      }
-    }
+    if (error) throw error;
   } catch (err) {
     console.warn('Failed to register photo view:', err);
   }
@@ -348,7 +330,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       .eq('plan', 'vip')
       .gt('subscription_ends_at', new Date().toISOString());
     const { count: videoCount } = await supabase.from('video_catalog').select('*', { count: 'exact', head: true });
-    const { count: photoCount } = await supabase.from('photos').select('*', { count: 'exact', head: true });
+    const { count: photoCount } = await supabase.from('photo_catalog').select('id', { count: 'exact', head: true });
     
     const { data: totalViewsData } = await supabase.rpc('get_total_views');
     
@@ -414,7 +396,7 @@ export async function adminDeleteVideo(id: string) {
 export async function adminListPhotos(page: number = 1): Promise<Photo[]> {
   const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
   const { data, error } = await supabase
-    .from('photos')
+    .from('photo_catalog')
     .select('*')
     .order('created_at', { ascending: false })
     .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
@@ -565,6 +547,23 @@ export async function updateLiveStatus(isActive: boolean, streamUrl: string | nu
 // FONCTIONS DE GESTION DU SYSTÈME VIP
 // ====================================================
 
+function getVipProofObjectPath(proofReference: string | null | undefined): string {
+  if (!proofReference) return '';
+
+  // New records store the object path directly. Older records stored a public URL.
+  if (!/^https?:\/\//i.test(proofReference)) return proofReference;
+
+  try {
+    const url = new URL(proofReference);
+    const marker = '/storage/v1/object/public/vip-proofs/';
+    const index = url.pathname.indexOf(marker);
+    if (index < 0) return '';
+    return decodeURIComponent(url.pathname.slice(index + marker.length));
+  } catch {
+    return '';
+  }
+}
+
 export async function adminListVipRequests(page: number = 1): Promise<VipRequest[]> {
   const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
   const { data, error } = await supabase
@@ -572,20 +571,44 @@ export async function adminListVipRequests(page: number = 1): Promise<VipRequest
     .select('*')
     .order('created_at', { ascending: false })
     .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
-  
+
   if (error) throw error;
-  return (data || []).map((r: any) => ({
-    id: r.id,
-    userId: r.user_id,
-    userEmail: r.user_email,
-    paymentMethod: r.payment_method,
-    proofUrl: r.proof_url,
-    planName: r.plan_name || 'Formule Unique',
-    amountUsd: r.amount_usd || 20,
-    durationDays: r.duration_days || 30,
-    status: r.status,
-    createdAt: r.created_at,
-  }));
+
+  const rows = data || [];
+  const proofPaths = rows
+    .map((request: any) => getVipProofObjectPath(request.proof_url))
+    .filter((path: string) => path.length > 0);
+  const signedUrlByPath = new Map<string, string>();
+
+  if (proofPaths.length > 0) {
+    const { data: signedFiles, error: signingError } = await supabase.storage
+      .from('vip-proofs')
+      .createSignedUrls(proofPaths, 10 * 60);
+
+    if (signingError) throw signingError;
+
+    for (const file of signedFiles || []) {
+      if (file.path && file.signedUrl) {
+        signedUrlByPath.set(file.path, file.signedUrl);
+      }
+    }
+  }
+
+  return rows.map((r: any) => {
+    const proofPath = getVipProofObjectPath(r.proof_url);
+    return {
+      id: r.id,
+      userId: r.user_id,
+      userEmail: r.user_email,
+      paymentMethod: r.payment_method,
+      proofUrl: signedUrlByPath.get(proofPath) || '',
+      planName: r.plan_name || 'Formule Unique',
+      amountUsd: r.amount_usd || 20,
+      durationDays: r.duration_days || 30,
+      status: r.status,
+      createdAt: r.created_at,
+    };
+  });
 }
 
 export async function adminProcessVipRequest(
