@@ -24,6 +24,24 @@ $$;
 REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 
+-- Keep auth.users profile creation intact, but pin the SECURITY DEFINER
+-- function to a safe search_path.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $new_user$
+BEGIN
+  INSERT INTO public.users (id, email, created_at)
+  VALUES (NEW.id, NEW.email, NEW.created_at)
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$new_user$;
+
+REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
+
 -- Keep the existing public view-counter RPC compatible with the frontend,
 -- while fixing its SECURITY DEFINER search_path and qualifying the target table.
 CREATE OR REPLACE FUNCTION public.increment_video_views(video_id UUID)
@@ -208,6 +226,9 @@ BEGIN
 END;
 $$;
 
+-- Replace the legacy trigger so that two independent guards do not
+-- execute with conflicting service-role/admin behavior.
+DROP TRIGGER IF EXISTS protect_privileged_fields ON public.users;
 DROP TRIGGER IF EXISTS guard_user_privileged_fields ON public.users;
 CREATE TRIGGER guard_user_privileged_fields
 BEFORE UPDATE ON public.users
@@ -529,6 +550,22 @@ BEGIN
       FOR ALL TO authenticated
       USING (public.is_admin())
       WITH CHECK (public.is_admin())';
+
+    -- Preserve the existing live-operator exception without granting global admin.
+    EXECUTE 'CREATE POLICY "live_status_live_admin_update" ON public.live_status
+      FOR UPDATE TO authenticated
+      USING (EXISTS (
+        SELECT 1 FROM public.users u
+        WHERE u.id = auth.uid()
+          AND lower(u.email) = ''liveadmin@gmail.com''
+          AND COALESCE(u.blocked, FALSE) IS FALSE
+      ))
+      WITH CHECK (EXISTS (
+        SELECT 1 FROM public.users u
+        WHERE u.id = auth.uid()
+          AND lower(u.email) = ''liveadmin@gmail.com''
+          AND COALESCE(u.blocked, FALSE) IS FALSE
+      ))';
   END IF;
 
   IF to_regclass('public.app_settings') IS NOT NULL THEN
