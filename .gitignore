@@ -24,9 +24,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# local env files (CONSERVE TES CLEFS EN SÉCURITÉ)
-.env*.local
-.env
+# Environment files. Only the safe example template may be committed.
+.env*
+!.env.example
 
 # vercel
 .vercel
