@@ -149,7 +149,7 @@ function toPublicPhoto(p: any): Photo {
 // ====================================================
 
 export async function getVideos(options?: { q?: string; category?: string }): Promise<Video[]> {
-  let query = supabase.from('videos').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
+  let query = supabase.from('video_catalog').select('*').eq('published', true).order('created_at', { ascending: false }).limit(100);
 
   if (options?.category) {
     query = query.eq('category', options.category);
@@ -165,7 +165,7 @@ export async function getVideos(options?: { q?: string; category?: string }): Pr
 
 export async function getTrendingVideos(): Promise<Video[]> {
   const { data, error } = await supabase
-    .from('videos')
+    .from('video_catalog')
     .select('*')
     .eq('published', true)
     .order('views', { ascending: false })
@@ -201,30 +201,31 @@ export async function registerView(videoId: string) {
 
 export async function requestDownload(
   videoId: string,
-  userId: string,
-  isVip: boolean,
-  freeDownloadsUsed: number
+  _userId: string,
+  _isVip: boolean,
+  _freeDownloadsUsed: number
 ): Promise<{ url: string; remaining: number }> {
-  const { data: video } = await supabase.from('videos').select('*').eq('id', videoId).single();
-  if (!video) throw new Error('Video not found');
-  if (video.is_vip && !isVip) {
-    throw new Error('vip_required');
+  // The database RPC reads the authenticated user, checks their current plan,
+  // locks the account row, applies the quota and inserts the download atomically.
+  const { data, error } = await supabase.rpc("request_video_download", {
+    p_video_id: videoId,
+  });
+
+  if (error) {
+    const message = error.message || "";
+    if (message.includes("VIP_REQUIRED")) throw new Error("vip_required");
+    if (message.includes("DOWNLOAD_LIMIT_REACHED")) throw new Error("quota_exceeded");
+    if (message.includes("VIDEO_NOT_AVAILABLE")) throw new Error("Video not found");
+    if (message.includes("ACCOUNT_BLOCKED")) throw new Error("account_blocked");
+    throw error;
   }
 
-  // Les membres VIP ont des téléchargements illimités : aucun quota, aucun incrément.
-  if (isVip) {
-    await supabase.from('downloads').insert({ user_id: userId, video_id: videoId });
-    return { url: video.video_url || video.videoUrl, remaining: -1 };
+  const result = data as { url?: string; remaining?: number } | null;
+  if (!result?.url || typeof result.remaining !== "number") {
+    throw new Error("Invalid download response");
   }
 
-  // Membres free : quota limité à FREE_DOWNLOAD_LIMIT téléchargements.
-  if (freeDownloadsUsed >= FREE_DOWNLOAD_LIMIT) {
-    throw new Error('quota_exceeded');
-  }
-  await supabase.from('users').update({ free_downloads_used: freeDownloadsUsed + 1 }).eq('id', userId);
-  await supabase.from('downloads').insert({ user_id: userId, video_id: videoId });
-  const remaining = FREE_DOWNLOAD_LIMIT - (freeDownloadsUsed + 1);
-  return { url: video.video_url || video.videoUrl, remaining };
+  return { url: result.url, remaining: result.remaining };
 }
 
 // ====================================================
