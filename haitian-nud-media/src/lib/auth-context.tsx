@@ -113,20 +113,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           });
         }
       } else {
-        // Check subscription expiry
+        // Expiry is enforced by the database download/media checks. Reflect it
+        // locally without letting a browser update its own protected plan field.
         const now = new Date().toISOString();
-        if (data.plan === 'vip' && data.subscription_ends_at && data.subscription_ends_at < now) {
-          const { data: updated } = await supabase
-            .from('users')
-            .update({ plan: 'free' })
-            .eq('id', authUser.id)
-            .select()
-            .single();
-          if (updated) {
-            setAppUser(mapUser(updated, email));
-            return;
-          }
+        if (data.plan === 'vip' && data.subscription_ends_at && data.subscription_ends_at <= now) {
+          setAppUser(mapUser({ ...data, plan: 'free' }, email));
+          return;
         }
+
         // Administrator privileges come only from the protected database profile.
         setAppUser(mapUser(data, email));
       }
