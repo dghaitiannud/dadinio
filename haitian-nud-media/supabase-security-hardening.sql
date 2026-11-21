@@ -483,19 +483,19 @@ CREATE POLICY "push_subs_insert_own"
 ON public.push_subscriptions
 FOR INSERT
 TO authenticated
-WITH CHECK (user_id = auth.uid());
+WITH CHECK (user_id = auth.uid()::text);
 
 CREATE POLICY "push_subs_read_own"
 ON public.push_subscriptions
 FOR SELECT
 TO authenticated
-USING (user_id = auth.uid());
+USING (user_id = auth.uid()::text);
 
 CREATE POLICY "push_subs_delete_own"
 ON public.push_subscriptions
 FOR DELETE
 TO authenticated
-USING (user_id = auth.uid());
+USING (user_id = auth.uid()::text);
 
 -- Free-download quota is enforced atomically inside the database RPC, not by
 -- client-supplied isVip/freeDownloadsUsed/userId values.
