@@ -200,7 +200,9 @@ LANGUAGE plpgsql
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  IF auth.role() = 'service_role' OR public.is_admin() THEN
+  IF auth.role() = 'service_role'
+     OR public.is_admin()
+     OR current_setting('app.dadinio_internal_user_update', TRUE) = 'on' THEN
     RETURN NEW;
   END IF;
 
@@ -342,10 +344,16 @@ BEGIN
       RAISE EXCEPTION 'DOWNLOAD_LIMIT_REACHED' USING ERRCODE = '42501';
     END IF;
 
+    -- Explicit transaction-local bypass for this trusted quota update only.
+    -- The profile guard otherwise rejects client-side edits to this field.
+    PERFORM set_config('app.dadinio_internal_user_update', 'on', TRUE);
+
     UPDATE public.users
     SET free_downloads_used = COALESCE(free_downloads_used, 0) + 1
     WHERE id = v_user.id
     RETURNING 3 - free_downloads_used INTO v_remaining;
+
+    PERFORM set_config('app.dadinio_internal_user_update', 'off', TRUE);
   END IF;
 
   INSERT INTO public.downloads (user_id, video_id)
