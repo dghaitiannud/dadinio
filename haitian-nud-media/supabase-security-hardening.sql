@@ -101,7 +101,10 @@ FOR SELECT TO anon, authenticated
 USING (TRUE);
 CREATE POLICY "views_insert_limited" ON public.views
 FOR INSERT TO anon, authenticated
-WITH CHECK (user_id IS NULL OR user_id = auth.uid());
+WITH CHECK (
+  public.can_insert_view(video_id)
+  AND (user_id IS NULL OR user_id = auth.uid())
+);
 
 -- TICKETS: user-owned tickets and administrator support access.
 CREATE POLICY "tickets_self_read" ON public.tickets
