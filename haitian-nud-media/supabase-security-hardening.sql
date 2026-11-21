@@ -296,7 +296,7 @@ DECLARE
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
     'users', 'videos', 'photos', 'comments', 'downloads', 'views',
-    'photo_view_events', 'tickets', 'push_subscriptions'
+    'photo_view_events', 'tickets', 'push_subscriptions', 'audit_log'
   ] LOOP
     IF to_regclass(format('public.%I', table_name)) IS NOT NULL THEN
       EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
