@@ -184,16 +184,7 @@ export async function getVideo(id: string): Promise<Video | null> {
 export async function registerView(videoId: string) {
   try {
     const { error } = await supabase.rpc('increment_video_views', { video_id: videoId });
-    if (error) {
-      const { data: vid } = await supabase.from('videos').select('views').eq('id', videoId).single();
-      if (vid) {
-        const currentViews = vid.views ?? 0;
-        await supabase
-          .from('videos')
-          .update({ views: currentViews + 1 })
-          .eq('id', videoId);
-      }
-    }
+    if (error) throw error;
   } catch (err) {
     console.warn('Failed to register video view:', err);
   }
@@ -245,16 +236,7 @@ export async function getPhotos(options?: { category?: string }): Promise<Photo[
 export async function registerPhotoView(photoId: string): Promise<void> {
   try {
     const { error } = await supabase.rpc('increment_photo_views', { photo_id: photoId });
-    if (error) {
-      const { data: photo } = await supabase.from('photos').select('views').eq('id', photoId).single();
-      if (photo) {
-        const currentViews = photo.views ?? 0;
-        await supabase
-          .from('photos')
-          .update({ views: currentViews + 1 })
-          .eq('id', photoId);
-      }
-    }
+    if (error) throw error;
   } catch (err) {
     console.warn('Failed to register photo view:', err);
   }
@@ -348,7 +330,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       .eq('plan', 'vip')
       .gt('subscription_ends_at', new Date().toISOString());
     const { count: videoCount } = await supabase.from('video_catalog').select('*', { count: 'exact', head: true });
-    const { count: photoCount } = await supabase.from('photos').select('*', { count: 'exact', head: true });
+    const { count: photoCount } = await supabase.from('photo_catalog').select('id', { count: 'exact', head: true });
     
     const { data: totalViewsData } = await supabase.rpc('get_total_views');
     
