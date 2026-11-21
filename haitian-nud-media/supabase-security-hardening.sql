@@ -695,7 +695,7 @@ DECLARE
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
     'users', 'videos', 'photos', 'comments', 'downloads', 'views',
-    'tickets', 'push_subscriptions',
+    'tickets', 'push_subscriptions', 'audit_log',
     'vip_requests', 'video_ads', 'live_status', 'app_settings'
   ] LOOP
     table_oid := to_regclass(format('public.%I', table_name));
