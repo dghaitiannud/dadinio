@@ -24,6 +24,24 @@ $$;
 REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 
+-- Keep the existing public view-counter RPC compatible with the frontend,
+-- while fixing its SECURITY DEFINER search_path and qualifying the target table.
+CREATE OR REPLACE FUNCTION public.increment_video_views(video_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $views$
+BEGIN
+  UPDATE public.videos
+  SET views = COALESCE(views, 0) + 1
+  WHERE id = video_id;
+END;
+$views$;
+
+REVOKE ALL ON FUNCTION public.increment_video_views(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.increment_video_views(UUID) TO anon, authenticated;
+
 -- Remove any older permissive policies on the core application tables before
 -- recreating a known least-privilege policy set.
 DO $core$
