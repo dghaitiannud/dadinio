@@ -633,6 +633,92 @@ BEGIN
 END;
 $optional$;
 
+-- RLS does not govern TRUNCATE, REFERENCES, TRIGGER, or MAINTAIN privileges.
+-- Remove every direct table grant from PUBLIC/anon/authenticated, then grant
+-- only the object privileges exercised by the frontend. service_role is kept
+-- untouched for trusted backend operations.
+DO $acl$
+DECLARE
+  table_name TEXT;
+BEGIN
+  FOREACH table_name IN ARRAY ARRAY[
+    'users', 'videos', 'photos', 'comments', 'downloads', 'views',
+    'tickets', 'push_subscriptions',
+    'vip_requests', 'video_ads', 'live_status', 'app_settings'
+  ] LOOP
+    IF to_regclass(format('public.%I', table_name)) IS NOT NULL THEN
+      EXECUTE format(
+        'REVOKE ALL PRIVILEGES ON TABLE public.%I FROM PUBLIC, anon, authenticated',
+        table_name
+      );
+    END IF;
+  END LOOP;
+END;
+$acl$;
+
+-- User profiles: users read their own row; administrators read/manage all rows.
+GRANT SELECT ON public.users TO authenticated;
+GRANT UPDATE ON public.users TO authenticated;
+
+-- Video base table: only non-sensitive catalog columns are directly readable.
+-- The raw video_url is returned only by video_catalog under its entitlement rule.
+GRANT SELECT (
+  id, title, description, thumbnail_url, category, duration_sec,
+  views, is_vip, published, created_at
+) ON public.videos TO anon, authenticated;
+GRANT INSERT (
+  title, description, thumbnail_url, video_url, category,
+  duration_sec, views, is_vip, published
+) ON public.videos TO authenticated;
+GRANT DELETE ON public.videos TO authenticated;
+
+-- Photo base table: no direct image_url reads; the photo_catalog view applies VIP checks.
+GRANT SELECT (
+  id, title, description, category, views, is_vip, published, created_at
+) ON public.photos TO anon, authenticated;
+GRANT INSERT (
+  title, description, image_url, category, views, is_vip, published
+) ON public.photos TO authenticated;
+GRANT DELETE ON public.photos TO authenticated;
+
+-- Comments: public read, authenticated insert; only admins can moderate via RLS.
+GRANT SELECT ON public.comments TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.comments TO authenticated;
+
+-- Download history is visible only to the owner/admin; creation is via the RPC.
+GRANT SELECT ON public.downloads TO authenticated;
+
+-- View events can be read and inserted under their RLS rate-limit policy.
+GRANT SELECT, INSERT ON public.views TO anon, authenticated;
+
+-- Tickets: owner read/insert; administrators reply/manage under RLS.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.tickets TO authenticated;
+
+-- Push subscriptions are accessed by the Node API with service_role only.
+-- No table privileges are granted to anon/authenticated.
+
+-- Optional modules, present in this production schema.
+DO $optional_grants$
+BEGIN
+  IF to_regclass('public.vip_requests') IS NOT NULL THEN
+    GRANT SELECT, INSERT, UPDATE, DELETE ON public.vip_requests TO authenticated;
+  END IF;
+  IF to_regclass('public.video_ads') IS NOT NULL THEN
+    GRANT SELECT ON public.video_ads TO anon, authenticated;
+    GRANT INSERT, UPDATE, DELETE ON public.video_ads TO authenticated;
+  END IF;
+  IF to_regclass('public.live_status') IS NOT NULL THEN
+    GRANT SELECT ON public.live_status TO anon, authenticated;
+    GRANT UPDATE ON public.live_status TO authenticated;
+  END IF;
+  IF to_regclass('public.app_settings') IS NOT NULL THEN
+    GRANT SELECT (id, value, updated_at) ON public.app_settings TO anon, authenticated;
+    GRANT INSERT (id, value, updated_at) ON public.app_settings TO authenticated;
+    GRANT UPDATE (value, updated_at) ON public.app_settings TO authenticated;
+  END IF;
+END;
+$optional_grants$;
+
 COMMIT;
 
 -- After applying, test:
