@@ -641,17 +641,38 @@ $optional$;
 DO $acl$
 DECLARE
   table_name TEXT;
+  column_name TEXT;
+  table_oid OID;
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
     'users', 'videos', 'photos', 'comments', 'downloads', 'views',
     'tickets', 'push_subscriptions',
     'vip_requests', 'video_ads', 'live_status', 'app_settings'
   ] LOOP
-    IF to_regclass(format('public.%I', table_name)) IS NOT NULL THEN
+    table_oid := to_regclass(format('public.%I', table_name));
+    IF table_oid IS NOT NULL THEN
+      -- Table-level grants include TRUNCATE/REFERENCES/TRIGGER/MAINTAIN,
+      -- none of which are required by the browser roles.
       EXECUTE format(
         'REVOKE ALL PRIVILEGES ON TABLE public.%I FROM PUBLIC, anon, authenticated',
         table_name
       );
+
+      -- Column ACLs are independent of table ACLs; remove any old column grants too.
+      FOR column_name IN
+        SELECT a.attname
+        FROM pg_attribute a
+        WHERE a.attrelid = table_oid
+          AND a.attnum > 0
+          AND NOT a.attisdropped
+          AND a.attacl IS NOT NULL
+      LOOP
+        EXECUTE format(
+          'REVOKE ALL PRIVILEGES (%I) ON TABLE public.%I FROM PUBLIC, anon, authenticated',
+          column_name,
+          table_name
+        );
+      END LOOP;
     END IF;
   END LOOP;
 END;
