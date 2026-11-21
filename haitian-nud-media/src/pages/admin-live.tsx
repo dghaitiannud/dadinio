@@ -110,7 +110,7 @@ export function AdminLive() {
       .from('app_settings')
       .upsert({
         id: 'live_playback_id',
-        value: null,
+        value: '',
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
 
