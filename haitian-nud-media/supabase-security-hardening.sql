@@ -379,7 +379,12 @@ USING (user_id = auth.uid());
 
 CREATE POLICY "tickets_self_insert" ON public.tickets
 FOR INSERT TO authenticated
-WITH CHECK (user_id = auth.uid());
+WITH CHECK (
+  user_id = auth.uid()
+  AND status = 'open'
+  AND char_length(trim(subject)) BETWEEN 1 AND 200
+  AND char_length(trim(message)) BETWEEN 1 AND 2000
+);
 
 CREATE POLICY "tickets_admin_all" ON public.tickets
 FOR ALL TO authenticated
@@ -927,9 +932,11 @@ GRANT INSERT (
 ) ON public.photos TO authenticated;
 GRANT DELETE ON public.photos TO authenticated;
 
--- Comments: public read, authenticated insert; only admins can moderate via RLS.
+-- Comments: public read; authenticated users may insert only the fields
+-- used by the comment form; administrator moderation remains RLS-controlled.
 GRANT SELECT ON public.comments TO anon, authenticated;
-GRANT INSERT, UPDATE, DELETE ON public.comments TO authenticated;
+GRANT INSERT (video_id, user_id, body, anonymous, display_name) ON public.comments TO authenticated;
+GRANT UPDATE, DELETE ON public.comments TO authenticated;
 
 -- Download history is visible only to the owner/admin; creation is via the RPC.
 GRANT SELECT ON public.downloads TO authenticated;
@@ -937,8 +944,9 @@ GRANT SELECT ON public.downloads TO authenticated;
 -- View-event tables are private; SECURITY DEFINER RPCs write the event rows.
 -- No direct browser privileges are granted on views or photo_view_events.
 
--- Tickets: owner read/insert; administrators reply/manage under RLS.
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.tickets TO authenticated;
+-- Tickets: owners may submit only new ticket fields; administrators reply/manage under RLS.
+GRANT SELECT, UPDATE, DELETE ON public.tickets TO authenticated;
+GRANT INSERT (user_id, subject, message, status) ON public.tickets TO authenticated;
 
 -- Push subscriptions are accessed by the Node API with service_role only.
 -- No table privileges are granted to anon/authenticated.
