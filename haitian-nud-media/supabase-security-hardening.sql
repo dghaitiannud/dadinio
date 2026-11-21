@@ -865,7 +865,7 @@ BEGIN
     TO authenticated
     WITH CHECK (
       bucket_id = 'vip-proofs'
-      AND split_part(name, '-', 1) = auth.uid()::text
+      AND left(name, 36) = auth.uid()::text
     );
 
     CREATE POLICY vip_proofs_read_own_or_admin
