@@ -176,7 +176,7 @@ export async function getTrendingVideos(): Promise<Video[]> {
 }
 
 export async function getVideo(id: string): Promise<Video | null> {
-  const { data, error } = await supabase.from('videos').select('*').eq('id', id).single();
+  const { data, error } = await supabase.from('video_catalog').select('*').eq('id', id).single();
   if (error) return null;
   return toPublicVideo(data);
 }
@@ -347,7 +347,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       .select('*', { count: 'exact', head: true })
       .eq('plan', 'vip')
       .gt('subscription_ends_at', new Date().toISOString());
-    const { count: videoCount } = await supabase.from('videos').select('*', { count: 'exact', head: true });
+    const { count: videoCount } = await supabase.from('video_catalog').select('*', { count: 'exact', head: true });
     const { count: photoCount } = await supabase.from('photos').select('*', { count: 'exact', head: true });
     
     const { data: totalViewsData } = await supabase.rpc('get_total_views');
@@ -382,7 +382,7 @@ export async function getAdminStats(): Promise<AdminStats> {
 export async function adminListVideos(page: number = 1): Promise<Video[]> {
   const offset = (page - 1) * ADMIN_ITEMS_PER_PAGE;
   const { data, error } = await supabase
-    .from('videos')
+    .from('video_catalog')
     .select('*')
     .order('created_at', { ascending: false })
     .range(offset, offset + ADMIN_ITEMS_PER_PAGE - 1);
