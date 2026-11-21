@@ -691,7 +691,7 @@ DO $acl$
 DECLARE
   table_name TEXT;
   column_name TEXT;
-  table_oid OID;
+  table_oid REGCLASS;
 BEGIN
   FOREACH table_name IN ARRAY ARRAY[
     'users', 'videos', 'photos', 'comments', 'downloads', 'views',
