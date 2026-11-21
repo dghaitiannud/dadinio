@@ -200,9 +200,16 @@ LANGUAGE plpgsql
 SET search_path = public, pg_temp
 AS $$
 BEGIN
-  IF auth.role() = 'service_role'
-     OR public.is_admin()
-     OR current_setting('app.dadinio_internal_user_update', TRUE) = 'on' THEN
+  -- Only the owner executing the trusted download RPC may update the
+  -- quota field. Do not use a custom GUC as an authorization flag: clients
+  -- can set arbitrary two-part custom settings themselves.
+  IF current_user = (
+       SELECT pg_get_userbyid(p.proowner)
+       FROM pg_proc p
+       WHERE p.oid = 'public.request_video_download(uuid)'::regprocedure
+     )
+     OR current_user = 'service_role'
+     OR public.is_admin() THEN
     RETURN NEW;
   END IF;
 
@@ -344,16 +351,10 @@ BEGIN
       RAISE EXCEPTION 'DOWNLOAD_LIMIT_REACHED' USING ERRCODE = '42501';
     END IF;
 
-    -- Explicit transaction-local bypass for this trusted quota update only.
-    -- The profile guard otherwise rejects client-side edits to this field.
-    PERFORM set_config('app.dadinio_internal_user_update', 'on', TRUE);
-
     UPDATE public.users
     SET free_downloads_used = COALESCE(free_downloads_used, 0) + 1
     WHERE id = v_user.id
     RETURNING 3 - free_downloads_used INTO v_remaining;
-
-    PERFORM set_config('app.dadinio_internal_user_update', 'off', TRUE);
   END IF;
 
   INSERT INTO public.downloads (user_id, video_id)
@@ -701,20 +702,20 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.tickets TO authenticated;
 DO $optional_grants$
 BEGIN
   IF to_regclass('public.vip_requests') IS NOT NULL THEN
-    GRANT SELECT, INSERT, UPDATE, DELETE ON public.vip_requests TO authenticated;
+    EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON public.vip_requests TO authenticated';
   END IF;
   IF to_regclass('public.video_ads') IS NOT NULL THEN
-    GRANT SELECT ON public.video_ads TO anon, authenticated;
-    GRANT INSERT, UPDATE, DELETE ON public.video_ads TO authenticated;
+    EXECUTE 'GRANT SELECT ON public.video_ads TO anon, authenticated';
+    EXECUTE 'GRANT INSERT, UPDATE, DELETE ON public.video_ads TO authenticated';
   END IF;
   IF to_regclass('public.live_status') IS NOT NULL THEN
-    GRANT SELECT ON public.live_status TO anon, authenticated;
-    GRANT UPDATE ON public.live_status TO authenticated;
+    EXECUTE 'GRANT SELECT ON public.live_status TO anon, authenticated';
+    EXECUTE 'GRANT UPDATE ON public.live_status TO authenticated';
   END IF;
   IF to_regclass('public.app_settings') IS NOT NULL THEN
-    GRANT SELECT (id, value, updated_at) ON public.app_settings TO anon, authenticated;
-    GRANT INSERT (id, value, updated_at) ON public.app_settings TO authenticated;
-    GRANT UPDATE (value, updated_at) ON public.app_settings TO authenticated;
+    EXECUTE 'GRANT SELECT (id, value, updated_at) ON public.app_settings TO anon, authenticated';
+    EXECUTE 'GRANT INSERT (id, value, updated_at) ON public.app_settings TO authenticated';
+    EXECUTE 'GRANT UPDATE (value, updated_at) ON public.app_settings TO authenticated';
   END IF;
 END;
 $optional_grants$;
