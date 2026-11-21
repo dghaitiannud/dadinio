@@ -715,7 +715,12 @@ BEGIN
 
     EXECUTE 'CREATE POLICY "vip_requests_insert_own_pending" ON public.vip_requests
       FOR INSERT TO authenticated
-      WITH CHECK (user_id = auth.uid() AND status = ''pending'')';
+      WITH CHECK (
+        user_id = auth.uid()
+        AND status = ''pending''
+        AND proof_url IS NOT NULL
+        AND left(proof_url, 36) = auth.uid()::text
+      )';
 
     EXECUTE 'CREATE POLICY "vip_requests_admin_update" ON public.vip_requests
       FOR UPDATE TO authenticated
