@@ -26,7 +26,7 @@ GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
 
 -- Remove any older permissive policies on the core application tables before
 -- recreating a known least-privilege policy set.
-DO $
+DO $core$
 DECLARE
   table_name TEXT;
   policy_record RECORD;
@@ -47,7 +47,7 @@ BEGIN
     END IF;
   END LOOP;
 END;
-$;
+$core$;
 
 -- USERS: self read/update (the trigger above restricts which columns may change),
 -- and full access only for an active administrator.
