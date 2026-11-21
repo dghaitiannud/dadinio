@@ -99,6 +99,9 @@ WITH CHECK (public.is_admin());
 CREATE POLICY "views_public_read" ON public.views
 FOR SELECT TO anon, authenticated
 USING (TRUE);
+CREATE POLICY "views_insert_limited" ON public.views
+FOR INSERT TO anon, authenticated
+WITH CHECK (user_id IS NULL OR user_id = auth.uid());
 
 -- TICKETS: user-owned tickets and administrator support access.
 CREATE POLICY "tickets_self_read" ON public.tickets
@@ -431,10 +434,6 @@ BEGIN
   END IF;
 END;
 $optional$;
-
--- Views are written through the increment_video_views RPC. Prevent direct
--- anonymous/authenticated inserts that could inflate counters.
-DROP POLICY IF EXISTS "views_insert" ON public.views;
 
 COMMIT;
 
