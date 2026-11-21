@@ -585,14 +585,50 @@ BEGIN
       EXECUTE format('DROP POLICY %I ON public.app_settings', policy_record.policyname);
     END LOOP;
 
-    EXECUTE 'CREATE POLICY "app_settings_home_banner_read" ON public.app_settings
+    -- These two values are intentionally public: the home banner URL and
+    -- the public Mux playback ID used by the live page.
+    EXECUTE 'CREATE POLICY "app_settings_public_media_read" ON public.app_settings
       FOR SELECT TO anon, authenticated
-      USING (id = ''home_banner_video'')';
+      USING (id IN (''home_banner_video'', ''live_playback_id''))';
 
     EXECUTE 'CREATE POLICY "app_settings_admin_all" ON public.app_settings
       FOR ALL TO authenticated
       USING (public.is_admin())
       WITH CHECK (public.is_admin())';
+
+    -- The live operator can manage only the live playback row, never arbitrary settings.
+    EXECUTE 'CREATE POLICY "app_settings_live_admin_insert" ON public.app_settings
+      FOR INSERT TO authenticated
+      WITH CHECK (
+        id = ''live_playback_id''
+        AND EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid()
+            AND lower(u.email) = ''liveadmin@gmail.com''
+            AND COALESCE(u.blocked, FALSE) IS FALSE
+        )
+      )';
+
+    EXECUTE 'CREATE POLICY "app_settings_live_admin_update" ON public.app_settings
+      FOR UPDATE TO authenticated
+      USING (
+        id = ''live_playback_id''
+        AND EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid()
+            AND lower(u.email) = ''liveadmin@gmail.com''
+            AND COALESCE(u.blocked, FALSE) IS FALSE
+        )
+      )
+      WITH CHECK (
+        id = ''live_playback_id''
+        AND EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid()
+            AND lower(u.email) = ''liveadmin@gmail.com''
+            AND COALESCE(u.blocked, FALSE) IS FALSE
+        )
+      )';
   END IF;
 END;
 $optional$;
