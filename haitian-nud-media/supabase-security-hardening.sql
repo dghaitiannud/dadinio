@@ -832,6 +832,18 @@ BEGIN
         )
       )';
   END IF;
+
+  -- Legacy app_banner has no current frontend consumer. Remove its broad
+  -- read policies and leave it inaccessible to browser roles by default.
+  IF to_regclass('public.app_banner') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.app_banner ENABLE ROW LEVEL SECURITY';
+    FOR policy_record IN
+      SELECT policyname FROM pg_policies
+      WHERE schemaname = 'public' AND tablename = 'app_banner'
+    LOOP
+      EXECUTE format('DROP POLICY %I ON public.app_banner', policy_record.policyname);
+    END LOOP;
+  END IF;
 END;
 $optional$;
 
@@ -848,7 +860,7 @@ BEGIN
   FOREACH table_name IN ARRAY ARRAY[
     'users', 'videos', 'photos', 'comments', 'downloads', 'views',
     'photo_view_events', 'tickets', 'push_subscriptions', 'audit_log',
-    'vip_requests', 'video_ads', 'live_status', 'app_settings'
+    'vip_requests', 'video_ads', 'live_status', 'app_settings', 'app_banner'
   ] LOOP
     table_oid := to_regclass(format('public.%I', table_name));
     IF table_oid IS NOT NULL THEN
