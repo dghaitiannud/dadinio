@@ -387,11 +387,8 @@ USING (public.is_admin())
 WITH CHECK (public.is_admin());
 
 
--- Admin status must come from the database, not from an email string supplied by the browser.
--- Preserve the current configured administrator if their account already exists.
-UPDATE public.users
-SET is_admin = TRUE
-WHERE lower(email) = lower('dghaitiannud@gmail.com');
+-- Administrator status is preserved as already configured in the existing users table.
+-- This migration deliberately does not elevate accounts by matching an email address.
 
 -- Ordinary users may update display_name and confirm their age, but never their role,
 -- plan, block state, quota, subscription dates, email, or identity.
