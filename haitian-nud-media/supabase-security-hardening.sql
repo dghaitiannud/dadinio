@@ -249,6 +249,86 @@ WHERE v.published IS TRUE OR public.is_admin();
 REVOKE ALL ON public.video_catalog FROM PUBLIC;
 GRANT SELECT ON public.video_catalog TO anon, authenticated;
 
+-- Tables used by newer frontend modules are not present in the legacy bootstrap
+-- files. Harden them when they exist, without assuming they are installed everywhere.
+DO $
+BEGIN
+  IF to_regclass('public.vip_requests') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.vip_requests ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "vip_requests_select_own_or_admin" ON public.vip_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "vip_requests_insert_own_pending" ON public.vip_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "vip_requests_admin_update" ON public.vip_requests';
+    EXECUTE 'DROP POLICY IF EXISTS "vip_requests_admin_delete" ON public.vip_requests';
+
+    EXECUTE 'CREATE POLICY "vip_requests_select_own_or_admin" ON public.vip_requests
+      FOR SELECT TO authenticated
+      USING (user_id = auth.uid() OR public.is_admin())';
+
+    EXECUTE 'CREATE POLICY "vip_requests_insert_own_pending" ON public.vip_requests
+      FOR INSERT TO authenticated
+      WITH CHECK (user_id = auth.uid() AND status = ''pending'')';
+
+    EXECUTE 'CREATE POLICY "vip_requests_admin_update" ON public.vip_requests
+      FOR UPDATE TO authenticated
+      USING (public.is_admin())
+      WITH CHECK (public.is_admin())';
+
+    EXECUTE 'CREATE POLICY "vip_requests_admin_delete" ON public.vip_requests
+      FOR DELETE TO authenticated
+      USING (public.is_admin())';
+  END IF;
+
+  IF to_regclass('public.video_ads') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.video_ads ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "video_ads_public_read_active" ON public.video_ads';
+    EXECUTE 'DROP POLICY IF EXISTS "video_ads_admin_all" ON public.video_ads';
+
+    EXECUTE 'CREATE POLICY "video_ads_public_read_active" ON public.video_ads
+      FOR SELECT TO anon, authenticated
+      USING (is_active IS TRUE OR public.is_admin())';
+
+    EXECUTE 'CREATE POLICY "video_ads_admin_all" ON public.video_ads
+      FOR ALL TO authenticated
+      USING (public.is_admin())
+      WITH CHECK (public.is_admin())';
+  END IF;
+
+  IF to_regclass('public.live_status') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.live_status ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "live_status_public_read" ON public.live_status';
+    EXECUTE 'DROP POLICY IF EXISTS "live_status_admin_all" ON public.live_status';
+
+    EXECUTE 'CREATE POLICY "live_status_public_read" ON public.live_status
+      FOR SELECT TO anon, authenticated
+      USING (true)';
+
+    EXECUTE 'CREATE POLICY "live_status_admin_all" ON public.live_status
+      FOR ALL TO authenticated
+      USING (public.is_admin())
+      WITH CHECK (public.is_admin())';
+  END IF;
+
+  IF to_regclass('public.app_settings') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY';
+    EXECUTE 'DROP POLICY IF EXISTS "app_settings_home_banner_read" ON public.app_settings';
+    EXECUTE 'DROP POLICY IF EXISTS "app_settings_admin_all" ON public.app_settings';
+
+    EXECUTE 'CREATE POLICY "app_settings_home_banner_read" ON public.app_settings
+      FOR SELECT TO anon, authenticated
+      USING (id = ''home_banner_video'')';
+
+    EXECUTE 'CREATE POLICY "app_settings_admin_all" ON public.app_settings
+      FOR ALL TO authenticated
+      USING (public.is_admin())
+      WITH CHECK (public.is_admin())';
+  END IF;
+END;
+$;
+
+-- Views are written through the increment_video_views RPC. Prevent direct
+-- anonymous/authenticated inserts that could inflate counters.
+DROP POLICY IF EXISTS "views_insert" ON public.views;
+
 COMMIT;
 
 -- After applying, test:
