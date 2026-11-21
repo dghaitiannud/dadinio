@@ -177,9 +177,10 @@ BEGIN
     RETURN;
   END IF;
 
-  v_has_vip := v_is_admin OR (
+  v_has_vip := COALESCE(v_is_admin, FALSE) OR COALESCE(
     v_plan = 'vip'
-    AND (v_subscription_ends_at IS NULL OR v_subscription_ends_at > now())
+    AND (v_subscription_ends_at IS NULL OR v_subscription_ends_at > now()),
+    FALSE
   );
 
   IF v_is_vip IS TRUE AND NOT v_has_vip THEN
@@ -255,9 +256,10 @@ BEGIN
     RETURN;
   END IF;
 
-  v_has_vip := v_is_admin OR (
+  v_has_vip := COALESCE(v_is_admin, FALSE) OR COALESCE(
     v_plan = 'vip'
-    AND (v_subscription_ends_at IS NULL OR v_subscription_ends_at > now())
+    AND (v_subscription_ends_at IS NULL OR v_subscription_ends_at > now()),
+    FALSE
   );
 
   IF v_is_vip IS TRUE AND NOT v_has_vip THEN
