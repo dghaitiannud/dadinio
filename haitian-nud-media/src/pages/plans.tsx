@@ -118,10 +118,6 @@ export function Plans() {
 
       if (uploadError) throw new Error(`Erreur upload : ${uploadError.message}`);
 
-      const { data: { publicUrl } } = supabase.storage.
-      from("vip-proofs").
-      getPublicUrl(filePath);
-
       const { error: dbError } = await supabase.from("vip_requests").insert({
         user_id: (appUser as any).id,
         user_email: (appUser as any).email,
@@ -130,7 +126,7 @@ export function Plans() {
         plan_name: selectedPlan.name,
         amount_usd: selectedPlan.priceUsd,
         duration_days: selectedPlan.days,
-        proof_url: publicUrl,
+        proof_url: filePath,
         status: "pending"
       });
 
