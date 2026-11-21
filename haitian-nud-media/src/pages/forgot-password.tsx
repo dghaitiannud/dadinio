@@ -23,32 +23,20 @@ export function ForgotPasswordPage() {
     setError(null);
 
     try {
-      // 1. Interrogation de ton API privée sur Render pour valider l'existence de l'e-mail
-      const response = await fetch("https://api.haitiannud.com/api/auth/check-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      });
-
-      const checkResult = await response.json();
-
-      if (!response.ok || !checkResult.exists) {
-        setError(t("Cet e-mail n'existe pas sur la plateforme."));
-        setLoading(false);
-        return;
-      }
-
-      // 2. Si l'e-mail existe, on procède à l'envoi du lien de réinitialisation via Supabase
-      const { error: resetError } = await resetPassword(email);
+      // Use Supabase Auth directly. Never pre-check an email address, because
+      // that creates an account-enumeration endpoint.
+      const { error: resetError } = await resetPassword(email.trim());
       if (resetError) {
-        toast.error(resetError.message || t("Erreur lors de l'envoi"));
-      } else {
-        setSent(true);
-        toast.success(t("Email envoyé ! Vérifiez votre boîte de réception."));
+        // Keep the public response identical whether an account exists or not.
+        console.warn("Password reset request could not be completed:", resetError.message);
       }
-    } catch (err: any) {
-      setError(t("Impossible de joindre le serveur de sécurité."));
-      toast.error(t("Erreur de connexion au serveur."));
+
+      setSent(true);
+      toast.success(t("Si un compte correspond à cette adresse, un email de réinitialisation sera envoyé."));
+    } catch (err) {
+      console.warn("Password reset request failed:", err);
+      // Avoid revealing account existence even on an unexpected error.
+      setSent(true);
     } finally {
       setLoading(false);
     }
@@ -65,7 +53,7 @@ export function ForgotPasswordPage() {
             {sent ? t("Email envoyé !") : t("Mot de passe oublié ?")}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {sent ? t("Un lien de réinitialisation a été envoyé à votre adresse email.") : t("Entrez votre email pour recevoir un lien de réinitialisation.")
+            {sent ? t("Si un compte correspond à cette adresse, un lien de réinitialisation sera envoyé.") : t("Entrez votre email pour recevoir un lien de réinitialisation.")
 
             }
           </p>
@@ -115,7 +103,7 @@ export function ForgotPasswordPage() {
             <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl text-center">
               <ShieldCheck className="h-8 w-8 text-primary mx-auto mb-2" />
               <p className="text-sm text-primary font-medium">
-                {t("Vérifiez votre boîte de réception et cliquez sur le lien reçu.")}
+                {t("Vérifiez votre boîte de réception. Si votre compte existe, vous recevrez un lien de réinitialisation.")}
               </p>
             </div>
             <Button

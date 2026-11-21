@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { consumeAuthenticatedSSE } from "@/lib/authenticated-sse";
 import { supabase } from "@/lib/supabase";import { useTranslation } from "react-i18next";
 
 export function AdsTab({ token }: {token: string;}) {const { t } = useTranslation();
@@ -34,42 +35,55 @@ export function AdsTab({ token }: {token: string;}) {const { t } = useTranslatio
     setProgress(0);
     setMessage(t("Connexion..."));
 
-    const es = new EventSource(`https://api.haitiannud.com/api/upload-progress/${jobId}?token=${token}`);
+    const streamController = new AbortController();
+    consumeAuthenticatedSSE(
+      `https://api.haitiannud.com/api/upload-progress/${jobId}`,
+      token,
+      (event, rawData) => {
+        const data = rawData ? JSON.parse(rawData) : {};
+        if (event === "progress") {
+          setProgress(data.percent);
+          setMessage(data.message);
+          if (data.step === "transcode" || data.step === "upload") setStatus("processing");
+        } else if (event === "complete") {
+          streamController.abort();
+          void (async () => {
+            const { error } = await supabase.from("video_ads").insert({
+              title: form.title,
+              ad_video_url: data.url,
+              ad_type: form.type,
+              trigger_seconds: form.trigger,
+              skip_after: form.skip,
+              resolution: form.resolution,
+              click_url: form.clickUrl || null,
+              language: form.language
+            });
+            if (error) throw error;
 
-    es.addEventListener("progress", (e) => {
-      const data = JSON.parse(e.data);
-      setProgress(data.percent);
-      setMessage(data.message);
-      if (data.step === "transcode" || data.step === "upload") setStatus("processing");
-    });
-
-    es.addEventListener("complete", async (e) => {
-      const data = JSON.parse(e.data);
-      es.close();
-
-      await supabase.from("video_ads").insert({
-        title: form.title,
-        ad_video_url: data.url,
-        ad_type: form.type,
-        trigger_seconds: form.trigger,
-        skip_after: form.skip,
-        resolution: form.resolution,
-        click_url: form.clickUrl || null,
-        language: form.language
-      });
-
-      toast.success(t("Pub ajoutée avec succès !"));
-      setStatus("idle");
-      setFile(null);
-      setForm({ title: "", type: "pre-roll", trigger: 0, skip: 5, resolution: "720p", clickUrl: "", language: "fr" });
-      loadAds();
-    });
-
-    es.addEventListener("error", (e: any) => {
-      if (e.data) {
-        toast.error(JSON.parse(e.data).message);
+            toast.success(t("Pub ajoutée avec succès !"));
+            setStatus("idle");
+            setFile(null);
+            setForm({ title: "", type: "pre-roll", trigger: 0, skip: 5, resolution: "720p", clickUrl: "", language: "fr" });
+            loadAds();
+          })().catch((error) => {
+            console.error("Could not save uploaded advertisement:", error);
+            toast.error(t("La vidéo est prête, mais l'enregistrement de la publicité a échoué."));
+            setStatus("idle");
+          });
+        } else if (event === "error") {
+          toast.error(data.message || t("Erreur lors du traitement"));
+          setStatus("idle");
+          streamController.abort();
+        } else if (event === "close") {
+          streamController.abort();
+        }
+      },
+      streamController.signal
+    ).catch((error) => {
+      if (!streamController.signal.aborted) {
+        console.warn("Advertisement progress stream failed:", error);
+        toast.error(t("Connexion de progression interrompue"));
         setStatus("idle");
-        es.close();
       }
     });
 
@@ -93,9 +107,15 @@ export function AdsTab({ token }: {token: string;}) {const { t } = useTranslatio
 
     xhr.onload = () => {
       if (xhr.status !== 200) {
+        streamController.abort();
         toast.error(t("Erreur lors de l'envoi"));
         setStatus("idle");
       }
+    };
+    xhr.onerror = () => {
+      streamController.abort();
+      toast.error(t("Connexion au serveur impossible"));
+      setStatus("idle");
     };
     xhr.send(formData);
   };
