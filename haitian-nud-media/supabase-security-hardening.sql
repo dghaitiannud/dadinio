@@ -875,7 +875,7 @@ BEGIN
     USING (
       bucket_id = 'vip-proofs'
       AND (
-        split_part(name, '-', 1) = auth.uid()::text
+        left(name, 36) = auth.uid()::text
         OR public.is_admin()
       )
     );
