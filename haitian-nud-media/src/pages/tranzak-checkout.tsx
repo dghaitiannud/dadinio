@@ -26,7 +26,7 @@ export function TranzakCheckout() {
   const [email, setEmail] = useState(session?.user?.email || "");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const plan = useMemo(() => PLANS.find(p => p.id === planId) || PLANS[3], [planId);
+  const plan = useMemo(() => PLANS.find(p => p.id === planId) || PLANS[3], [planId]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,5 +66,20 @@ export function TranzakCheckout() {
       </form>
       <p className="flex justify-center gap-2 text-center text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4"/>Activation VIP après confirmation du paiement.</p>
     </CardContent></Card>
+  </div>;
+}
+
+export function PaymentReturn() {
+  return <div className="container mx-auto max-w-xl min-h-[70vh] px-4 py-16 text-center space-y-4">
+    <h1 className="text-2xl font-bold">Paiement en cours de vérification</h1>
+    <p className="text-muted-foreground">Votre retour de paiement a été reçu. L'activation VIP se fait après confirmation du fournisseur. Vous pouvez vérifier votre compte dans quelques instants.</p>
+    <a href="/account" className="inline-flex rounded-md bg-primary px-4 py-2 text-primary-foreground">Voir mon compte</a>
+  </div>;
+}
+export function PaymentCancel() {
+  return <div className="container mx-auto max-w-xl min-h-[70vh] px-4 py-16 text-center space-y-4">
+    <h1 className="text-2xl font-bold">Paiement annulé</h1>
+    <p className="text-muted-foreground">Le paiement n'a pas été finalisé. Aucun accès VIP n'a été activé.</p>
+    <a href="/plans" className="inline-flex rounded-md border px-4 py-2">Reprendre le paiement</a>
   </div>;
 }
