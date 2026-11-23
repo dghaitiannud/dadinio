@@ -646,5 +646,7 @@
   "pay.return_cta": "Wè kont mwen",
   "pay.cancel_title": "Peman anile",
   "pay.cancel_desc": "Peman an pa fini. Pa gen aksè VIP ki aktive.",
+  "account.days_left": "Dat ekspirasyon",
+  "account.extend": "Pwolonje kont ou",
   "pay.cancel_cta": "Reprann peman an"
 }
