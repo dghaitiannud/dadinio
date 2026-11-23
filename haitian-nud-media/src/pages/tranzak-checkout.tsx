@@ -130,7 +130,7 @@ export function TranzakCheckout() {
                     : "border-border hover:border-foreground/30",
                 )}
               >
-                <PaymentLogo brand={m} className="h-9 px-3" />
+                <PaymentLogo brand={m} className="h-10" />
               </button>
             ))}
           </div>
