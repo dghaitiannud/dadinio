@@ -223,7 +223,8 @@ export function Plans() {
                 {isSignedIn ?
             <Button onClick={() => setStep('payment')} className="w-full py-6 text-base font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl shadow-lg gap-2">
                     {t("S'abonner avec la formule {{plan}} ({{price}}$)", { plan: selectedPlan.name, price: selectedPlan.priceUsd })} <ArrowRight className="h-5 w-5" />
-                  </Button> :
+                  </Button>
+                  <Button onClick={() => setLocation(`/tranzak-checkout?planId=${selectedPlan.id}`)} variant="outline" className="w-full mt-3 py-5 text-sm font-bold rounded-xl gap-2 border-primary/40">Payer via Tranzak (MonCash / NatCash)</Button> :
 
             <Button onClick={() => setLocation("/login")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
                     <LogIn className="h-5 w-5" /> {t("Connectez-vous pour vous abonner")}
