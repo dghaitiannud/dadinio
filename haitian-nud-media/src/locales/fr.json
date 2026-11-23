@@ -646,5 +646,7 @@
   "pay.return_cta": "Voir mon compte",
   "pay.cancel_title": "Paiement annulé",
   "pay.cancel_desc": "Le paiement n'a pas été finalisé. Aucun accès VIP n'a été activé.",
+  "account.days_left": "Date d'expiration",
+  "account.extend": "Prolonger votre compte",
   "pay.cancel_cta": "Reprendre le paiement"
 }
