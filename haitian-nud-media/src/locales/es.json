@@ -646,5 +646,7 @@
   "pay.return_cta": "Ver mi cuenta",
   "pay.cancel_title": "Pago cancelado",
   "pay.cancel_desc": "El pago no se completó. No se activó ningún acceso VIP.",
+  "account.days_left": "Fecha de vencimiento",
+  "account.extend": "Extender tu cuenta",
   "pay.cancel_cta": "Reanudar el pago"
 }
