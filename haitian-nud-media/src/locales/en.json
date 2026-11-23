@@ -646,5 +646,7 @@
   "pay.return_cta": "View my account",
   "pay.cancel_title": "Payment cancelled",
   "pay.cancel_desc": "The payment was not completed. No VIP access was activated.",
+  "account.days_left": "Expiration date",
+  "account.extend": "Extend your account",
   "pay.cancel_cta": "Resume payment"
 }
