@@ -4,15 +4,18 @@ import { getVideos, getBannerVideo, getPhotos, registerPhotoView, type Video, ty
 import { VideoCard } from "@/components/video-card";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
-import { Play, Sparkles, Star, ChevronRight, Home as HomeIcon, Video as VideoIcon, Image as ImageIcon, Eye, Lock, X } from "lucide-react";
+import { Play, Star, Eye, Lock, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth-context";
+import { cn } from "@/lib/utils";
 
 const TABS = [
-{ id: "all", label: "Accueil", icon: HomeIcon },
-{ id: "video", label: "Vidéo", icon: VideoIcon },
-{ id: "photo", label: "Photo", icon: ImageIcon }] as
-const;
+  { id: "all", label: "Accueil" },
+  { id: "video", label: "Vidéo" },
+  { id: "photo", label: "Photo" },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
 
 function extractViews(item: any): number {
   if (!item) return 0;
@@ -21,24 +24,96 @@ function extractViews(item: any): number {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+function timeOf(item: any): number {
+  return new Date(item.created_at || item.createdAt || 0).getTime();
+}
+
+function SectionHeader({ title, href, more }: { title: string; href?: string; more?: string }) {
+  return (
+    <div className="mb-6 flex items-baseline justify-between gap-4">
+      <h2 className="font-serif text-2xl font-semibold tracking-tight md:text-3xl">{title}</h2>
+      {href && more && (
+        <Link href={href} className="text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+          {more}
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function VideoGridSkeleton({ count }: { count: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="flex flex-col gap-3">
+          <Skeleton className="aspect-video w-full rounded-2xl" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-1/2" />
+        </div>
+      ))}
+    </>
+  );
+}
+
+function PhotoCard({ photo, locked, onOpen }: { photo: Photo; locked: boolean; onOpen: (p: Photo) => void }) {
+  const { t, i18n } = useTranslation();
+  const views = extractViews(photo);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(photo)}
+      className="group block rounded-2xl text-left outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+    >
+      <div className="relative mb-3 aspect-video overflow-hidden rounded-2xl bg-muted">
+        <img
+          src={photo.imageUrl || (photo as any).image_url}
+          alt=""
+          loading="lazy"
+          className={cn(
+            "h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]",
+            locked && "scale-110 select-none blur-xl",
+          )}
+        />
+        {locked && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50 p-4 text-center text-white">
+            <Lock className="h-5 w-5" />
+            <span className="text-sm font-semibold">{t("Contenu VIP Exclusif")}</span>
+            <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-black">
+              {t("Devenir VIP pour débloquer")}
+            </span>
+          </div>
+        )}
+        {photo.isVip && !locked && (
+          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-semibold text-black">
+            <Star className="h-3 w-3 fill-current" /> VIP
+          </span>
+        )}
+      </div>
+      <h3 className="line-clamp-1 text-[15px] font-semibold">{photo.title}</h3>
+      <p className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+        <span className="truncate">{photo.category}</span>
+        <span className="flex shrink-0 items-center gap-1">
+          <Eye className="h-3.5 w-3.5" />
+          {t("{{views}} vues", { count: views, views: views.toLocaleString(i18n.language) })}
+        </span>
+      </p>
+    </button>
+  );
+}
+
 export function Home() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<typeof TABS[number]["id"]>("all");
+  const [activeTab, setActiveTab] = useState<TabId>("all");
   const [allVideos, setAllVideos] = useState<Video[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [bannerVideoUrl, setBannerVideoUrl] = useState<string>("");
   const [isLoadingVideos, setIsLoadingVideos] = useState(true);
   const [isLoadingPhotos, setIsLoadingPhotos] = useState(true);
-
   const [sortBy, setSortBy] = useState<"recent" | "views">("recent");
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-
-  // --- Animation de titre dynamique & cyclique ---
-  const FULL_TEXT = "HAITIAN NUD";
-  const [displayText, setDisplayText] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
 
@@ -46,92 +121,45 @@ export function Home() {
     setIsLoadingVideos(true);
     setIsLoadingPhotos(true);
 
-    // 🛠️ CORRECTION : Ajout des .catch() et .finally() pour éviter le blocage
-    getBannerVideo().
-    then((url) => setBannerVideoUrl(url)).
-    catch((err) => console.warn("Erreur bannière:", err));
+    getBannerVideo()
+      .then((url) => setBannerVideoUrl(url))
+      .catch((err) => console.warn("Erreur bannière:", err));
 
-    getVideos().
-    then((v) => setAllVideos(v)).
-    catch((err) => {
-      console.error("Erreur chargement vidéos:", err);
-      setAllVideos([]); // On vide en cas d'erreur
-    }).
-    finally(() => setIsLoadingVideos(false)); // S'exécute TOUJOURS
+    getVideos()
+      .then((v) => setAllVideos(v))
+      .catch((err) => {
+        console.error("Erreur chargement vidéos:", err);
+        setAllVideos([]);
+      })
+      .finally(() => setIsLoadingVideos(false));
 
-    getPhotos().
-    then((p) => setPhotos(p)).
-    catch((err) => {
-      console.error("Erreur chargement photos:", err);
-      setPhotos([]);
-    }).
-    finally(() => setIsLoadingPhotos(false)); // S'exécute TOUJOURS
+    getPhotos()
+      .then((p) => setPhotos(p))
+      .catch((err) => {
+        console.error("Erreur chargement photos:", err);
+        setPhotos([]);
+      })
+      .finally(() => setIsLoadingPhotos(false));
   }, []);
 
-  // Effet de frappe en boucle (Typing / Deleting effect)
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    if (!selectedPhoto) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSelectedPhoto(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedPhoto]);
 
-    if (!isDeleting && displayText.length < FULL_TEXT.length) {
-      timer = setTimeout(() => {
-        setDisplayText(FULL_TEXT.substring(0, displayText.length + 1));
-      }, 120);
-    } else if (!isDeleting && displayText.length === FULL_TEXT.length) {
-      timer = setTimeout(() => {
-        setIsDeleting(true);
-      }, 3500);
-    } else if (isDeleting && displayText.length > 0) {
-      timer = setTimeout(() => {
-        setDisplayText(FULL_TEXT.substring(0, displayText.length - 1));
-      }, 60);
-    } else if (isDeleting && displayText.length === 0) {
-      setIsDeleting(false);
-    }
+  const sortItems = <T,>(items: T[]): T[] =>
+    [...items].sort((a, b) => (sortBy === "views" ? extractViews(b) - extractViews(a) : timeOf(b) - timeOf(a)));
 
-    return () => clearTimeout(timer);
-  }, [displayText, isDeleting]);
-
-  // Tri des vidéos
-  const sortedVideos = useMemo(() => {
-    if (!allVideos) return [];
-    let list = [...allVideos];
-
-    if (sortBy === "views") {
-      return list.sort((a, b) => extractViews(b) - extractViews(a));
-    }
-
-    return list.sort((a, b) => {
-      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
-      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
-      return dateB - dateA;
-    });
-  }, [allVideos, sortBy]);
-
-  // Tri des photos
-  const sortedPhotos = useMemo(() => {
-    if (!photos) return [];
-    let list = [...photos];
-
-    if (sortBy === "views") {
-      return list.sort((a, b) => extractViews(b) - extractViews(a));
-    }
-
-    return list.sort((a, b) => {
-      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
-      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
-      return dateB - dateA;
-    });
-  }, [photos, sortBy]);
-
-  // Nouveautés vidéo
-  const newestVideos = useMemo(() => {
-    if (!allVideos) return [];
-    return [...allVideos].sort((a, b) => {
-      const dateA = new Date((a as any).created_at || (a as any).createdAt || 0).getTime();
-      const dateB = new Date((b as any).created_at || (b as any).createdAt || 0).getTime();
-      return dateB - dateA;
-    });
-  }, [allVideos]);
+  const sortedVideos = useMemo(() => sortItems(allVideos || []), [allVideos, sortBy]);
+  const sortedPhotos = useMemo(() => sortItems(photos || []), [photos, sortBy]);
+  const newestVideos = useMemo(() => [...(allVideos || [])].sort((a, b) => timeOf(b) - timeOf(a)), [allVideos]);
+  const mostViewedVideos = useMemo(
+    () => [...(allVideos || [])].sort((a, b) => extractViews(b) - extractViews(a)),
+    [allVideos],
+  );
+  const recentPhotos = useMemo(() => [...(photos || [])].sort((a, b) => timeOf(b) - timeOf(a)), [photos]);
 
   const handlePhotoClick = async (photo: Photo) => {
     if (photo.isVip && !isUserVip) {
@@ -139,14 +167,9 @@ export function Home() {
       return;
     }
 
-    const updatedViews = extractViews(photo) + 1;
-    const updatedPhoto = { ...photo, views: updatedViews };
-
+    const updatedPhoto = { ...photo, views: extractViews(photo) + 1 };
     setSelectedPhoto(updatedPhoto);
-
-    setPhotos((prev) =>
-    prev.map((p) => p.id === photo.id ? updatedPhoto : p)
-    );
+    setPhotos((prev) => prev.map((p) => (p.id === photo.id ? updatedPhoto : p)));
 
     try {
       await registerPhotoView(photo.id);
@@ -155,398 +178,238 @@ export function Home() {
     }
   };
 
-  const haitianPart = displayText.substring(0, 8);
-  const nudPart = displayText.substring(8);
+  const emptyClass = "col-span-full rounded-2xl border border-dashed border-border py-20 text-center text-sm text-muted-foreground";
+  const videoGrid = "grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4";
+  const photoGrid = "grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3";
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* ================= HERO BANNER REPENSOUE ================= */}
-      <section className="relative w-full aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9] max-h-[75vh] bg-black overflow-hidden border-b border-border/50">
-        {bannerVideoUrl ?
-        <div className="absolute inset-0 z-0 scale-105 transform">
-            <video
+    <div className="flex min-h-screen flex-col">
+      {/* ================= HERO ================= */}
+      <section className="relative isolate w-full overflow-hidden bg-black">
+        {bannerVideoUrl && (
+          <video
             src={bannerVideoUrl}
             autoPlay
             muted
             loop
             playsInline
             controls={false}
-            className="w-full h-full object-cover pointer-events-none filter brightness-90" />
-          
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/30 to-transparent" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.6)_100%)]" />
-          </div> :
+            className="pointer-events-none absolute inset-0 -z-10 h-full w-full object-cover opacity-80"
+          />
+        )}
+        {/* Voile de lisibilité : sombre en bas et à gauche, là où se trouve le texte */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black via-black/40 to-black/10" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/70 via-transparent to-transparent" />
 
-        <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-background to-background" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(30,94,255,0.35),transparent_70%)]" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-          </div>
-        }
-        
-        <div className="absolute inset-0 flex flex-col justify-end p-6 sm:p-10 md:p-16 lg:p-24 container mx-auto z-10">
-          <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-6 duration-700">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 backdrop-blur-md mb-4 text-xs font-semibold text-primary-foreground shadow-lg">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              <span>{t('home.new_on_platform')}</span>
-            </div>
-            
-            <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white mb-6 leading-none min-h-[50px] sm:min-h-[70px] flex items-center">
-              <span className="drop-shadow-md">{haitianPart}</span>
-              <span className="bg-gradient-to-r from-blue-400 via-primary to-indigo-500 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(30,94,255,0.8)] ml-2">
-                {nudPart}
-              </span>
-              <span className="animate-pulse ml-1.5 inline-block w-1 h-8 sm:h-12 bg-primary rounded-full" />
-            </h1>
+        <div className="mx-auto flex min-h-[420px] w-full max-w-6xl flex-col justify-end px-5 pb-12 pt-24 animate-in fade-in duration-700 md:min-h-[520px] md:pb-16">
+          <h1 className="font-serif text-5xl font-semibold tracking-tight text-white sm:text-6xl md:text-7xl">
+            HAITIAN NUD
+          </h1>
+          <p className="mt-4 max-w-md text-base text-white/75 md:text-lg">
+            {t("Découvrez les contenus les plus exclusifs et récents de la plateforme en haute définition.")}
+          </p>
 
-            <p className="text-muted-foreground text-sm sm:text-base max-w-lg mb-8 line-clamp-2 hidden sm:block">
-              {t("Découvrez les contenus les plus exclusifs et récents de la plateforme en haute définition.")}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              <Button
-                size="lg"
-                onClick={() => setLocation("/vip-catalog")}
-                className="bg-primary hover:bg-primary/90 text-white font-bold px-8 h-12 rounded-xl shadow-[0_0_30px_rgba(30,94,255,0.5)] transition-all hover:scale-105 w-full sm:w-auto">
-                
-                <Play className="mr-2 h-5 w-5 fill-current" /> {t("Regarder maintenant")}
-              </Button>
-              
-              {!isUserVip &&
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button
+              size="lg"
+              onClick={() => setLocation("/vip-catalog")}
+              className="h-12 rounded-full bg-white px-8 text-base font-semibold text-black hover:bg-white/90"
+            >
+              <Play className="mr-2 h-4 w-4 fill-current" /> {t("Regarder maintenant")}
+            </Button>
+            {!isUserVip && (
               <Button
                 size="lg"
                 variant="outline"
                 onClick={() => setLocation("/plans")}
-                className="bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20 backdrop-blur-md h-12 rounded-xl font-semibold transition-all hover:scale-105 w-full sm:w-auto">
-                
-                  <Star className="mr-2 h-5 w-5 text-yellow-400 fill-yellow-400/20 animate-pulse" />
-                  {t('nav.become_vip')}
-                </Button>
-              }
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Barre de navigation par onglets & tri */}
-      <section className="border-b border-border bg-background/95 backdrop-blur-md sticky top-16 z-40">
-        <div className="container mx-auto px-4 py-2.5 flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-          
-          <div className="flex items-center gap-1.5 shrink-0">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const active = tab.id === activeTab;
-              return (
-                <Button
-                  key={tab.id}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-full px-3.5 h-8 text-xs font-medium transition-all gap-1.5 ${
-                  active ?
-                  "bg-primary text-white shadow-sm hover:bg-primary/90" :
-                  "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"}`
-                  }>
-                  
-                  <Icon className="h-3.5 w-3.5" />
-                  {t(tab.label)}
-                </Button>);
-
-            })}
-          </div>
-
-          <div className="h-4 w-[1px] bg-border shrink-0 sm:hidden" />
-
-          <div className="flex items-center gap-1 bg-muted/40 p-0.5 rounded-full border border-border/50 shrink-0">
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSortBy("recent")}
-              className={`h-7 px-2.5 text-[11px] rounded-full font-medium transition-all ${
-              sortBy === "recent" ?
-              "bg-background text-foreground shadow-xs" :
-              "text-muted-foreground hover:text-foreground"}`
-              }>
-              {t("Récentes")}
-            
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setSortBy("views")}
-              className={`h-7 px-2.5 text-[11px] rounded-full font-medium transition-all ${
-              sortBy === "views" ?
-              "bg-background text-foreground shadow-xs" :
-              "text-muted-foreground hover:text-foreground"}`
-              }>
-              {t("Plus vues")}
-            
-            </Button>
-          </div>
-
-        </div>
-      </section>
-
-      <div className="container mx-auto px-4 py-8 flex flex-col gap-12">
-        {activeTab === "all" &&
-        <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-serif font-bold flex items-center gap-2">
-                <Sparkles className="text-primary h-6 w-6" /> {t("Nouvelles vidéos")}
-              </h2>
-              <Link href="/search" className="text-sm text-primary hover:underline flex items-center">
-                {t("Voir tout")} <ChevronRight className="h-4 w-4" />
-              </Link>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {isLoadingVideos ?
-            Array.from({ length: 4 }).map((_, i) =>
-            <div key={i} className="flex flex-col gap-3">
-                    <Skeleton className="aspect-video w-full rounded-xl" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-            ) :
-            newestVideos && newestVideos.length > 0 ?
-            newestVideos.slice(0, 4).map((video, i) =>
-            <div key={video.id} className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}>
-                    <VideoCard video={video} />
-                  </div>
-            ) :
-
-            <div className="col-span-full py-12 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-                  {t("Aucune nouvelle vidéo pour le moment.")}
-                </div>
-            }
-            </div>
-          </section>
-        }
-
-        {!isUserVip &&
-        <section className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-background to-background" />
-            <div className="absolute right-0 top-0 bottom-0 w-1/3 md:w-1/2">
-               <div className="absolute inset-0 bg-[radial-gradient(circle_at_right,rgba(30,94,255,0.35),transparent_70%)]" />
-               <div className="absolute inset-0 bg-gradient-to-r from-card to-transparent" />
-            </div>
-            <div className="relative p-6 md:p-10 flex flex-col md:flex-row items-center justify-between gap-6 z-10">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Star className="h-5 w-5 text-primary fill-primary" />
-                  <h3 className="text-xl md:text-2xl font-bold">{t('home.exclusive_vip_pass')}</h3>
-                </div>
-                <p className="text-muted-foreground max-w-md">
-                  {t("Accédez à tout le contenu premium, téléchargements illimités et sans publicités. Soutenez les créateurs haïtiens.")}
-                </p>
-              </div>
-              <Button size="lg" onClick={() => setLocation("/plans")} className="bg-primary text-primary-foreground font-bold shrink-0">
-                {t("Découvrir les offres")}
+                className="h-12 rounded-full border-white/30 bg-white/10 px-8 text-base font-semibold text-white backdrop-blur-md hover:bg-white/20 hover:text-white"
+              >
+                {t("nav.become_vip")}
               </Button>
-            </div>
-          </section>
-        }
+            )}
+          </div>
+        </div>
+      </section>
 
-        <section className="mb-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-serif font-bold">
-              {activeTab === "all" && t("Contenus récents & populaires")}
-              {activeTab === "video" && t("Galerie vidéo")}
-              {activeTab === "photo" && t("Galerie photo")}
-            </h2>
+      {/* ================= ONGLETS & TRI ================= */}
+      <div className="sticky top-14 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl md:top-16">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-5 py-3">
+          <div role="tablist" className="inline-flex rounded-full bg-muted p-1">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={tab.id === activeTab}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400",
+                  tab.id === activeTab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t(tab.label)}
+              </button>
+            ))}
           </div>
 
-          {activeTab === "photo" &&
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {isLoadingPhotos ?
-            Array.from({ length: 6 }).map((_, i) =>
-            <div key={`photo-sk-${i}`} className="flex flex-col gap-2">
-                    <Skeleton className="aspect-video w-full rounded-xl" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-            ) :
-            sortedPhotos && sortedPhotos.length > 0 ?
-            sortedPhotos.map((photo, i) => {
-              const isLocked = photo.isVip && !isUserVip;
-              const viewsCount = extractViews(photo);
-
-              return (
-                <div
-                  key={photo.id}
-                  onClick={() => handlePhotoClick(photo)}
-                  className="group relative rounded-xl overflow-hidden border border-border bg-card cursor-pointer animate-in fade-in zoom-in-95 duration-500"
-                  style={{ animationDelay: `${i % 3 * 100}ms`, animationFillMode: 'both' }}>
-                  
-                      <div className="aspect-video w-full bg-muted relative overflow-hidden">
-                        <img
-                      src={photo.imageUrl || (photo as any).image_url}
-                      alt={photo.title}
-                      className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
-                      isLocked ? "blur-md scale-110 select-none" : ""}`
-                      } />
-                    
-
-                        {isLocked &&
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4 text-center z-10 transition-opacity group-hover:bg-black/70">
-                            <Lock className="h-6 w-6 text-yellow-400 mb-1 animate-bounce" />
-                            <span className="text-xs font-bold text-yellow-400 mb-2">{t("Contenu VIP Exclusif")}</span>
-                            <span className="text-[10px] bg-primary text-white px-2 py-1 rounded-full font-semibold shadow">
-                              {t("Devenir VIP pour débloquer")}
-                            </span>
-                          </div>
-                    }
-
-                        {photo.isVip && !isLocked &&
-                    <div className="absolute top-2 right-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 shadow-md z-10">
-                            <Star className="h-3 w-3 fill-current text-yellow-400" /> VIP
-                          </div>
-                    }
-                      </div>
-
-                      <div className="p-3">
-                        <h3 className="font-semibold text-sm line-clamp-1 group-hover:text-primary transition-colors">
-                          {photo.title}
-                        </h3>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                          <span className="bg-accent px-1.5 py-0.5 rounded text-[11px] font-medium">
-                            {photo.category}
-                          </span>
-                          <span className="flex items-center gap-1 font-medium text-foreground/80">
-                            <Eye className="h-3.5 w-3.5 text-primary" /> {t("{{views}} vues", { count: viewsCount, views: viewsCount.toLocaleString() })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>);
-
-            }) :
-
-            <div className="col-span-full py-24 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-                  {t("Aucune photo disponible pour l'instant.")}
-                </div>
-            }
+          {activeTab !== "all" && (
+            <div className="flex items-center gap-4 text-sm">
+              {(["recent", "views"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSortBy(s)}
+                  aria-pressed={sortBy === s}
+                  className={cn(
+                    "font-medium transition-colors focus-visible:outline-none focus-visible:underline",
+                    sortBy === s ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {s === "recent" ? t("Récentes") : t("Plus vues")}
+                </button>
+              ))}
             </div>
-          }
-
-          {activeTab === "video" &&
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 gap-y-10">
-              {isLoadingVideos ?
-            Array.from({ length: 8 }).map((_, i) =>
-            <div key={`latest-${i}`} className="flex flex-col gap-3">
-                    <Skeleton className="aspect-video w-full rounded-xl" />
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-            ) :
-            sortedVideos && sortedVideos.length > 0 ?
-            sortedVideos.map((video, i) =>
-            <div key={video.id} className="animate-in fade-in zoom-in-95 duration-500" style={{ animationDelay: `${i % 4 * 100}ms`, animationFillMode: 'both' }}>
-                    <VideoCard video={video} />
-                  </div>
-            ) :
-
-            <div className="col-span-full py-24 text-center text-muted-foreground border border-dashed border-border rounded-xl">
-                  {t("Aucune vidéo disponible.")}
-                </div>
-            }
-            </div>
-          }
-
-          {activeTab === "all" &&
-          <div className="space-y-10">
-              <div>
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <VideoIcon className="h-5 w-5 text-primary" /> {t("Vidéos")}
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                  {isLoadingVideos ?
-                Array.from({ length: 4 }).map((_, i) =>
-                <Skeleton key={i} className="aspect-video w-full rounded-xl" />
-                ) :
-                sortedVideos.slice(0, 8).map((video) =>
-                <VideoCard key={video.id} video={video} />
-                )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5 text-primary" /> {t("Photos")}
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {isLoadingPhotos ?
-                Array.from({ length: 3 }).map((_, i) =>
-                <Skeleton key={i} className="aspect-video w-full rounded-xl" />
-                ) :
-                sortedPhotos.slice(0, 6).map((photo) => {
-                  const isLocked = photo.isVip && !isUserVip;
-                  return (
-                    <div
-                      key={photo.id}
-                      onClick={() => handlePhotoClick(photo)}
-                      className="group relative rounded-xl overflow-hidden border border-border bg-card cursor-pointer">
-                      
-                        <div className="aspect-video w-full bg-muted relative overflow-hidden">
-                          <img
-                          src={photo.imageUrl || (photo as any).image_url}
-                          alt={photo.title}
-                          className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
-                          isLocked ? "blur-md scale-110 select-none" : ""}`
-                          } />
-                        
-                          {isLocked &&
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white">
-                              <Lock className="h-6 w-6 text-yellow-400" />
-                            </div>
-                        }
-                        </div>
-                        <div className="p-3">
-                          <h4 className="font-semibold text-sm line-clamp-1">{photo.title}</h4>
-                        </div>
-                      </div>);
-
-                })}
-                </div>
-              </div>
-            </div>
-          }
-        </section>
+          )}
+        </div>
       </div>
 
-      {selectedPhoto &&
-      <div
-        className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200"
-        onClick={() => setSelectedPhoto(null)}>
-        
-          <div className="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+      {/* ================= CONTENU ================= */}
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-5 pb-28 pt-12">
+        {activeTab === "all" && (
+          <>
+            <section>
+              <SectionHeader title={t("Nouvelles vidéos")} href="/search" more={t("Voir tout")} />
+              <div className={videoGrid}>
+                {isLoadingVideos ? (
+                  <VideoGridSkeleton count={4} />
+                ) : newestVideos.length > 0 ? (
+                  newestVideos.slice(0, 4).map((v) => <VideoCard key={v.id} video={v} />)
+                ) : (
+                  <div className={emptyClass}>{t("Aucune nouvelle vidéo pour le moment.")}</div>
+                )}
+              </div>
+            </section>
+
+            {!isUserVip && (
+              <section className="flex flex-col gap-6 rounded-3xl border border-border bg-card p-8 md:flex-row md:items-center md:justify-between md:p-10">
+                <div>
+                  <h2 className="font-serif text-2xl font-semibold tracking-tight md:text-3xl">{t("home.exclusive_vip_pass")}</h2>
+                  <p className="mt-2 max-w-lg text-muted-foreground">
+                    {t("Accédez à tout le contenu premium, téléchargements illimités et sans publicités. Soutenez les créateurs haïtiens.")}
+                  </p>
+                </div>
+                <Button
+                  size="lg"
+                  onClick={() => setLocation("/plans")}
+                  className="h-12 shrink-0 rounded-full bg-amber-400 px-8 text-base font-semibold text-black hover:bg-amber-300"
+                >
+                  {t("Découvrir les offres")}
+                </Button>
+              </section>
+            )}
+
+            {(isLoadingVideos || mostViewedVideos.length > 4) && (
+              <section>
+                <SectionHeader title={t("Plus vues")} href="/search" more={t("Voir tout")} />
+                <div className={videoGrid}>
+                  {isLoadingVideos ? (
+                    <VideoGridSkeleton count={4} />
+                  ) : (
+                    mostViewedVideos.slice(0, 8).map((v) => <VideoCard key={v.id} video={v} />)
+                  )}
+                </div>
+              </section>
+            )}
+
+            <section>
+              <SectionHeader title={t("Photos")} />
+              <div className={photoGrid}>
+                {isLoadingPhotos ? (
+                  Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-2xl" />)
+                ) : recentPhotos.length > 0 ? (
+                  recentPhotos.slice(0, 6).map((p) => (
+                    <PhotoCard key={p.id} photo={p} locked={!!p.isVip && !isUserVip} onOpen={handlePhotoClick} />
+                  ))
+                ) : (
+                  <div className={emptyClass}>{t("Aucune photo disponible pour l'instant.")}</div>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
+        {activeTab === "video" && (
+          <section>
+            <SectionHeader title={t("Galerie vidéo")} />
+            <div className={videoGrid}>
+              {isLoadingVideos ? (
+                <VideoGridSkeleton count={8} />
+              ) : sortedVideos.length > 0 ? (
+                sortedVideos.map((v) => <VideoCard key={v.id} video={v} />)
+              ) : (
+                <div className={emptyClass}>{t("Aucune vidéo disponible.")}</div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {activeTab === "photo" && (
+          <section>
+            <SectionHeader title={t("Galerie photo")} />
+            <div className={photoGrid}>
+              {isLoadingPhotos ? (
+                Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="aspect-video w-full rounded-2xl" />)
+              ) : sortedPhotos.length > 0 ? (
+                sortedPhotos.map((p) => (
+                  <PhotoCard key={p.id} photo={p} locked={!!p.isVip && !isUserVip} onOpen={handlePhotoClick} />
+                ))
+              ) : (
+                <div className={emptyClass}>{t("Aucune photo disponible pour l'instant.")}</div>
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+
+      {/* ================= VISIONNEUSE PHOTO ================= */}
+      {selectedPhoto && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={selectedPhoto.title}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setSelectedPhoto(null)}
+        >
+          <div className="relative flex max-h-[90vh] max-w-5xl flex-col items-center" onClick={(e) => e.stopPropagation()}>
             <button
-            onClick={() => setSelectedPhoto(null)}
-            className="absolute -top-10 right-0 text-white hover:text-primary transition-colors flex items-center gap-1 font-bold">
-            
-              <X className="h-6 w-6" /> {t("Fermer")}
+              type="button"
+              autoFocus
+              onClick={() => setSelectedPhoto(null)}
+              className="absolute -top-11 right-0 inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm font-medium text-white/80 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+            >
+              <X className="h-5 w-5" /> {t("Fermer")}
             </button>
             <img
-            src={selectedPhoto.imageUrl || (selectedPhoto as any).image_url}
-            alt={selectedPhoto.title}
-            className="max-w-full max-h-[80vh] object-contain rounded-lg border border-border shadow-2xl" />
-          
+              src={selectedPhoto.imageUrl || (selectedPhoto as any).image_url}
+              alt={selectedPhoto.title}
+              className="max-h-[78vh] max-w-full rounded-xl object-contain shadow-2xl"
+            />
             <div className="mt-4 text-center text-white">
-              <h3 className="text-lg font-bold">{selectedPhoto.title}</h3>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-2">
+              <h3 className="text-lg font-semibold">{selectedPhoto.title}</h3>
+              <p className="mt-1 flex items-center justify-center gap-3 text-sm text-white/70">
                 <span>{selectedPhoto.category}</span>
-                <span>•</span>
-                <span className="flex items-center gap-1 text-white">
-                  <Eye className="h-3.5 w-3.5 text-primary" /> {t("{{views}} vues", { count: extractViews(selectedPhoto), views: extractViews(selectedPhoto).toLocaleString() })}
+                <span className="flex items-center gap-1">
+                  <Eye className="h-3.5 w-3.5" />
+                  {t("{{views}} vues", {
+                    count: extractViews(selectedPhoto),
+                    views: extractViews(selectedPhoto).toLocaleString(i18n.language),
+                  })}
                 </span>
               </p>
             </div>
           </div>
         </div>
-      }
-    </div>);
-
+      )}
+    </div>
+  );
 }
