@@ -37,9 +37,12 @@ export function TranzakCheckout() {
     }
     setLoading(true);
     try {
+      const idempotencyKey = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `payment-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
       const res = await fetch("https://api.haitiannud.com/api/payments/vip", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "Idempotency-Key": crypto.randomUUID() },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}`, "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({ planId, paymentMethod: method, customerName: name.trim(), customerEmail: email.trim(), customerPhone: phone.trim() })
       });
       const result = await res.json().catch(() => null);
