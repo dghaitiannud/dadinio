@@ -21,7 +21,7 @@ import { ForgotPasswordPage } from "@/pages/forgot-password";
 import { ResetPasswordPage } from "@/pages/reset-password";
 import { DownloadsPage } from "@/pages/downloads";
 import { VipCatalog } from "@/pages/vip-catalog";
-import { TranzakCheckout } from "@/pages/tranzak-checkout";
+import { TranzakCheckout, PaymentReturn, PaymentCancel } from "@/pages/tranzak-checkout";
 
 // 🚀 LAZY LOADING (Chargement à la demande)
 const Watch = lazy(() => import("@/pages/watch").then(m => ({ default: m.Watch })));
@@ -131,6 +131,8 @@ function App() {
                     <Route path="/search" component={Search} />
                     <Route path="/plans" component={Plans} />
                     <Route path="/tranzak-checkout" component={TranzakCheckout} />
+                    <Route path="/payment/return" component={PaymentReturn} />
+                    <Route path="/payment/cancel" component={PaymentCancel} />
                     <Route path="/account" component={Account} />
                     <Route path="/admin" component={Admin} />
                     <Route path="/live" component={Live} />
