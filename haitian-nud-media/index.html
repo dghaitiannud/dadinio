@@ -158,6 +158,31 @@
     </div>
 
     <div id="root"></div>
+    <!-- Temporary browser error diagnostics -->
+    <script>
+      function showStartupError(title, details) {
+        const preloader = document.getElementById('app-preloader');
+        if (preloader) preloader.remove();
+        const root = document.getElementById('root');
+        if (!root) return;
+        const box = document.createElement('div');
+        box.style.cssText = 'background:#180b0b;color:#ff6b6b;padding:20px;font-family:monospace;white-space:pre-wrap;overflow-wrap:anywhere;min-height:100vh;';
+        const heading = document.createElement('strong');
+        heading.textContent = title;
+        const message = document.createElement('pre');
+        message.style.cssText = 'white-space:pre-wrap;overflow-wrap:anywhere;';
+        message.textContent = details || 'No details provided';
+        box.append(heading, message);
+        root.replaceChildren(box);
+      }
+      window.addEventListener('error', (event) => {
+        showStartupError('JAVASCRIPT ERROR', [event.message, event.filename, 'Line: ' + event.lineno].join('\\n'));
+      });
+      window.addEventListener('unhandledrejection', (event) => {
+        const reason = event.reason;
+        showStartupError('PROMISE ERROR', reason && reason.stack ? reason.stack : String(reason));
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
 
     <!-- 🛡️ SCRIPT ANTI-BARRE FLUIDE (Ne bloque pas la traduction) -->
