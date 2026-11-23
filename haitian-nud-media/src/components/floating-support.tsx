@@ -141,7 +141,10 @@ export function FloatingSupport({ currentUser }: {currentUser: any;}) {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      sessionIdRef.current = crypto.randomUUID();
+      // randomUUID() is unavailable in some insecure HTTP contexts (e.g. IP-based dev URLs).
+      sessionIdRef.current = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `support-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
     }
   }, []);
 
