@@ -662,6 +662,7 @@
   "auth.reset_check_inbox": "Verifye bwat resepsyon ou. Si kont ou an egziste, w ap resevwa yon lyen pou reyinisyalize modpas la.",
   "downloads.delete": "Efase",
   "live.mute": "Koupe son an",
+  "auth.login_success": "Koneksyon an reyisi",
   "live.unmute": "Mete son an"
   
 }
