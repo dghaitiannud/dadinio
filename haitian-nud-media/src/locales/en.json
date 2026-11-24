@@ -662,5 +662,6 @@
   "auth.reset_check_inbox": "Check your inbox. If your account exists, you will receive a reset link.",
   "downloads.delete": "Delete",
   "live.mute": "Mute",
+  "auth.login_success": "Login successful",
   "live.unmute": "Unmute"
 }
