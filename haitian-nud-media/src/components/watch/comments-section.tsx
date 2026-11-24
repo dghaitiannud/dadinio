@@ -33,11 +33,10 @@ export function CommentsSection({
   const { t } = useTranslation();
 
   return (
-    <div className="mt-8 pt-8 border-t border-border">
-      <h3 className="text-xl font-serif font-bold mb-6 flex items-center gap-2">
-        <MessageSquare className="h-5 w-5 text-primary" />
-        {t("watch.comments")} ({comments.length || 0})
-      </h3>
+     <section className="mt-10 border-t border-border pt-8">
+      <h2 className="mb-6 font-serif text-xl font-semibold tracking-tight">
+        {t("watch.comments")} <span className="font-sans text-base font-normal text-muted-foreground">{comments.length || 0}</span>
+      </h2>
 
       {isSignedIn ? (
         <form onSubmit={handleComment} className="mb-8 bg-card p-4 rounded-xl border border-border">
