@@ -648,5 +648,19 @@
   "pay.cancel_desc": "El pago no se completó. No se activó ningún acceso VIP.",
   "account.days_left": "Fecha de vencimiento",
   "account.extend": "Extender tu cuenta",
-  "pay.cancel_cta": "Reanudar el pago"
+  "pay.cancel_cta": "Reanudar el pago",
+  "watch.load_error": "No se pudo cargar el video. Revisa tu conexión.",
+  "watch.link_not_found": "Enlace de descarga no encontrado.",
+  "watch.slow_connection": "Conexión lenta o interrumpida. Inténtalo de nuevo en un momento.",
+  "catalog.empty_videos": "Aún no hay videos VIP.",
+  "catalog.empty_photos": "Aún no hay fotos VIP.",
+  "catalog.empty_all": "Aún no hay contenido VIP.",
+  "auth.show_password": "Mostrar contraseña",
+  "auth.hide_password": "Ocultar contraseña",
+  "auth.reset_email_sent": "Si existe una cuenta con esta dirección, se enviará un correo de restablecimiento.",
+  "auth.reset_link_sent": "Si existe una cuenta con esta dirección, se enviará un enlace de restablecimiento.",
+  "auth.reset_check_inbox": "Revisa tu bandeja de entrada. Si tu cuenta existe, recibirás un enlace de restablecimiento.",
+  "downloads.delete": "Eliminar",
+  "live.mute": "Silenciar",
+  "live.unmute": "Activar sonido"
 }
