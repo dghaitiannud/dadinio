@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="240" height="80" role="img" aria-label="Pay avec MonCash">
+  <defs>
+    
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#F6002C" />
+      <stop offset="45%" stop-color="#D40022" />
+      <stop offset="80%" stop-color="#8A0010" />
+      <stop offset="100%" stop-color="#4A0005" />
+    </linearGradient>
+
+    
+    <linearGradient id="foldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E5E5E5" />
+      <stop offset="100%" stop-color="#F7F7F7" />
+    </linearGradient>
+
+    
+    <clipPath id="triangleClip">
+      <path d="M 366 24 C 364 17, 371 14, 378 17 L 530 84 C 538 88, 538 96, 530 100 L 378 167 C 371 170, 364 167, 366 160 L 380 92 Z" />
+    </clipPath>
+  </defs>
+
+  
+  <rect x="4" y="4" width="592" height="192" rx="68" fill="url(#bgGrad)" />
+
+  
+  <text x="192" y="128" font-family="&#39;Segoe UI&#39;, Roboto, Helvetica, Arial, sans-serif" font-size="94" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="-1">Pay</text>
+
+  
+  <line x1="348" y1="20" x2="348" y2="180" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" />
+
+  
+  <g clip-path="url(#triangleClip)">
+    
+    <rect x="360" y="10" width="185" height="82" fill="#FFFFFF" />
+    
+    <rect x="360" y="92" width="185" height="85" fill="url(#foldGrad)" />
+  </g>
+
+  
+  <text x="434" y="108" font-family="&#39;Arial Black&#39;, &#39;Segoe UI&#39;, Roboto, sans-serif" font-size="43" font-weight="900" fill="#E30627" text-anchor="middle" letter-spacing="0.5">MON</text>
+
+  
+  <text x="498" y="180" font-family="&#39;Segoe UI&#39;, Roboto, Helvetica, Arial, sans-serif" font-size="48" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="-0.5">Cash</text>
+</svg>

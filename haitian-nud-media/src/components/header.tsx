@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { PwaInstallButton } from "@/components/pwa-install";
+import { cn } from "@/lib/utils";
 
 export function Header() {
   const { t } = useTranslation();
@@ -23,8 +24,8 @@ export function Header() {
 
   return (
     /* 🌐 Ajout de la classe "skiptranslate" si nécessaire, mais ici on laisse Google agir de force avec l'arbre du DOM rafraîchi */
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 md:h-16">
         <div className="flex items-center gap-2">
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
@@ -47,7 +48,7 @@ export function Header() {
                 <Link href="/plans" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg hover:text-primary transition-colors">
                   <Star className="h-5 w-5" /> <span>{t('nav.become_vip')}</span>
                 </Link>
-                
+
                 {isSignedIn &&
                 <Link href="/live" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-2 py-2 text-lg text-red-500 font-semibold hover:text-red-600 transition-colors">
                     <Radio className="h-5 w-5" /> <span>{t('common.live')}</span>
@@ -83,48 +84,70 @@ export function Header() {
           </Link>
         </div>
 
-        <nav className="hidden md:flex items-center gap-6">
-          <Link href="/" className={`text-sm font-medium transition-colors hover:text-primary ${location === '/' ? 'text-primary' : 'text-muted-foreground'}`}>
-            <span>{t('common.home')}</span>
-          </Link>
-          <Link href="/search" className={`text-sm font-medium transition-colors hover:text-primary ${location === '/search' ? 'text-primary' : 'text-muted-foreground'}`}>
-            <span>{t('common.search')}</span>
-          </Link>
-          <Link href="/plans" className={`text-sm font-medium transition-colors hover:text-primary ${location === '/plans' ? 'text-primary' : 'text-muted-foreground'}`}>
-            <span>{t('common.vip')}</span>
-          </Link>
-          {isSignedIn &&
-          <Link href="/live" className={`text-sm font-semibold transition-colors flex items-center gap-1.5 hover:text-red-500 ${location === '/live' ? 'text-red-500' : 'text-muted-foreground'}`}>
-              <Radio className="h-4 w-4 animate-pulse text-red-500" /> <span>{t('common.live')}</span>
+        <nav className="hidden items-center gap-1 md:flex">
+          {[
+            { href: "/", label: t("common.home") },
+            { href: "/search", label: t("common.search") },
+          ].map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className={cn(
+                "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400",
+                location === l.href ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {l.label}
             </Link>
-          }
+          ))}
+          {isSignedIn && (
+            <Link
+              href="/live"
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400",
+                location === "/live" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden /> {t("common.live")}
+            </Link>
+          )}
         </nav>
 
-        <div className="flex items-center gap-4">
-          <Link href="/search" className="md:hidden text-muted-foreground hover:text-primary">
+        <div className="flex items-center gap-3">
+          <Link href="/search" className="text-muted-foreground transition-colors hover:text-foreground md:hidden" aria-label={t("common.search")}>
             <Search className="h-5 w-5" />
           </Link>
           <div className="hidden md:block"><PwaInstallButton /></div>
-          {isSignedIn ?
-          <div className="flex items-center gap-4">
-              <Link href="/account" className="hidden sm:block">
-                <Button variant="ghost" size="sm"><span>{t('common.account')}</span></Button>
-              </Link>
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary/10 text-primary text-sm font-bold">
+          {appUser?.plan !== "vip" && (
+            <Link
+              href="/plans"
+              className="hidden h-8 items-center rounded-full bg-amber-400 px-4 text-sm font-semibold text-black transition-colors hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:inline-flex"
+            >
+              {t("nav.become_vip")}
+            </Link>
+          )}
+          {isSignedIn ? (
+            <Link href="/account" aria-label={t("common.account")} className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
+              <Avatar
+                className={cn(
+                  "h-8 w-8",
+                  appUser?.plan === "vip" && "ring-2 ring-amber-400 ring-offset-2 ring-offset-background",
+                )}
+              >
+                <AvatarFallback className="bg-muted text-sm font-semibold text-foreground">
                   {(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-            </div> :
-
-          <Link href="/login">
-              <Button size="sm" className="hidden sm:flex bg-primary hover:bg-primary/90 text-primary-foreground">
-                <span>{t('nav.login')}</span>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <Button size="sm" variant="outline" className="h-8 rounded-full px-4">
+                <span>{t("nav.login")}</span>
               </Button>
             </Link>
-          }
+          )}
         </div>
       </div>
-    </header>);
-
+    </header>
+  );
 }

@@ -1,63 +1,90 @@
-import { useTranslation, Trans } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLocation } from "wouter";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
-  Send, ShieldCheck,
-  Smartphone, Upload, Sparkles, LogIn, ArrowRight, FileImage, Crown, BellRing, ShieldAlert, Check, Globe, MapPin, MessageSquare } from
-"lucide-react";
+  ArrowLeft, ArrowUpRight, BellRing, Check, Copy, Crown, FileImage,
+  Loader2, Lock, ShieldAlert, ShieldCheck, Zap, Hand,
+} from "lucide-react";
+import { PaymentLogos } from "@/components/payment-logos";
+import { cn } from "@/lib/utils";
 
 import { isPushSupported, getPushPermission, subscribeToPush, notifyAdminsOfVipRequest } from "@/lib/push-notifications";
 
 const COMMUNITY_LINKS = [
-{ label: "Group WhatsApp 1", url: "https://chat.whatsapp.com/LOPVxj4kg01Eeol3La0oWC?s=cl&p=a&ilr=4&amv=2", desc: "Groupe WhatsApp VIP 1" },
-{ label: "Group WhatsApp 2", url: "https://chat.whatsapp.com/L0pruKgrYrcBTtNJZ1qXpv?s=cl&p=a&ilr=4&amv=2", desc: "Groupe WhatsApp VIP 2" },
-{ label: "Canal Telegram", url: "https://t.me/hatiannud_canal", desc: "Canal officiel Telegram" }];
+  { label: "Group WhatsApp 1", url: "https://chat.whatsapp.com/LOPVxj4kg01Eeol3La0oWC?s=cl&p=a&ilr=4&amv=2" },
+  { label: "Group WhatsApp 2", url: "https://chat.whatsapp.com/L0pruKgrYrcBTtNJZ1qXpv?s=cl&p=a&ilr=4&amv=2" },
+  { label: "Canal Telegram", url: "https://t.me/hatiannud_canal" },
+];
 
-
+// `name` reste en français : c'est la valeur enregistrée en base (vip_requests.plan_name).
+// L'affichage passe par t(`plans.name.${id}`).
 const SUBSCRIPTION_PLANS = [
-{ id: "decouverte", name: "Découverte", priceUsd: 6, htg: 750, days: 7, dailyRate: "0.86$" },
-{ id: "starter", name: "Starter", priceUsd: 8, htg: 1000, days: 10, dailyRate: "0.80$" },
-{ id: "standard", name: "Standard", priceUsd: 11, htg: 1375, days: 15, dailyRate: "0.73$" },
-{ id: "avantage", name: "Avantage", priceUsd: 20, htg: 2500, days: 30, dailyRate: "0.67$", popular: true },
-{ id: "prolonje", name: "Prolonje", priceUsd: 24, htg: 3000, days: 40, dailyRate: "0.60$" },
-{ id: "confort", name: "Confort", priceUsd: 60, htg: 7500, days: 105, dailyRate: "0.571$" },
-{ id: "vip_privilege", name: "VIP Privilège", priceUsd: 200, htg: 25000, days: 365, dailyRate: "0.55$" }];
+  { id: "decouverte", name: "Découverte", priceUsd: 6, htg: 750, days: 7 },
+  { id: "starter", name: "Starter", priceUsd: 8, htg: 1000, days: 10 },
+  { id: "standard", name: "Standard", priceUsd: 11, htg: 1375, days: 15 },
+  { id: "avantage", name: "Avantage", priceUsd: 20, htg: 2500, days: 30, popular: true },
+  { id: "prolonje", name: "Prolonje", priceUsd: 24, htg: 3000, days: 40 },
+  { id: "confort", name: "Confort", priceUsd: 60, htg: 7500, days: 105 },
+  { id: "vip_privilege", name: "VIP Privilège", priceUsd: 200, htg: 25000, days: 365 },
+];
 
+type Plan = (typeof SUBSCRIPTION_PLANS)[number];
+type Step = "info" | "payment" | "success";
+type Method = "auto" | "manual";
+
+const BASE_DAILY = SUBSCRIPTION_PLANS[0].priceUsd / SUBSCRIPTION_PLANS[0].days;
+const dailyOf = (p: Plan) => p.priceUsd / p.days;
+const savingOf = (p: Plan) => Math.round((1 - dailyOf(p) / BASE_DAILY) * 100);
+
+const NATCASH_NUMBER = "+509 32 49 24 65";
+const NATCASH_NAME = "Dafca Saint Vill";
 
 export function Plans() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { isSignedIn, appUser } = useAuth();
   const [, setLocation] = useLocation();
 
   const isUserVip = isSignedIn && appUser && (appUser as any).plan === "vip";
   const supported = isPushSupported();
 
-  const [step, setStep] = useState<'info' | 'payment' | 'success'>('info');
+  const [step, setStep] = useState<Step>("info");
   const [selectedPlanId, setSelectedPlanId] = useState<string>("avantage");
-  const [paymentMethod, setPaymentMethod] = useState<"natcash">("natcash");
+  const [method, setMethod] = useState<Method>("auto");
+  const [origin, setOrigin] = useState<"abroad" | "haiti">("haiti");
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pushPending, setPushPending] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  // Remonte automatiquement la page tout en haut à chaque changement d'étape
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
 
   const selectedPlan = SUBSCRIPTION_PLANS.find((p) => p.id === selectedPlanId) || SUBSCRIPTION_PLANS[3];
+  const planName = (p: Plan) => t(`plans.name.${p.id}`);
+  const fmtDays = (n: number) => t("plans.days_count", { days: n });
+  const fmtHtg = (n: number) => `${n.toLocaleString(i18n.language)} HTG`;
+  const fmtDaily = (p: Plan) =>
+    t("plans.per_day", { price: dailyOf(p).toLocaleString(i18n.language, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) });
+
+  const accessUntil = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + selectedPlan.days);
+    try {
+      return d.toLocaleDateString(i18n.language, { day: "numeric", month: "long", year: "numeric" });
+    } catch {
+      return d.toLocaleDateString();
+    }
+  }, [selectedPlan.days, i18n.language]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      const maxSize = 5 * 1024 * 1024;
-      if (selectedFile.size > maxSize) {
+      if (selectedFile.size > 5 * 1024 * 1024) {
         toast.error(t("Le fichier est trop lourd. Maximum 5 Mo autorisé."));
         e.target.value = "";
         return;
@@ -72,7 +99,7 @@ export function Plans() {
     }
   };
 
-  const handleActivatePushBeforeSubmit = async () => {
+  const handleActivatePush = async () => {
     setPushPending(true);
     try {
       const ok = await subscribeToPush((appUser as any)?.id);
@@ -88,61 +115,63 @@ export function Plans() {
     }
   };
 
-  const handlePaymentSubmit = async (e: React.FormEvent) => {
+  const copyNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(NATCASH_NUMBER.replace(/\s/g, ""));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard indisponible : le numéro reste lisible à l'écran */
+    }
+  };
+
+  const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isSignedIn || !appUser) {
       toast.error(t("Veuillez vous connecter pour soumettre votre paiement."));
       return;
     }
-
     if (!file) {
       toast.error(t("Veuillez téléverser votre reçu de paiement."));
       return;
     }
-
     if (supported && getPushPermission() !== "granted") {
       toast.error(t("Action requise : Veuillez activer les notifications système avant d'envoyer."));
       return;
     }
 
     setIsSubmitting(true);
-
     try {
-      const fileExt = file.name.split('.').pop();
-      const uniqueFileName = `${(appUser as any).id}-${Date.now()}.${fileExt}`;
-      const filePath = `${uniqueFileName}`;
+      const fileExt = file.name.split(".").pop();
+      const filePath = `${(appUser as any).id}-${Date.now()}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage.
-      from("vip-proofs").
-      upload(filePath, file, { cacheControl: "3600", upsert: false });
-
+      const { error: uploadError } = await supabase.storage
+        .from("vip-proofs")
+        .upload(filePath, file, { cacheControl: "3600", upsert: false });
       if (uploadError) throw new Error(`Erreur upload : ${uploadError.message}`);
 
       const { error: dbError } = await supabase.from("vip_requests").insert({
         user_id: (appUser as any).id,
         user_email: (appUser as any).email,
-        payment_method: paymentMethod,
+        payment_method: "natcash",
         plan_id: selectedPlan.id,
         plan_name: selectedPlan.name,
         amount_usd: selectedPlan.priceUsd,
         duration_days: selectedPlan.days,
         proof_url: filePath,
-        status: "pending"
+        status: "pending",
       });
-
       if (dbError) throw dbError;
 
       try {
         const notified = await notifyAdminsOfVipRequest();
-        if (!notified) {
-          console.warn("La demande VIP est enregistrée, mais la notification admin n'a pas été envoyée.");
-        }
+        if (!notified) console.warn("La demande VIP est enregistrée, mais la notification admin n'a pas été envoyée.");
       } catch (pushErr) {
         console.error("Échec notification admin:", pushErr);
       }
 
       toast.success(t("Preuve de paiement reçue avec succès !"));
-      setStep('success');
+      setStep("success");
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || t("Une erreur est survenue lors de l'envoi."));
@@ -151,276 +180,477 @@ export function Plans() {
     }
   };
 
-  return (
-    <div className="container mx-auto px-4 py-8 md:py-16 min-h-screen max-w-5xl">
-      {step === 'info' &&
-      <div className="space-y-12 animate-fade-in">
-          <div className="text-center max-w-2xl mx-auto">
-            <div className="inline-flex items-center gap-2 mb-4 bg-yellow-500/10 text-yellow-500 px-4 py-2 rounded-full text-sm font-semibold border border-yellow-500/20">
-              <Sparkles className="h-4 w-4 fill-yellow-500" /> {t("Espace Membre Premium")}
-            </div>
-            <h1 className="text-3xl md:text-5xl font-serif font-bold mb-6 tracking-tight">
-              {isUserVip ? t("Votre Abonnement VIP est Actif") : t("Choisissez votre formule VIP")}
-            </h1>
-            <p className="text-muted-foreground text-base md:text-lg">
-              {isUserVip ? t("Merci pour votre confiance ! Vous disposez actuellement d'un accès illimité et sécurisé à l'ensemble de la plateforme.") : t("Profitez d'un accès illimité aux vidéos et photos HD selon la durée de votre choix.")
+  const goToPayment = () => {
+    if (!isSignedIn) {
+      setLocation("/login");
+      return;
+    }
+    setStep("payment");
+  };
 
+  const startAutomatic = () => setLocation(`/tranzak-checkout?planId=${selectedPlan.id}`);
 
-            }
-            </p>
+  /* ---------- Récapitulatif (commun aux étapes 1 et 2) ---------- */
+  const Summary = (
+    <aside className="rounded-3xl border border-border bg-card p-6">
+      <p className="text-sm text-muted-foreground">{t("plans.summary_title")}</p>
+      <div className="mt-1 flex items-baseline justify-between gap-3">
+        <h3 className="font-serif text-2xl font-semibold tracking-tight">{planName(selectedPlan)}</h3>
+        <span className="text-sm text-muted-foreground">{fmtDays(selectedPlan.days)}</span>
+      </div>
+
+      <div className="mt-6 flex items-end justify-between border-t border-border pt-5">
+        <span className="text-sm text-muted-foreground">{t("plans.total")}</span>
+        <div className="text-right">
+          <div className="font-serif text-4xl font-semibold leading-none tracking-tight tabular-nums">
+            {selectedPlan.priceUsd} <span className="text-xl font-medium text-muted-foreground">$</span>
           </div>
+          <div className="mt-1.5 text-sm text-muted-foreground tabular-nums">{fmtHtg(selectedPlan.htg)}</div>
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">{t("plans.access_until", { date: accessUntil })}</p>
 
-          {!isUserVip &&
-        <div className="space-y-6">
-              <h2 className="text-xl font-bold text-center">{t("Nos Formules d'Abonnement")}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {SUBSCRIPTION_PLANS.map((p) => {
-              const isSelected = selectedPlanId === p.id;
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => setSelectedPlanId(p.id)}
-                  className={`relative p-5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
-                  isSelected ?
-                  "border-yellow-500 bg-yellow-500/10 shadow-lg scale-[1.02]" :
-                  "border-border bg-card/50 hover:border-primary/40"}`
-                  }>
-                  
-                      {p.popular &&
-                  <span className="absolute -top-3 right-4 bg-yellow-500 text-black text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          {t("Recommandé")}
-                        </span>
-                  }
-                      <div>
-                        <div className="flex justify-between items-center mb-2">
-                          <h3 className="font-bold text-base">{p.name}</h3>
-                          {isSelected && <Check className="h-4 w-4 text-yellow-500" />}
-                        </div>
-                        <div className="text-2xl font-mono font-bold text-foreground">
-                          {p.priceUsd}$ <span className="text-xs font-normal text-muted-foreground">USD</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                          ~ {p.htg.toLocaleString()} HTG
-                        </div>
-                      </div>
+      <ul className="mt-6 space-y-2.5 border-t border-border pt-5 text-sm">
+        {(["plans.includes_media", "plans.includes_catalog", "plans.includes_community"] as const).map((k) => (
+          <li key={k} className="flex items-start gap-2.5">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" strokeWidth={2.5} />
+            <span>{t(k)}</span>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  );
 
-                      <div className="mt-4 pt-3 border-t border-border/50 text-xs text-muted-foreground space-y-1">
-                        <div className="flex justify-between">
-                          <span>{t("Durée :")}</span>
-                          <span className="font-bold text-foreground">{t("{{days}} jours", { days: p.days })}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>{t("Prix par jour :")}</span>
-                          <span className="font-mono text-yellow-500">{p.dailyRate}</span>
-                        </div>
-                      </div>
-                    </div>);
+  const Stepper = (
+    <ol className="mb-10 flex items-center gap-3 text-sm">
+      {(["info", "payment", "success"] as Step[]).map((s, i) => {
+        const labels = { info: "plans.step_plan", payment: "plans.step_payment", success: "plans.step_done" } as const;
+        const order = { info: 0, payment: 1, success: 2 };
+        const state = order[s] < order[step] ? "done" : s === step ? "current" : "todo";
+        return (
+          <li key={s} className="flex items-center gap-3" aria-current={state === "current" ? "step" : undefined}>
+            {i > 0 && <span className="h-px w-6 bg-border sm:w-10" aria-hidden />}
+            <span
+              className={cn(
+                "flex items-center gap-2",
+                state === "current" ? "font-semibold text-foreground" : "text-muted-foreground",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-semibold",
+                  state === "todo" && "border border-border",
+                  state === "current" && "bg-foreground text-background",
+                  state === "done" && "bg-amber-400 text-black",
+                )}
+              >
+                {state === "done" ? <Check className="h-3 w-3" strokeWidth={3} /> : i + 1}
+              </span>
+              <span className={cn(state !== "current" && "hidden sm:inline")}>{t(labels[s])}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
 
-            })}
+  return (
+    <div className="mx-auto min-h-screen w-full max-w-6xl px-5 pb-44 pt-10 md:pb-24 md:pt-16">
+      {step !== "success" && Stepper}
+
+      {/* ================= ÉTAPE 1 : FORMULES ================= */}
+      {step === "info" && (
+        <div className="animate-fade-in">
+          {isUserVip ? (
+            <div className="mx-auto max-w-md py-10 text-center">
+              <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-amber-400 text-black">
+                <Crown className="h-6 w-6" />
               </div>
-
-              <div className="max-w-md mx-auto text-center pt-4">
-                {isSignedIn ?
-            <Button onClick={() => setStep('payment')} className="w-full py-6 text-base font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl shadow-lg gap-2">
-                    {t("S'abonner avec la formule {{plan}} ({{price}}$)", { plan: selectedPlan.name, price: selectedPlan.priceUsd })} <ArrowRight className="h-5 w-5" />
-                  </Button> :
-
-            <Button onClick={() => setLocation("/login")} variant="outline" className="w-full py-6 text-base font-bold rounded-xl gap-2">
-                    <LogIn className="h-5 w-5" /> {t("Connectez-vous pour vous abonner")}
-                  </Button>
-            }
-              </div>
-            </div>
-        }
-
-          {isUserVip &&
-        <div className="max-w-md mx-auto text-center p-6 bg-gradient-to-b from-yellow-500/10 to-transparent rounded-2xl border border-yellow-500/30 relative overflow-hidden backdrop-blur-sm">
-              <div className="absolute top-0 right-0 p-3 opacity-10">
-                <Crown className="h-24 w-24 text-yellow-500 fill-yellow-500" />
-              </div>
-              <div className="w-12 h-12 bg-yellow-500/10 text-yellow-500 rounded-full flex items-center justify-center mx-auto border border-yellow-500/20 mb-3 shadow-inner">
-                <Crown className="h-6 w-6 fill-yellow-500" />
-              </div>
-              <p className="text-xs uppercase tracking-widest font-bold text-yellow-500 mb-1">{t('plans.premium_active')}</p>
-              <h3 className="text-xl font-bold mb-2">{t('plans.welcome_vip')}</h3>
-              <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
-                {t("Votre abonnement est actuellement actif sur ce compte.")}
-              </p>
-              <Button onClick={() => setLocation("/vip-catalog")} className="w-full py-6 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl gap-2 shadow-lg">
-                {t("Explorer le catalogue privé")} <ArrowRight className="h-4 w-4" />
+              <h1 className="font-serif text-3xl font-semibold tracking-tight md:text-4xl">{t("plans.vip_active_title")}</h1>
+              <p className="mt-3 text-muted-foreground">{t("plans.vip_active_sub")}</p>
+              <Button
+                onClick={() => setLocation("/vip-catalog")}
+                className="mt-8 h-12 rounded-full bg-amber-400 px-8 text-base font-semibold text-black hover:bg-amber-300"
+              >
+                {t("Explorer le catalogue privé")}
               </Button>
             </div>
-        }
+          ) : (
+            <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14">
+              <section className="lg:col-span-7">
+                <h1 className="font-serif text-4xl font-semibold tracking-tight md:text-5xl">{t("plans.hero_title")}</h1>
+                <p className="mt-4 max-w-md text-lg text-muted-foreground">{t("plans.hero_sub")}</p>
 
-          <div className="max-w-xl mx-auto border-t pt-8">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 justify-center">
-              <Send className="h-5 w-5 text-primary" /> {t("Rejoindre nos communautés")}
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {COMMUNITY_LINKS.map((link) =>
-            <a key={link.url} href={link.url} target="_blank" rel="noopener noreferrer" className="flex flex-col justify-between p-3.5 bg-card border border-border rounded-xl hover:border-primary/40 transition-all text-center">
-                  <div className="mb-2">
-                    <div className="font-semibold text-xs text-foreground">{link.label}</div>
-                    <div className="text-[11px] text-muted-foreground">{t(link.desc)}</div>
-                  </div>
-                  <Button size="sm" className="w-full h-8 text-xs bg-primary text-white gap-1">{t("Rejoindre")}</Button>
-                </a>
-            )}
-            </div>
-          </div>
-        </div>
-      }
+                <div role="radiogroup" aria-label={t("plans.hero_title")} className="mt-10 space-y-2.5">
+                  {SUBSCRIPTION_PLANS.map((p) => {
+                    const selected = p.id === selectedPlanId;
+                    const saving = savingOf(p);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setSelectedPlanId(p.id)}
+                        className={cn(
+                          "group flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left outline-none transition-colors",
+                          "focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                          selected
+                            ? "border-amber-400 bg-amber-400/[0.06] ring-1 ring-amber-400"
+                            : "border-border hover:border-foreground/30",
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
+                            selected ? "border-amber-400 bg-amber-400" : "border-muted-foreground/40",
+                          )}
+                        >
+                          {selected && <Check className="h-3 w-3 text-black" strokeWidth={3.5} />}
+                        </span>
 
-      {step === 'payment' &&
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
-          <div className="lg:col-span-7 space-y-6">
-            <div className="border-b pb-4">
-              <h2 className="text-2xl font-serif font-bold">{t('plans.how_to_pay')}</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t("Formule choisie :")} <span className="font-bold text-yellow-500">{t("{{plan}} ({{usd}} $ USD / ~{{htg}} HTG / {{days}} jours)", { plan: selectedPlan.name, usd: selectedPlan.priceUsd, htg: selectedPlan.htg, days: selectedPlan.days })}</span>
-              </p>
-            </div>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                            <span className="text-base font-semibold">{planName(p)}</span>
+                            {p.popular && (
+                              <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-semibold text-black">
+                                {t("plans.most_chosen")}
+                              </span>
+                            )}
+                          </span>
+                          <span className="mt-0.5 block text-sm text-muted-foreground">
+                            {fmtDays(p.days)} · {fmtDaily(p)}
+                            {saving > 0 && (
+                              <span className="ml-2 font-medium text-emerald-600 dark:text-emerald-400">
+                                {t("plans.save_pct", { pct: saving })}
+                              </span>
+                            )}
+                          </span>
+                        </span>
 
-            {/* Instruction paiement */}
-            <div className="space-y-4">
-              {/* Option 1 : Depuis l'étranger (TapTap Send) */}
-              <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-                <h3 className="font-bold text-sm flex items-center gap-2 text-primary">
-                  <Globe className="h-4 w-4" /> {t("1. Si vous résidez à l'Étranger (TapTap Send)")}
-                </h3>
-                <div className="space-y-2 text-xs text-muted-foreground pl-2">
-                  <p><Trans i18nKey="• Ouvrez l'application <b>TapTap Send</b>." components={{ b: <strong /> }} /></p>
-                  <p><Trans i18nKey="• Sélectionnez <b>Haïti (+509)</b> comme destination." components={{ b: <strong /> }} /></p>
-                  <p><Trans i18nKey="• Saisissez le montant exact de la formule : <b>{{price}} $ USD</b>." values={{ price: selectedPlan.priceUsd }} components={{ b: <strong className="text-foreground" /> }} /></p>
-                  <p>{t("• Envoyez sur le compte NatCash :")}</p>
-                  <div className="p-3 bg-muted/40 border border-border/60 rounded-lg space-y-1 my-2">
-                    <p className="text-xs">{t("Numéro NatCash :")} <span className="font-bold text-foreground font-mono">+509 32 49 24 65</span></p>
-                    <p className="text-xs">{t("Nom du compte :")} <span className="font-bold text-foreground">{t("Dafca Saint Vill")}</span></p>
-                  </div>
-                  <p>{t("• Prenez une capture d'écran claire de votre reçu TapTap Send.")}</p>
+                        <span className="shrink-0 text-right">
+                          <span className="block font-serif text-xl font-semibold tabular-nums">{p.priceUsd} $</span>
+                          <span className="block text-xs text-muted-foreground tabular-nums">{fmtHtg(p.htg)}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
 
-              {/* Option 2 : Depuis Haïti (Dépôt ou Transfert) */}
-              <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-                <h3 className="font-bold text-sm flex items-center gap-2 text-emerald-500">
-                  <MapPin className="h-4 w-4" /> {t("2. Si vous résidez en Haïti (Dépôt / Transfert)")}
-                </h3>
-                <div className="space-y-2 text-xs text-muted-foreground pl-2">
-                  <p><Trans i18nKey="• Effectuez simplement un <b>dépôt ou un transfert direct</b> d'un montant de <c>{{htg}} HTG</c>." values={{ htg: selectedPlan.htg }} components={{ b: <strong />, c: <strong className="text-foreground" /> }} /></p>
-                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg space-y-1 my-2">
-                    <p className="text-xs">{t("NatCash :")} <span className="font-bold text-emerald-500 font-mono">+509 32 49 24 65</span></p>
-                    <p className="text-xs">{t("Nom du compte :")} <span className="font-bold text-foreground">{t("Dafca Saint Vill")}</span></p>
+                <div className="mt-12">
+                  <h2 className="text-sm font-semibold text-muted-foreground">{t("plans.communities_title")}</h2>
+                  <div className="mt-3 divide-y divide-border rounded-2xl border border-border">
+                    {COMMUNITY_LINKS.map((l) => (
+                      <a
+                        key={l.url}
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between px-5 py-3.5 text-sm transition-colors hover:bg-muted/40"
+                      >
+                        <span className="font-medium">{l.label}</span>
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                      </a>
+                    ))}
                   </div>
-                  <p>{t("• Prenez une capture d'écran ou une photo nette du reçu de confirmation de transfert/dépôt.")}</p>
                 </div>
-              </div>
+              </section>
 
-              {/* Option 3 : Autre méthode via Telegram */}
-              <div className="bg-sky-500/10 border border-sky-500/20 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="space-y-1 text-center sm:text-left">
-                  <h4 className="font-bold text-xs text-sky-400 flex items-center justify-center sm:justify-start gap-1.5">
-                    <MessageSquare className="h-3.5 w-3.5" /> {t("Vous préférez un autre moyen de paiement ?")}
-                  </h4>
-                  <p className="text-[11px] text-muted-foreground">
-                    {t("Contactez-nous directement sur Telegram pour procéder au paiement.")}
+              <div className="hidden lg:col-span-5 lg:block">
+                <div className="sticky top-24 space-y-4">
+                  {Summary}
+                  <Button
+                    onClick={goToPayment}
+                    className="h-12 w-full rounded-full bg-amber-400 text-base font-semibold text-black hover:bg-amber-300"
+                  >
+                    {isSignedIn ? t("plans.continue") : t("plans.sign_in_to_continue")}
+                  </Button>
+                  <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Lock className="h-3.5 w-3.5" /> {t("plans.secure_note")}
                   </p>
                 </div>
-                <a
-                href="https://T.me/dg_haitiannud"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto">
-                
-                  <Button size="sm" className="w-full bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs gap-1.5 rounded-lg whitespace-nowrap">
-                    {t("Écrire sur Telegram")}
+              </div>
+
+              {/* Barre d'action mobile */}
+              <div className="fixed inset-x-0 bottom-[84px] z-40 px-4 lg:hidden">
+                <div className="mx-auto flex max-w-md items-center gap-4 rounded-2xl border border-border bg-background/90 p-3 pl-5 shadow-xl backdrop-blur-xl">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold">{planName(selectedPlan)}</div>
+                    <div className="text-xs text-muted-foreground tabular-nums">
+                      {selectedPlan.priceUsd} $ · {fmtHtg(selectedPlan.htg)}
+                    </div>
+                  </div>
+                  <Button
+                    onClick={goToPayment}
+                    className="h-11 shrink-0 rounded-full bg-amber-400 px-6 font-semibold text-black hover:bg-amber-300"
+                  >
+                    {isSignedIn ? t("plans.continue") : t("plans.sign_in_to_continue")}
                   </Button>
-                </a>
+                </div>
               </div>
             </div>
+          )}
+        </div>
+      )}
 
-            <Button variant="ghost" onClick={() => setStep('info')} className="text-xs text-muted-foreground hover:text-foreground">
-              {t("← Changer de formule")}
-            </Button>
-          </div>
+      {/* ================= ÉTAPE 2 : PAIEMENT ================= */}
+      {step === "payment" && (
+        <div className="animate-fade-in">
+          <button
+            type="button"
+            onClick={() => setStep("info")}
+            className="mb-6 -ml-1 inline-flex items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+          >
+            <ArrowLeft className="h-4 w-4" /> {t("plans.change_plan")}
+          </button>
 
-          <div className="lg:col-span-5">
-            <Card className="bg-card border-border shadow-xl sticky top-6">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  <Upload className="h-4 w-4 text-primary" /> {t("Transmettre le reçu")}
-                </h3>
-                
-                <form onSubmit={handlePaymentSubmit} className="space-y-6">
-                  <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-xs space-y-1">
-                    <p className="font-bold text-yellow-500">{t("Formule :")} {selectedPlan.name}</p>
-                    <p>{t("Montant :")} <strong>{selectedPlan.priceUsd} $ USD</strong> (~{selectedPlan.htg} HTG)</p>
-                    <p>{t("Accès :")} <strong>{t("{{days}} jours", { days: selectedPlan.days })}</strong> VIP</p>
-                  </div>
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-14">
+            <section className="lg:col-span-7">
+              <h1 className="font-serif text-3xl font-semibold tracking-tight md:text-4xl">{t("plans.pay_title")}</h1>
 
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('plans.payment_method_used')}</Label>
-                    <RadioGroup value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)} className="grid grid-cols-1 gap-3">
-                      <div>
-                        <RadioGroupItem value="natcash" id="natcash" className="sr-only" />
-                        <Label htmlFor="natcash" className="flex items-center justify-center p-3 border rounded-xl cursor-pointer text-sm font-bold text-center border-emerald-500 bg-emerald-500/10 text-emerald-500">NatCash</Label>
+              <div role="radiogroup" aria-label={t("plans.pay_title")} className="mt-8 space-y-3">
+                {/* Automatique — prioritaire */}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={method === "auto"}
+                  onClick={() => setMethod("auto")}
+                  className={cn(
+                    "w-full rounded-2xl border p-5 text-left outline-none transition-colors",
+                    "focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    method === "auto"
+                      ? "border-amber-400 bg-amber-400/[0.06] ring-1 ring-amber-400"
+                      : "border-border hover:border-foreground/30",
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-400 text-black">
+                      <Zap className="h-4.5 w-4.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2.5">
+                        <span className="text-base font-semibold">{t("plans.auto_title")}</span>
+                        <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-semibold text-black">
+                          {t("plans.recommended")}
+                        </span>
                       </div>
-                    </RadioGroup>
+                      <p className="mt-1 text-sm text-muted-foreground">{t("plans.auto_desc")}</p>
+                      <PaymentLogos className="mt-4" />
+                    </div>
                   </div>
+                </button>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="proof-file" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('plans.screenshot_proof')}</Label>
-                    <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl p-4 bg-background hover:bg-muted/20 transition-all cursor-pointer group">
-                      <input type="file" id="proof-file" required accept="image/png, image/jpeg, image/jpg" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                      <FileImage className={`h-8 w-8 mb-2 ${file ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} transition-colors`} />
-                      <p className="text-xs font-medium text-center text-foreground max-w-[200px] truncate">{file ? file.name : t("Cliquez pour choisir un fichier")}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1">{t('plans.file_limits')}</p>
+                {/* Manuel */}
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={method === "manual"}
+                  onClick={() => setMethod("manual")}
+                  className={cn(
+                    "w-full rounded-2xl border p-5 text-left outline-none transition-colors",
+                    "focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    method === "manual"
+                      ? "border-amber-400 bg-amber-400/[0.06] ring-1 ring-amber-400"
+                      : "border-border hover:border-foreground/30",
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                      <Hand className="h-4.5 w-4.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-base font-semibold">{t("plans.manual_title")}</span>
+                      <p className="mt-1 text-sm text-muted-foreground">{t("plans.manual_desc")}</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {/* Détail : automatique */}
+              {method === "auto" && (
+                <div className="mt-8 animate-fade-in">
+                  <ol className="space-y-4">
+                    {(["plans.auto_how_1", "plans.auto_how_2", "plans.auto_how_3"] as const).map((k, i) => (
+                      <li key={k} className="flex items-start gap-3.5 text-sm">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
+                          {i + 1}
+                        </span>
+                        <span className="pt-0.5">{t(k)}</span>
+                      </li>
+                    ))}
+                  </ol>
+                  <Button
+                    onClick={startAutomatic}
+                    className="mt-8 h-12 w-full rounded-full bg-amber-400 text-base font-semibold text-black hover:bg-amber-300 sm:w-auto sm:px-10"
+                  >
+                    {t("plans.continue_to_payment")}
+                  </Button>
+                </div>
+              )}
+
+              {/* Détail : manuel */}
+              {method === "manual" && (
+                <form onSubmit={handleManualSubmit} className="mt-8 animate-fade-in space-y-8">
+                  <div>
+                    <div role="tablist" className="inline-flex rounded-full bg-muted p-1 text-sm">
+                      {(["haiti", "abroad"] as const).map((o) => (
+                        <button
+                          key={o}
+                          type="button"
+                          role="tab"
+                          aria-selected={origin === o}
+                          onClick={() => setOrigin(o)}
+                          className={cn(
+                            "rounded-full px-4 py-1.5 font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400",
+                            origin === o ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {o === "haiti" ? t("plans.manual_haiti") : t("plans.manual_abroad")}
+                        </button>
+                      ))}
+                    </div>
+
+                    <ol className="mt-5 space-y-3 text-sm">
+                      {(origin === "abroad"
+                        ? [
+                            t("plans.abroad_step1"),
+                            t("plans.abroad_step2", { amount: selectedPlan.priceUsd }),
+                            t("plans.abroad_step3"),
+                          ]
+                        : [
+                            t("plans.haiti_step1", { amount: selectedPlan.htg.toLocaleString(i18n.language) }),
+                            t("plans.haiti_step2"),
+                          ]
+                      ).map((txt, i) => (
+                        <li key={txt} className="flex items-start gap-3.5">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border text-xs font-semibold text-muted-foreground">
+                            {i + 1}
+                          </span>
+                          <span className="pt-0.5">{txt}</span>
+                        </li>
+                      ))}
+                    </ol>
+
+                    <div className="mt-5 rounded-2xl border border-border bg-muted/30 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs text-muted-foreground">{t("plans.account_number")}</div>
+                          <div className="mt-0.5 font-mono text-lg font-semibold tabular-nums">{NATCASH_NUMBER}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={copyNumber}
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3.5 py-1.5 text-sm font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                        >
+                          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copied ? t("plans.copied") : t("plans.copy")}
+                        </button>
+                      </div>
+                      <div className="mt-3 border-t border-border pt-3 text-sm">
+                        <span className="text-muted-foreground">{t("plans.account_name")} : </span>
+                        <span className="font-medium">{NATCASH_NAME}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {supported && getPushPermission() !== "granted" ?
-                <div className="p-3 border border-amber-500/30 bg-amber-500/5 rounded-xl space-y-2">
-                      <p className="text-[11px] text-muted-foreground leading-normal">
-                        ⚠️ <strong>{t('plans.action_required')}</strong> {t("Autorisez les notifications système pour débloquer l'envoi.")}
+                  <div>
+                    <h2 className="text-base font-semibold">{t("plans.receipt_title")}</h2>
+                    <label
+                      htmlFor="proof-file"
+                      className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border px-4 py-8 text-center transition-colors focus-within:ring-2 focus-within:ring-amber-400 hover:bg-muted/30"
+                    >
+                      <FileImage className={cn("h-7 w-7", file ? "text-amber-500" : "text-muted-foreground")} />
+                      <span className="mt-3 max-w-[260px] truncate text-sm font-medium">
+                        {file ? file.name : t("plans.choose_file")}
+                      </span>
+                      <span className="mt-1 text-xs text-muted-foreground">{t("plans.file_hint")}</span>
+                      <input
+                        id="proof-file"
+                        type="file"
+                        required
+                        accept="image/png, image/jpeg, image/jpg"
+                        onChange={handleFileChange}
+                        className="sr-only"
+                      />
+                    </label>
+                  </div>
+
+                  {supported && getPushPermission() !== "granted" ? (
+                    <div className="rounded-2xl border border-amber-400/40 bg-amber-400/[0.06] p-4">
+                      <p className="flex items-start gap-2 text-sm">
+                        <BellRing className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                        {t("plans.notif_needed")}
                       </p>
-                      {getPushPermission() === "denied" ?
-                  <p className="text-[11px] text-destructive font-bold flex items-center gap-1">
-                          <ShieldAlert className="h-3.5 w-3.5" /> {t("Autorisation bloquée dans le navigateur.")}
-                        </p> :
-
-                  <Button type="button" onClick={handleActivatePushBeforeSubmit} disabled={pushPending} className="w-full bg-amber-500 hover:bg-amber-600 text-black font-bold text-xs py-2 rounded-lg gap-1.5">
-                          <BellRing className="h-3.5 w-3.5" /> {pushPending ? t("Activation...") : t("Activer les notifications système")}
+                      {getPushPermission() === "denied" ? (
+                        <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-destructive">
+                          <ShieldAlert className="h-4 w-4" /> {t("Autorisation bloquée dans le navigateur.")}
+                        </p>
+                      ) : (
+                        <Button
+                          type="button"
+                          onClick={handleActivatePush}
+                          disabled={pushPending}
+                          variant="outline"
+                          className="mt-3 h-10 rounded-full"
+                        >
+                          {pushPending ? t("Activation...") : t("Activer les notifications système")}
                         </Button>
-                  }
-                    </div> :
-
-                <Button type="submit" disabled={isSubmitting || !file} className="w-full py-5 text-sm font-bold bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl mt-4">
-                      {isSubmitting ? t("Sécurisation & Envoi...") : t("Envoyer ma preuve ({{priceUsd}}$)", { priceUsd: selectedPlan.priceUsd })}
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting || !file}
+                      className="h-12 w-full rounded-full bg-amber-400 text-base font-semibold text-black hover:bg-amber-300 disabled:opacity-40 sm:w-auto sm:px-10"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("plans.sending")}
+                        </>
+                      ) : (
+                        t("plans.send_receipt")
+                      )}
                     </Button>
-                }
+                  )}
+
+                  <p className="text-sm text-muted-foreground">
+                    {t("Vous préférez un autre moyen de paiement ?")}{" "}
+                    <a
+                      href="https://T.me/dg_haitiannud"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-foreground underline underline-offset-4"
+                    >
+                      {t("Écrire sur Telegram")}
+                    </a>
+                  </p>
                 </form>
-              </CardContent>
-            </Card>
+              )}
+            </section>
+
+            <div className="lg:col-span-5">
+              <div className="lg:sticky lg:top-24">{Summary}</div>
+            </div>
           </div>
         </div>
-      }
+      )}
 
-      {step === 'success' &&
-      <div className="max-w-md mx-auto text-center py-12 space-y-6 animate-scale-in">
-          <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20 shadow-inner">
-            <ShieldCheck className="h-8 w-8" />
+      {/* ================= ÉTAPE 3 : CONFIRMATION ================= */}
+      {step === "success" && (
+        <div className="mx-auto max-w-md animate-scale-in py-16 text-center">
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+            <ShieldCheck className="h-7 w-7" />
           </div>
-          <div className="space-y-2">
-            <h2 className="text-3xl font-serif font-bold tracking-tight">{t('plans.thank_you')}</h2>
-            <p className="text-sm text-muted-foreground px-4">
-              <Trans i18nKey="Votre preuve de paiement pour la formule <b>{{plan}} ({{days}} jours)</b> a été transmise aux administrateurs." values={{ plan: selectedPlan.name, days: selectedPlan.days }} components={{ b: <span className="font-bold text-yellow-500" /> }} />
-            </p>
-          </div>
-          <Button onClick={() => setLocation("/")} variant="outline" className="w-full py-5 rounded-xl text-xs font-semibold">
-            {t("Retourner au Catalogue Public")}
+          <h1 className="font-serif text-3xl font-semibold tracking-tight">{t("plans.success_title")}</h1>
+          <p className="mt-3 text-muted-foreground">
+            {t("plans.success_desc", { plan: planName(selectedPlan), days: selectedPlan.days })}
+          </p>
+          <Button onClick={() => setLocation("/")} variant="outline" className="mt-8 h-11 rounded-full px-8">
+            {t("plans.back_home")}
           </Button>
         </div>
-      }
-    </div>);
-
+      )}
+    </div>
+  );
 }
