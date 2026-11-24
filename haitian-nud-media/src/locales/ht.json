@@ -648,5 +648,21 @@
   "pay.cancel_desc": "Peman an pa fini. Pa gen aksè VIP ki aktive.",
   "account.days_left": "Dat ekspirasyon",
   "account.extend": "Pwolonje kont ou",
-  "pay.cancel_cta": "Reprann peman an"
+  "pay.cancel_cta": "Reprann peman an",
+  {
+  "watch.load_error": "Enposib pou chaje videyo a. Verifye koneksyon w.",
+  "watch.link_not_found": "Lyen telechajman an pa jwenn.",
+  "watch.slow_connection": "Koneksyon an ralanti oswa li koupe. Eseye ankò nan yon ti moman.",
+  "catalog.empty_videos": "Pa gen videyo VIP pou kounye a.",
+  "catalog.empty_photos": "Pa gen foto VIP pou kounye a.",
+  "catalog.empty_all": "Pa gen kontni VIP pou kounye a.",
+  "auth.show_password": "Montre modpas la",
+  "auth.hide_password": "Kache modpas la",
+  "auth.reset_email_sent": "Si gen yon kont ki koresponn ak adrès sa a, y ap voye yon imèl pou reyinisyalize modpas la.",
+  "auth.reset_link_sent": "Si gen yon kont ki koresponn ak adrès sa a, y ap voye yon lyen pou reyinisyalize modpas la.",
+  "auth.reset_check_inbox": "Verifye bwat resepsyon ou. Si kont ou an egziste, w ap resevwa yon lyen pou reyinisyalize modpas la.",
+  "downloads.delete": "Efase",
+  "live.mute": "Koupe son an",
+  "live.unmute": "Mete son an"
+  
 }
