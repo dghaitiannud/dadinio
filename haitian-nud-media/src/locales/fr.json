@@ -649,7 +649,6 @@
   "account.days_left": "Date d'expiration",
   "account.extend": "Prolonger votre compte",
   "pay.cancel_cta": "Reprendre le paiement",
-  {
   "watch.load_error": "Impossible de charger la vidéo. Vérifiez votre connexion.",
   "watch.link_not_found": "Lien de téléchargement introuvable.",
   "watch.slow_connection": "Connexion lente ou interrompue. Réessayez dans quelques instants.",
