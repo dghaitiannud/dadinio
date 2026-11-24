@@ -662,5 +662,6 @@
   "auth.reset_check_inbox": "Revisa tu bandeja de entrada. Si tu cuenta existe, recibirás un enlace de restablecimiento.",
   "downloads.delete": "Eliminar",
   "live.mute": "Silenciar",
+  "auth.login_success": "Inicio de sesión correcto",
   "live.unmute": "Activar sonido"
 }
