@@ -648,5 +648,19 @@
   "pay.cancel_desc": "The payment was not completed. No VIP access was activated.",
   "account.days_left": "Expiration date",
   "account.extend": "Extend your account",
-  "pay.cancel_cta": "Resume payment"
+  "pay.cancel_cta": "Resume payment",
+  "watch.load_error": "Couldn't load the video. Check your connection.",
+  "watch.link_not_found": "Download link not found.",
+  "watch.slow_connection": "Slow or interrupted connection. Try again in a moment.",
+  "catalog.empty_videos": "No VIP videos yet.",
+  "catalog.empty_photos": "No VIP photos yet.",
+  "catalog.empty_all": "No VIP content yet.",
+  "auth.show_password": "Show password",
+  "auth.hide_password": "Hide password",
+  "auth.reset_email_sent": "If an account matches this address, a reset email will be sent.",
+  "auth.reset_link_sent": "If an account matches this address, a reset link will be sent.",
+  "auth.reset_check_inbox": "Check your inbox. If your account exists, you will receive a reset link.",
+  "downloads.delete": "Delete",
+  "live.mute": "Mute",
+  "live.unmute": "Unmute"
 }
