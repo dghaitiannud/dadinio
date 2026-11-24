@@ -1,3 +1,4 @@
+
 import { useTranslation } from "react-i18next";
 import { useEffect, useState, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
@@ -7,8 +8,9 @@ import MuxPlayer from "@mux/mux-player-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Heart, Send, Radio, Users, Volume2, VolumeX, ExternalLink, Sparkles, MessageSquareLock } from "lucide-react";
+import { Send, Radio, Users, Volume2, VolumeX, ExternalLink, MessageSquareLock } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface FloatingReaction {
   id: number;
@@ -34,10 +36,6 @@ export function Live() {
   const [viewerCount, setViewerCount] = useState(1);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-
-  if (!isSignedIn) {
-    return <Redirect to="/login" />;
-  }
 
   useEffect(() => {
     async function fetchLiveSettings() {
@@ -148,172 +146,147 @@ export function Live() {
     setInputText("");
   };
 
+  if (!isSignedIn) {
+    return <Redirect to="/login" />;
+  }
+
   return (
-    <div className="container mx-auto px-3 py-6 max-w-7xl pb-24 md:pb-8 min-h-[90vh] flex flex-col gap-6">
-      
-      {/* Banner Recrutement / Telegram */}
-      <div className="w-full bg-gradient-to-r from-pink-600/20 via-purple-600/20 to-primary/20 border border-primary/30 rounded-2xl p-4 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-        <div className="flex items-center gap-3 text-center sm:text-left">
-          <div className="p-2.5 bg-primary/20 rounded-xl text-primary shrink-0 hidden sm:block">
-            <Sparkles className="h-6 w-6 animate-pulse" />
-          </div>
-          <div>
-            <h3 className="font-bold text-sm sm:text-base text-foreground">{t("Envie de faire des streams & monétiser ton contenu ?")}</h3>
-            <p className="text-xs text-muted-foreground">{t("Rejoins l'équipe et deviens créatrice ou actrice de live sur HAITIAN NUD.")}</p>
-          </div>
+    <div className="mx-auto flex min-h-[90vh] w-full max-w-7xl flex-col gap-6 px-5 pb-28 pt-8 md:pb-10 md:pt-10">
+      {/* Recrutement */}
+      <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center">
+        <div>
+          <h2 className="font-semibold">{t("Envie de faire des streams & monétiser ton contenu ?")}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {t("Rejoins l'équipe et deviens créatrice ou actrice de live sur HAITIAN NUD.")}
+          </p>
         </div>
-        <a
-          href="https://T.me/dg_haitiannud"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="shrink-0 w-full sm:w-auto">
-          
-          <Button className="w-full sm:w-auto bg-gradient-to-r from-pink-500 to-primary hover:opacity-90 text-white font-bold h-11 rounded-xl px-6 shadow-md transition-all">
+        <a href="https://T.me/dg_haitiannud" target="_blank" rel="noopener noreferrer" className="w-full shrink-0 sm:w-auto">
+          <Button className="h-11 w-full rounded-full bg-amber-400 px-6 font-semibold text-black hover:bg-amber-300 sm:w-auto">
             {t("Devenir créatrice ou actrice de live")} <ExternalLink className="ml-2 h-4 w-4" />
           </Button>
         </a>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Colonne Lecteur Vidéo */}
-        <div className="flex-1 flex flex-col justify-between relative bg-black rounded-2xl overflow-hidden aspect-video lg:aspect-auto lg:h-[72vh] border border-border shadow-2xl">
-          {isActive && playbackId ?
-          <div className="relative w-full h-full bg-black">
-              <MuxPlayer
-              playbackId={playbackId}
-              streamType="live"
-              autoPlay
-              muted={isMuted}
-              className="w-full h-full object-contain" />
-            
+      <div className="flex flex-col gap-6 lg:flex-row">
+        {/* Lecteur */}
+        <div className="relative aspect-video flex-1 overflow-hidden rounded-2xl bg-black lg:aspect-auto lg:h-[72vh]">
+          {isActive && playbackId ? (
+            <div className="relative h-full w-full bg-black">
+              <MuxPlayer playbackId={playbackId} streamType="live" autoPlay muted={isMuted} className="h-full w-full object-contain" />
 
-              {/* Overlay Badges */}
-              <div className="absolute top-4 left-4 flex gap-2 items-center z-10">
-                <span className="bg-red-600 text-white text-[11px] font-black px-3 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider shadow-lg animate-pulse">
+              <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1 text-xs font-semibold text-white">
                   <Radio className="h-3.5 w-3.5" /> {t("Direct")}
                 </span>
-                <span className="bg-black/60 text-white text-[11px] font-semibold px-3 py-1 rounded-full flex items-center gap-1.5 backdrop-blur-md border border-white/10">
-                  <Users className="h-3.5 w-3.5 text-primary" /> {viewerCount}
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1 text-xs font-medium tabular-nums text-white backdrop-blur-md">
+                  <Users className="h-3.5 w-3.5" /> {viewerCount}
                 </span>
               </div>
 
-              {/* Bouton Mute */}
               <Button
-              variant="secondary"
-              size="icon"
-              className="absolute bottom-4 left-4 rounded-full bg-black/60 text-white backdrop-blur-md border border-white/10 hover:bg-black/80 z-10"
-              onClick={() => setIsMuted(!isMuted)}>
-              
+                variant="secondary"
+                size="icon"
+                aria-label={isMuted ? t("live.unmute") : t("live.mute")}
+                className="absolute bottom-4 left-4 z-10 rounded-full bg-black/60 text-white backdrop-blur-md hover:bg-black/80"
+                onClick={() => setIsMuted(!isMuted)}
+              >
                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </Button>
-            </div> :
-
-          <div className="flex flex-col items-center justify-center flex-1 text-center p-8 bg-neutral-950 text-neutral-400 h-full w-full">
-              <div className="p-4 bg-neutral-900 rounded-full border border-neutral-800 mb-4">
-                <Radio className="h-10 w-10 text-neutral-500 animate-pulse" />
+            </div>
+          ) : (
+            <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-950 p-8 text-center">
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-white">
+                <Radio className="h-5 w-5" />
               </div>
-              <h3 className="text-xl font-bold text-white">{t("Aucun direct en cours")}</h3>
-              <p className="text-xs sm:text-sm mt-1 max-w-sm text-neutral-400">
+              <h3 className="text-xl font-semibold text-white">{t("Aucun direct en cours")}</h3>
+              <p className="mt-2 max-w-sm text-sm text-white/60">
                 {t("Restez à l'affût, une notification sera envoyée dès le démarrage du prochain live !")}
               </p>
             </div>
-          }
+          )}
 
-          {/* Zone des réactions volantes */}
-          <div className="absolute bottom-16 right-4 w-24 h-64 pointer-events-none z-20 overflow-hidden">
-            {reactions.map((r) =>
-            <div
-              key={r.id}
-              className="absolute bottom-0 text-3xl animate-fade-up-float drop-shadow-md"
-              style={{ left: `${r.left}%` }}>
-              
+          {/* Réactions volantes */}
+          <div className="pointer-events-none absolute bottom-16 right-4 z-20 h-64 w-24 overflow-hidden">
+            {reactions.map((r) => (
+              <div key={r.id} className="animate-fade-up-float absolute bottom-0 text-3xl drop-shadow-md" style={{ left: `${r.left}%` }}>
                 {r.emoji}
               </div>
-            )}
+            ))}
           </div>
         </div>
 
-        {/* Colonne Chat et Interactions */}
-        <div className="w-full lg:w-96 flex flex-col h-[50vh] lg:h-[72vh] bg-card border border-border/80 rounded-2xl shadow-xl overflow-hidden">
-          
-          {/* En-tête Chat */}
-          <div className="p-3.5 border-b border-border/80 bg-muted/40 flex items-center justify-between">
-            <span className="font-bold text-sm flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-emerald-500 animate-ping' : 'bg-muted-foreground'}`} />
+        {/* Chat */}
+        <div className="flex h-[50vh] w-full flex-col overflow-hidden rounded-2xl border border-border bg-card lg:h-[72vh] lg:w-96">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              <span className={cn("h-2 w-2 rounded-full", isActive ? "bg-emerald-500" : "bg-muted-foreground/50")} aria-hidden />
               {t("Chat en direct")}
             </span>
-            
-            {/* Émojis réactifs (Désactivés si live inactif) */}
-            <div className={`flex gap-1 transition-opacity ${!isActive ? 'opacity-40 pointer-events-none' : ''}`}>
-              {["❤️", "🔥", "😂", "👑"].map((emoji) =>
-              <Button
-                key={emoji}
-                variant="ghost"
-                size="sm"
-                disabled={!isActive}
-                className="text-base p-1 h-8 w-8 hover:bg-primary/20 hover:scale-110 transition-transform rounded-lg"
-                onClick={() => sendReaction(emoji)}>
-                
+
+            <div className={cn("flex gap-0.5", !isActive && "pointer-events-none opacity-40")}>
+              {["❤️", "🔥", "😂", "👑"].map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  disabled={!isActive}
+                  onClick={() => sendReaction(emoji)}
+                  aria-label={emoji}
+                  className="h-9 w-9 rounded-full text-lg transition-transform hover:scale-110 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                >
                   {emoji}
-                </Button>
-              )}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Zone des messages */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3 text-sm">
-            {!isActive ?
-            <div className="h-full flex flex-col items-center justify-center text-center p-4 text-muted-foreground space-y-2">
-                <MessageSquareLock className="h-8 w-8 text-muted-foreground/60" />
-                <p className="text-xs font-medium">{t("Le chat en direct est verrouillé.")}</p>
-                <p className="text-[11px] text-muted-foreground/80">
+          <div className="flex-1 space-y-4 overflow-y-auto p-4 text-sm">
+            {!isActive ? (
+              <div className="flex h-full flex-col items-center justify-center space-y-2 text-center text-muted-foreground">
+                <MessageSquareLock className="h-7 w-7 text-muted-foreground/60" />
+                <p className="text-sm font-medium">{t("Le chat en direct est verrouillé.")}</p>
+                <p className="max-w-[240px] text-xs">
                   {t("Les réactions et messages s'activeront automatiquement dès que le live commencera.")}
                 </p>
-              </div> :
-            messages.length === 0 ?
-            <div className="text-center py-8 text-xs text-muted-foreground italic">
-                {t("Soyez le premier à envoyer un message !")}
-              </div> :
-
-            messages.map((m) =>
-            <div key={m.id} className="flex gap-2.5 items-start bg-muted/30 p-2.5 rounded-xl border border-border/40">
-                  <Avatar className="h-6 w-6 border border-primary/20">
-                    <AvatarFallback className="text-[10px] bg-primary/20 font-bold text-primary">
-                      {m.user.charAt(0).toUpperCase()}
-                    </AvatarFallback>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">{t("Soyez le premier à envoyer un message !")}</div>
+            ) : (
+              messages.map((m) => (
+                <div key={m.id} className="flex items-start gap-2.5">
+                  <Avatar className="h-7 w-7 shrink-0">
+                    <AvatarFallback className="bg-muted text-xs font-semibold">{m.user.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-bold text-xs block text-primary">{m.user}</span>
-                    <p className="text-foreground/90 break-words mt-0.5 text-xs leading-relaxed">{m.text}</p>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-xs font-semibold text-muted-foreground">{m.user}</span>
+                    <p className="mt-0.5 break-words text-sm leading-relaxed">{m.text}</p>
                   </div>
                 </div>
-            )
-            }
+              ))
+            )}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Formulaire d'envoi (Désactivé si live inactif) */}
-          <form onSubmit={handleSendMessage} className="p-3 border-t border-border/80 bg-muted/20 flex gap-2">
+          <form onSubmit={handleSendMessage} className="flex gap-2 border-t border-border p-3">
             <Input
               placeholder={isActive ? t("Envoyer un message...") : t("Live hors-ligne...")}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               disabled={!isActive}
               maxLength={150}
-              className="bg-background rounded-xl text-xs h-10 border-border/80 focus:border-primary" />
-            
+              className="h-10 rounded-full bg-background px-4"
+            />
             <Button
               type="submit"
               size="icon"
+              aria-label={t("Envoyer")}
               disabled={!inputText.trim() || !isActive}
-              className="h-10 w-10 shrink-0 rounded-xl bg-primary hover:bg-primary/90">
-              
+              className="h-10 w-10 shrink-0 rounded-full bg-amber-400 text-black hover:bg-amber-300 disabled:opacity-40"
+            >
               <Send className="h-4 w-4" />
             </Button>
           </form>
-
         </div>
       </div>
-    </div>);
-
-}
+    </div>
+  );
+                }
