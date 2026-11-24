@@ -8,6 +8,8 @@ import { ArrowLeft, Loader2, Lock } from "lucide-react";
 import { PaymentLogo } from "@/components/payment-logos";
 import { cn } from "@/lib/utils";
 
+const isLocalTestHost = window.location.hostname === "100.72.108.45";
+
 const PLANS = [
   { id: "decouverte", amount: 750, days: 7 },
   { id: "starter", amount: 1000, days: 10 },
@@ -16,6 +18,7 @@ const PLANS = [
   { id: "prolonje", amount: 3000, days: 40 },
   { id: "confort", amount: 7500, days: 105 },
   { id: "vip_privilege", amount: 25000, days: 365 },
+  ...(isLocalTestHost ? [{ id: "test_30_htg", amount: 30, days: 1 }] : []),
 ];
 
 const fieldClass =
@@ -25,14 +28,17 @@ export function TranzakCheckout() {
   const { t, i18n } = useTranslation();
   const { session, isSignedIn } = useAuth();
   const [, setLocation] = useLocation();
-  const [planId, setPlanId] = useState(new URLSearchParams(window.location.search).get("planId") || "avantage");
+  const [planId, setPlanId] = useState(() => {
+    const requestedPlan = new URLSearchParams(window.location.search).get("planId") || "avantage";
+    return PLANS.some((p) => p.id === requestedPlan) ? requestedPlan : "avantage";
+  });
   const [method, setMethod] = useState<"moncash" | "natcash">("moncash");
   const [name, setName] = useState("");
   const [email, setEmail] = useState(session?.user?.email || "");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const plan = useMemo(() => PLANS.find((p) => p.id === planId) || PLANS[3], [planId]);
-  const planLabel = (id: string) => t(`plans.name.${id}`);
+  const planLabel = (id: string) => id === "test_30_htg" ? "TEST LIVE · 30 HTG" : t(`plans.name.${id}`);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
