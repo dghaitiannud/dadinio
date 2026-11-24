@@ -48,17 +48,17 @@ export function CommentsSection({
       </h2>
 
       {isSignedIn ? (
-        <form onSubmit={handleComment} className="mb-8 bg-card p-4 rounded-xl border border-border">
+        <form onSubmit={handleComment} className="mb-8 rounded-2xl border border-border bg-card p-4">
           <div className="flex gap-4">
             <Avatar className="h-10 w-10 shrink-0">
-              <AvatarFallback className="bg-primary/10 text-primary">
+              <AvatarFallback className="bg-muted font-semibold text-foreground">
                 {(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <Textarea
                 placeholder={t("watch.add_comment")}
-                className="min-h-[80px] mb-3"
+                className="mb-3 min-h-[80px] resize-none bg-background"
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
               />
@@ -69,7 +69,11 @@ export function CommentsSection({
                     {t("watch.post_anonymous")}
                   </Label>
                 </div>
-                <Button type="submit" disabled={!commentBody.trim() || commentPending}>
+                <Button
+                  type="submit"
+                  className="h-10 rounded-full px-6 font-semibold"
+                  disabled={!commentBody.trim() || commentPending}
+                >
                   {t("watch.comment_btn")}
                 </Button>
               </div>
@@ -77,10 +81,12 @@ export function CommentsSection({
           </div>
         </form>
       ) : (
-        <div className="mb-8 p-6 bg-card border rounded-xl text-center">
+        <div className="mb-8 rounded-2xl border border-border bg-card p-6 text-center">
           <p className="text-muted-foreground mb-4">{t("watch.login_to_discuss")}</p>
           <Link href="/login">
-            <Button variant="outline">{t("nav.login")}</Button>
+            <Button variant="outline" className="h-10 rounded-full px-6">
+              {t("nav.login")}
+            </Button>
           </Link>
         </div>
       )}
