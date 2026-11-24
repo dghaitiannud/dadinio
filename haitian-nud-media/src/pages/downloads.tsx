@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -13,7 +12,7 @@ import {
   formatBytes,
   type OfflineVideo } from
 "@/lib/offline-store";
-import { Play, Trash2, WifiOff, Film, ArrowLeft } from "lucide-react";
+import { Play, Trash2, WifiOff, ArrowLeft } from "lucide-react";
 
 export function DownloadsPage() {
   const { t } = useTranslation();
@@ -66,114 +65,117 @@ export function DownloadsPage() {
     setPlayingId(null);
   };
 
-  return (
-    <div className="container mx-auto px-4 py-6 max-w-5xl min-h-screen">
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <h1 className="text-2xl font-serif font-bold">{t('downloads.my_downloads')}</h1>
-      </div>
+  const totalBytes = videos.reduce((sum, v) => sum + v.sizeBytes, 0);
+  const playing = videos.find((v) => v.id === playingId);
 
-      {loading ?
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) =>
-        <Skeleton key={i} className="w-full aspect-video rounded-xl" />
-        )}
-        </div> :
-      videos.length === 0 ?
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mb-6">
-            <WifiOff className="h-10 w-10 text-muted-foreground" />
+  return (
+    <div className="mx-auto min-h-screen w-full max-w-6xl px-5 pb-28 pt-10 md:pt-14">
+      <Link
+        href="/"
+        className="mb-6 -ml-1 inline-flex items-center gap-1.5 rounded-md px-1 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+      >
+        <ArrowLeft className="h-4 w-4" /> {t("watch.back_home")}
+      </Link>
+
+      <h1 className="font-serif text-4xl font-semibold tracking-tight md:text-5xl">{t("downloads.my_downloads")}</h1>
+
+      {loading ? (
+        <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-video w-full rounded-2xl" />
+          ))}
+        </div>
+      ) : videos.length === 0 ? (
+        <div className="mx-auto flex max-w-md flex-col items-center py-24 text-center">
+          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <WifiOff className="h-6 w-6 text-muted-foreground" />
           </div>
-          <h2 className="text-xl font-semibold mb-2">{t('downloads.no_downloads')}</h2>
-          <p className="text-muted-foreground max-w-md mb-6">
+          <h2 className="font-serif text-2xl font-semibold">{t("downloads.no_downloads")}</h2>
+          <p className="mt-2 text-muted-foreground">
             {t("Téléchargez des vidéos pour les regarder sans connexion internet. Maximum 5 vidéos.")}
           </p>
           <Link href="/">
-            <Button className="bg-primary text-white">{t('downloads.browse_videos')}</Button>
+            <Button className="mt-8 h-12 rounded-full bg-amber-400 px-8 text-base font-semibold text-black hover:bg-amber-300">
+              {t("downloads.browse_videos")}
+            </Button>
           </Link>
-        </div> :
-
-      <>
-          <p className="text-sm text-muted-foreground mb-4">
-            {t("{{used}}/5 vidéos — {{size}} utilisés", { used: videos.length, size: formatBytes(videos.reduce((s, v) => s + v.sizeBytes, 0)) })}
+        </div>
+      ) : (
+        <>
+          <p className="mt-3 text-muted-foreground">
+            {t("{{used}}/5 vidéos — {{size}} utilisés", { used: videos.length, size: formatBytes(totalBytes) })}
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {videos.map((video) =>
-          <Card key={video.id} className="overflow-hidden border-border bg-card">
-                <div className="relative aspect-video bg-black">
-                  <img
-                src={video.thumbnailUrl}
-                alt={video.title}
-                className="w-full h-full object-cover opacity-80" />
-              
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Button
-                  size="icon"
-                  className="w-14 h-14 rounded-full bg-primary/90 text-white hover:bg-primary hover:scale-110 transition-all"
-                  onClick={() => handlePlay(video)}>
-                  
-                      <Play className="h-6 w-6 ml-1" fill="currentColor" />
-                    </Button>
-                  </div>
-                  <div className="absolute top-2 right-2 px-2 py-1 bg-black/80 text-white text-xs rounded">
-                    {formatBytes(video.sizeBytes)}
-                  </div>
-                  <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 bg-black/80 text-white text-xs rounded">
-                    <WifiOff className="h-3 w-3" /> {t("Offline")}
-                  </div>
-                </div>
-                <CardContent className="p-3">
-                  <h3 className="font-semibold line-clamp-2 text-sm mb-1">{video.title}</h3>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
-                      {Math.floor(video.durationSec / 60)}:{(video.durationSec % 60).toString().padStart(2, "0")}
+          <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {videos.map((video) => (
+              <article key={video.id}>
+                <button
+                  type="button"
+                  onClick={() => handlePlay(video)}
+                  aria-label={video.title}
+                  className="group relative block aspect-video w-full overflow-hidden rounded-2xl bg-black outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+                >
+                  <img src={video.thumbnailUrl} alt="" className="h-full w-full object-cover opacity-90 transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-black shadow-lg">
+                      <Play className="ml-0.5 h-6 w-6" fill="currentColor" />
                     </span>
-                    <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
-                  onClick={() => handleDelete(video.id)}>
-                  
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  </span>
+                  <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-medium tabular-nums text-white">
+                    {Math.floor(video.durationSec / 60)}:{(video.durationSec % 60).toString().padStart(2, "0")}
+                  </span>
+                </button>
+
+                <div className="mt-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="line-clamp-2 text-[15px] font-semibold leading-snug">{video.title}</h3>
+                    <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <WifiOff className="h-3.5 w-3.5" /> {t("Offline")} · {formatBytes(video.sizeBytes)}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-          )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={t("downloads.delete")}
+                    title={t("downloads.delete")}
+                    className="h-9 w-9 shrink-0 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => handleDelete(video.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </article>
+            ))}
           </div>
         </>
-      }
+      )}
 
-      {/* Offline Video Player Modal */}
-      {playingId && videoUrl &&
-      <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
-          <div className="w-full max-w-4xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold truncate">
-                {videos.find((v) => v.id === playingId)?.title}
-              </h3>
+      {/* Lecteur hors ligne */}
+      {playingId && videoUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={playing?.title}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4"
+          onClick={handleClosePlayer}
+        >
+          <div className="w-full max-w-4xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <h3 className="truncate font-semibold text-white">{playing?.title}</h3>
               <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/10"
-              onClick={handleClosePlayer}>
-              {t('common.close')}</Button>
+                variant="ghost"
+                size="sm"
+                autoFocus
+                className="rounded-full text-white hover:bg-white/10 hover:text-white"
+                onClick={handleClosePlayer}
+              >
+                {t("common.close")}
+              </Button>
             </div>
-            <video
-            src={videoUrl}
-            controls
-            autoPlay
-            className="w-full rounded-lg"
-            style={{ maxHeight: "70vh" }} />
-          
+            <video src={videoUrl} controls autoPlay className="w-full rounded-2xl" style={{ maxHeight: "70vh" }} />
           </div>
         </div>
-      }
-    </div>);
-
+      )}
+    </div>
+  );
 }

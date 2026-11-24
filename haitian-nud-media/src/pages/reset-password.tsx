@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Lock, ArrowLeft, CheckCircle, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, CheckCircle } from "lucide-react";
+import { AuthShell, AuthField, authPrimaryButton } from "@/components/auth-shell";
+import { cn } from "@/lib/utils";
 
 export function ResetPasswordPage() {
   const { t } = useTranslation();
@@ -14,8 +14,6 @@ export function ResetPasswordPage() {
   const [, setLocation] = useLocation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // État pour le premier champ
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // État pour le deuxième champ
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -47,101 +45,56 @@ export function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-background px-4 py-6 flex items-start justify-center sm:items-center">
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-2xl">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-            {done ? <CheckCircle className="h-6 w-6" /> : <Lock className="h-6 w-6" />}
-          </div>
-          <h1 className="text-2xl font-serif font-bold text-foreground">
-            {done ? t("Mot de passe mis à jour !") : t("Nouveau mot de passe")}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {done ? t("Vous allez être redirigé vers la page de connexion.") : t("Choisissez un nouveau mot de passe sécurisé.")
-
-            }
-          </p>
-        </div>
-
-        {!done ?
+    <AuthShell
+      title={done ? t("Mot de passe mis à jour !") : t("Nouveau mot de passe")}
+      subtitle={done ? t("Vous allez être redirigé vers la page de connexion.") : t("Choisissez un nouveau mot de passe sécurisé.")}
+      footer={
+        <button
+          type="button"
+          onClick={() => setLocation("/login")}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> {t("Retour à la connexion")}
+        </button>
+      }
+    >
+      {!done ? (
         <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">{t('auth.new_password')}</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="pl-10 pr-10"
-                required
-                minLength={6} />
-              
-                <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
-                onClick={() => setShowPassword(!showPassword)}>
-                
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm">{t('auth.confirm_password')}</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                id="confirm"
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                className="pl-10 pr-10"
-                required
-                minLength={6} />
-              
-                <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-            <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-            
-              {loading ? t("Mise à jour...") : t("Réinitialiser le mot de passe")}
-            </Button>
-          </form> :
-
-        <div className="text-center">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <p className="text-muted-foreground mb-4">
-              {t("Votre mot de passe a été réinitialisé avec succès.")}
-            </p>
-            <Button onClick={() => setLocation("/login")} className="w-full">
-              {t("Aller à la connexion")}
-            </Button>
-          </div>
-        }
-
-        <div className="mt-6 text-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setLocation("/login")}
-            className="text-muted-foreground">
-            
-            <ArrowLeft className="h-4 w-4 mr-2" /> {t("Retour à la connexion")}
+          <AuthField
+            id="password"
+            label={t("auth.new_password")}
+            type="password"
+            value={password}
+            onChange={setPassword}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            minLength={6}
+            required
+          />
+          <AuthField
+            id="confirm"
+            label={t("auth.confirm_password")}
+            type="password"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            minLength={6}
+            required
+          />
+          <Button type="submit" disabled={loading} className={cn(authPrimaryButton, "mt-2")}>
+            {loading ? t("Mise à jour...") : t("Réinitialiser le mot de passe")}
+          </Button>
+        </form>
+      ) : (
+        <div className="space-y-6 text-center">
+          <CheckCircle className="mx-auto h-14 w-14 text-emerald-500" />
+          <p className="text-muted-foreground">{t("Votre mot de passe a été réinitialisé avec succès.")}</p>
+          <Button onClick={() => setLocation("/login")} className={authPrimaryButton}>
+            {t("Aller à la connexion")}
           </Button>
         </div>
-      </div>
-    </div>);
-
+      )}
+    </AuthShell>
+  );
 }

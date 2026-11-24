@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { getVideos, type Video } from "@/lib/supabase-db";
 import { VideoCard } from "@/components/video-card";
-import { Input } from "@/components/ui/input";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 
 // Messages plus courts adaptés aux mobiles
@@ -83,48 +82,48 @@ export function Search() {
   }, [debouncedQuery]);
 
   return (
-    <div className="container mx-auto px-4 py-8 min-h-[80vh]">
-      <div className="max-w-2xl mx-auto mb-10 text-center">
-        <h1 className="text-3xl font-serif font-bold mb-6">{t("Rechercher")}</h1>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <SearchIcon className="h-5 w-5 text-muted-foreground" />
-          </div>
-          <Input
+    <div className="mx-auto min-h-[80vh] w-full max-w-6xl px-5 pb-28 pt-10 md:pt-14">
+      <div className="mx-auto mb-12 max-w-2xl text-center">
+        <h1 className="font-serif text-4xl font-semibold tracking-tight md:text-5xl">{t("Rechercher")}</h1>
+        <div className="relative mt-8">
+          <SearchIcon className="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+          <input
             type="search"
+            aria-label={t("Rechercher")}
             placeholder={currentPlaceholder}
-            className="pl-10 h-12 bg-card border-border text-lg rounded-full shadow-sm focus-visible:ring-primary"
+            className="h-14 w-full rounded-full border border-border bg-card pr-6 text-lg outline-none transition-colors placeholder:text-muted-foreground/70 focus-visible:border-amber-400 focus-visible:ring-2 focus-visible:ring-amber-400/40"
+            style={{ paddingLeft: "3.25rem" }}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-4">
-          {debouncedQuery 
-            ? t("Résultats pour \"{{debouncedQuery}}\"", { debouncedQuery }) 
+      <section>
+        <h2 className="mb-6 font-serif text-2xl font-semibold tracking-tight">
+          {debouncedQuery
+            ? t("Résultats pour \"{{debouncedQuery}}\"", { debouncedQuery })
             : t("Toutes les vidéos")}
         </h2>
-        
+
         {isLoading ? (
-          <div className="flex justify-center items-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex items-center justify-center py-24">
+            <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
           </div>
         ) : videos && videos.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {videos.map((video) => (
               <VideoCard key={video.id} video={video} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-24 bg-card border border-dashed border-border rounded-xl">
-            <SearchIcon className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">{t('search.no_results')}</h3>
-            <p className="text-muted-foreground">{t('search.no_results_desc')}</p>
+          <div className="rounded-2xl border border-dashed border-border py-20 text-center">
+            <SearchIcon className="mx-auto mb-4 h-10 w-10 text-muted-foreground/50" />
+            <h3 className="text-lg font-semibold">{t("search.no_results")}</h3>
+            <p className="mt-1 text-muted-foreground">{t("search.no_results_desc")}</p>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

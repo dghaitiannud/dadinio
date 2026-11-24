@@ -4,7 +4,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useDateLocale } from "@/lib/date-locale";
 import { type Comment } from "@/lib/supabase-db";
@@ -25,32 +24,41 @@ interface CommentsSectionProps {
 }
 
 export function CommentsSection({
-  comments, isLoadingComments, isSignedIn, appUser,
-  commentBody, setCommentBody, anonymous, setAnonymous,
-  commentPending, handleComment
+  comments,
+  isLoadingComments,
+  isSignedIn,
+  appUser,
+  commentBody,
+  setCommentBody,
+  anonymous,
+  setAnonymous,
+  commentPending,
+  handleComment,
 }: CommentsSectionProps) {
   const dateLocale = useDateLocale();
   const { t } = useTranslation();
 
   return (
-    <div className="mt-8 pt-8 border-t border-border">
-      <h3 className="text-xl font-serif font-bold mb-6 flex items-center gap-2">
-        <MessageSquare className="h-5 w-5 text-primary" />
-        {t("watch.comments")} ({comments.length || 0})
-      </h3>
+    <section className="mt-10 border-t border-border pt-8">
+      <h2 className="mb-6 font-serif text-xl font-semibold tracking-tight">
+        {t("watch.comments")}{" "}
+        <span className="font-sans text-base font-normal text-muted-foreground">
+          {comments.length || 0}
+        </span>
+      </h2>
 
       {isSignedIn ? (
-        <form onSubmit={handleComment} className="mb-8 bg-card p-4 rounded-xl border border-border">
+        <form onSubmit={handleComment} className="mb-8 rounded-2xl border border-border bg-card p-4">
           <div className="flex gap-4">
             <Avatar className="h-10 w-10 shrink-0">
-              <AvatarFallback className="bg-primary/10 text-primary">
+              <AvatarFallback className="bg-muted font-semibold text-foreground">
                 {(appUser?.displayName || appUser?.email || "U").charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <Textarea
                 placeholder={t("watch.add_comment")}
-                className="min-h-[80px] mb-3"
+                className="mb-3 min-h-[80px] resize-none bg-background"
                 value={commentBody}
                 onChange={(e) => setCommentBody(e.target.value)}
               />
@@ -61,7 +69,11 @@ export function CommentsSection({
                     {t("watch.post_anonymous")}
                   </Label>
                 </div>
-                <Button type="submit" disabled={!commentBody.trim() || commentPending}>
+                <Button
+                  type="submit"
+                  className="h-10 rounded-full px-6 font-semibold"
+                  disabled={!commentBody.trim() || commentPending}
+                >
                   {t("watch.comment_btn")}
                 </Button>
               </div>
@@ -69,10 +81,12 @@ export function CommentsSection({
           </div>
         </form>
       ) : (
-        <div className="mb-8 p-6 bg-card border rounded-xl text-center">
+        <div className="mb-8 rounded-2xl border border-border bg-card p-6 text-center">
           <p className="text-muted-foreground mb-4">{t("watch.login_to_discuss")}</p>
           <Link href="/login">
-            <Button variant="outline">{t("nav.login")}</Button>
+            <Button variant="outline" className="h-10 rounded-full px-6">
+              {t("nav.login")}
+            </Button>
           </Link>
         </div>
       )}
@@ -92,15 +106,22 @@ export function CommentsSection({
           comments.map((comment: Comment) => (
             <div key={comment.id} className="flex gap-4">
               <Avatar className="h-10 w-10 shrink-0">
-                <AvatarFallback>{(comment.displayName || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarFallback>
+                  {(comment.displayName || "U").charAt(0).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-baseline gap-2 mb-1">
                   <span className="font-semibold text-sm">
-                    {comment.anonymous ? t("watch.anonymous") : (comment.displayName || t("watch.user"))}
+                    {comment.anonymous
+                      ? t("watch.anonymous")
+                      : comment.displayName || t("watch.user")}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: dateLocale })}
+                    {formatDistanceToNow(new Date(comment.createdAt), {
+                      addSuffix: true,
+                      locale: dateLocale,
+                    })}
                   </span>
                 </div>
                 <p className="text-sm text-foreground/90">{comment.body}</p>
@@ -111,6 +132,6 @@ export function CommentsSection({
           <p className="text-muted-foreground text-center py-8">{t("watch.first_comment")}</p>
         )}
       </div>
-    </div>
+    </section>
   );
 }
