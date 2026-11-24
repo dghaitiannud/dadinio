@@ -665,5 +665,6 @@
   "live.unmute": "Activer le son",
     "downloads.delete": "Supprimer",
   "live.mute": "Couper le son",
+  "auth.login_success": "Connexion réussie",
   "live.unmute": "Activer le son"
 }
