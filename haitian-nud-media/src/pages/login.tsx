@@ -42,7 +42,7 @@ export function LoginPage() {
         } else if (errorObj && typeof errorObj === "string") {
           setFormError(errorObj);
         } else {
-          toast.success(t("Demande envoyée"));
+          toast.success(t("auth.login_success"));
           setTimeout(() => {
             if (!isSignedIn) {
               setFormError(t("Identifiants incorrects ou adresse e-mail non confirmée."));
