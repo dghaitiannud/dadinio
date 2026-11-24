@@ -4,7 +4,6 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useDateLocale } from "@/lib/date-locale";
 import { type Comment } from "@/lib/supabase-db";
@@ -25,17 +24,27 @@ interface CommentsSectionProps {
 }
 
 export function CommentsSection({
-  comments, isLoadingComments, isSignedIn, appUser,
-  commentBody, setCommentBody, anonymous, setAnonymous,
-  commentPending, handleComment
+  comments,
+  isLoadingComments,
+  isSignedIn,
+  appUser,
+  commentBody,
+  setCommentBody,
+  anonymous,
+  setAnonymous,
+  commentPending,
+  handleComment,
 }: CommentsSectionProps) {
   const dateLocale = useDateLocale();
   const { t } = useTranslation();
 
   return (
-     <section className="mt-10 border-t border-border pt-8">
+    <section className="mt-10 border-t border-border pt-8">
       <h2 className="mb-6 font-serif text-xl font-semibold tracking-tight">
-        {t("watch.comments")} <span className="font-sans text-base font-normal text-muted-foreground">{comments.length || 0}</span>
+        {t("watch.comments")}{" "}
+        <span className="font-sans text-base font-normal text-muted-foreground">
+          {comments.length || 0}
+        </span>
       </h2>
 
       {isSignedIn ? (
@@ -91,15 +100,22 @@ export function CommentsSection({
           comments.map((comment: Comment) => (
             <div key={comment.id} className="flex gap-4">
               <Avatar className="h-10 w-10 shrink-0">
-                <AvatarFallback>{(comment.displayName || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarFallback>
+                  {(comment.displayName || "U").charAt(0).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-baseline gap-2 mb-1">
                   <span className="font-semibold text-sm">
-                    {comment.anonymous ? t("watch.anonymous") : (comment.displayName || t("watch.user"))}
+                    {comment.anonymous
+                      ? t("watch.anonymous")
+                      : comment.displayName || t("watch.user")}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true, locale: dateLocale })}
+                    {formatDistanceToNow(new Date(comment.createdAt), {
+                      addSuffix: true,
+                      locale: dateLocale,
+                    })}
                   </span>
                 </div>
                 <p className="text-sm text-foreground/90">{comment.body}</p>
@@ -110,6 +126,6 @@ export function CommentsSection({
           <p className="text-muted-foreground text-center py-8">{t("watch.first_comment")}</p>
         )}
       </div>
-    </div>
+    </section>
   );
 }
